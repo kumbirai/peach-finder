@@ -4,8 +4,11 @@ import {
 	releaseHeldMessagesForUser,
 	getThreadForSeekerProvider,
 	getPendingForSeekerProvider,
+	listSeekerThreads,
+	listProviderInbox,
 	validateMessageBody,
-	type SendOrHoldResult
+	type SendOrHoldResult,
+	type ThreadSummary
 } from './infra/messaging-commands';
 import { getDevMessageState } from './infra/dev-message-state';
 
@@ -14,9 +17,12 @@ export {
 	releaseHeldMessagesForUser,
 	getThreadForSeekerProvider,
 	getPendingForSeekerProvider,
+	listSeekerThreads,
+	listProviderInbox,
 	validateMessageBody,
 	getDevMessageState,
-	type SendOrHoldResult
+	type SendOrHoldResult,
+	type ThreadSummary
 };
 export { handleEmailVerified } from './infra/subscriptions';
 

@@ -1,4 +1,4 @@
-import { and, eq, isNull, asc } from 'drizzle-orm';
+import { and, eq, isNull, asc, desc } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import { publish } from '../../../shared/outbox';
 import {
@@ -11,7 +11,8 @@ import {
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
-import { isEmailVerified } from '../../identity-and-access';
+import { isEmailVerified, getDisplayIdentity } from '../../identity-and-access';
+import { getOwnedProfileIdDb, getProfileOwnerDisplayName } from '../../provider-profile';
 import { messages, pendingMessages, threads } from './schema';
 
 const MAX_BODY_LENGTH = 4000;
@@ -257,4 +258,77 @@ export async function getPendingForSeekerProvider(
 		)
 		.limit(1);
 	return rows[0] ?? null;
+}
+
+export type ThreadSummary = {
+	threadId: ThreadId;
+	counterpartName: string;
+	lastMessagePreview: string;
+	lastActivityAt: Date;
+};
+
+async function latestMessagePreview(
+	db: Database,
+	threadId: string
+): Promise<{ body: string; sentAt: Date } | null> {
+	const rows = await db
+		.select({ body: messages.body, sentAt: messages.sentAt })
+		.from(messages)
+		.where(eq(messages.threadId, threadId))
+		.orderBy(desc(messages.sentAt))
+		.limit(1);
+	return rows[0] ?? null;
+}
+
+export async function listSeekerThreads(db: Database, seekerId: UserId): Promise<ThreadSummary[]> {
+	const threadRows = await db
+		.select({
+			id: threads.id,
+			providerProfileId: threads.providerProfileId,
+			lastActivityAt: threads.lastActivityAt
+		})
+		.from(threads)
+		.where(eq(threads.seekerId, seekerId))
+		.orderBy(desc(threads.lastActivityAt));
+
+	const summaries: ThreadSummary[] = [];
+	for (const row of threadRows) {
+		const preview = await latestMessagePreview(db, row.id);
+		const name = await getProfileOwnerDisplayName(db, row.providerProfileId as ProviderProfileId);
+		summaries.push({
+			threadId: row.id as ThreadId,
+			counterpartName: name,
+			lastMessagePreview: preview?.body ?? '',
+			lastActivityAt: row.lastActivityAt
+		});
+	}
+	return summaries;
+}
+
+export async function listProviderInbox(db: Database, ownerId: UserId): Promise<ThreadSummary[]> {
+	const profileId = await getOwnedProfileIdDb(db, ownerId);
+	if (!profileId) return [];
+
+	const threadRows = await db
+		.select({
+			id: threads.id,
+			seekerId: threads.seekerId,
+			lastActivityAt: threads.lastActivityAt
+		})
+		.from(threads)
+		.where(eq(threads.providerProfileId, profileId))
+		.orderBy(desc(threads.lastActivityAt));
+
+	const summaries: ThreadSummary[] = [];
+	for (const row of threadRows) {
+		const preview = await latestMessagePreview(db, row.id);
+		const seeker = await getDisplayIdentity(db, row.seekerId as UserId);
+		summaries.push({
+			threadId: row.id as ThreadId,
+			counterpartName: seeker.isDeleted ? 'Deleted account' : seeker.displayName,
+			lastMessagePreview: preview?.body ?? '',
+			lastActivityAt: row.lastActivityAt
+		});
+	}
+	return summaries;
 }

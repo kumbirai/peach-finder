@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import RoleSwitch from './RoleSwitch.svelte';
 
 	let {
 		current = 'search',
 		variant = 'auto'
 	}: {
-		current?: 'search' | 'messages' | 'profile';
+		current?: 'search' | 'messages' | 'profile' | 'provider';
 		variant?: 'auto' | 'tabs' | 'top';
 	} = $props();
 
 	const signedIn = $derived(page.data.signedIn === true);
+	const showRoleSwitch = $derived(page.data.capabilities?.isProvider === true);
+	const activeRole = $derived(page.data.activeRole ?? 'anonymous');
 </script>
 
 <nav class="nav nav-{variant}" aria-label="Primary">
@@ -17,7 +20,15 @@
 		<a class="logo title" href="/">peach·finder</a>
 		<a class="top-link" class:active={current === 'search'} href="/">Search</a>
 		<a class="top-link" class:active={current === 'messages'} href="/messages">Messages</a>
+		{#if showRoleSwitch}
+			<a class="top-link" class:active={current === 'provider'} href="/provider/dashboard"
+				>Dashboard</a
+			>
+		{/if}
 		<a class="top-link" class:active={current === 'profile'} href="/profile">Profile</a>
+		{#if showRoleSwitch}
+			<RoleSwitch {activeRole} />
+		{/if}
 		{#if signedIn}
 			<form class="sign-out" method="POST" action="/api/identity/logout">
 				<button type="submit" class="sign-out-btn label">Sign out</button>
@@ -43,6 +54,20 @@
 			</svg>
 			<span>Messages</span>
 		</a>
+		{#if showRoleSwitch}
+			<a class="tab" class:active={current === 'provider'} href="/provider/dashboard">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+					<rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="2" />
+					<path
+						d="M8 15V9M12 15V7M16 15v-4"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+					/>
+				</svg>
+				<span>Dashboard</span>
+			</a>
+		{/if}
 		<a class="tab" class:active={current === 'profile'} href="/profile">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" />
@@ -51,6 +76,11 @@
 			<span>Profile</span>
 		</a>
 	</div>
+	{#if showRoleSwitch}
+		<div class="mobile-role-switch">
+			<RoleSwitch {activeRole} />
+		</div>
+	{/if}
 </nav>
 
 <style>
@@ -64,6 +94,7 @@
 		gap: var(--space-lg);
 		padding: var(--space-md) var(--space-xl);
 		background: var(--color-cream);
+		flex-wrap: wrap;
 	}
 	.top-link {
 		font-family: var(--font-label-family);
@@ -110,17 +141,30 @@
 	.nav-top .top {
 		display: flex;
 	}
+	.nav-top .mobile-role-switch {
+		display: none;
+	}
 	.nav-tabs .top {
 		display: none;
 	}
 	.nav-tabs .tabs {
 		display: flex;
 	}
+	.mobile-role-switch {
+		display: flex;
+		justify-content: center;
+		padding: var(--space-sm) var(--space-md);
+		background: var(--color-cream);
+		border-top: 1px solid var(--color-divider);
+	}
 	@media (min-width: 768px) {
 		.nav-auto .top {
 			display: flex;
 		}
 		.nav-auto .tabs {
+			display: none;
+		}
+		.nav-auto .mobile-role-switch {
 			display: none;
 		}
 	}

@@ -36,6 +36,55 @@ export async function ownsProfileDb(db: Database, userId: UserId): Promise<boole
 	return rows.length > 0;
 }
 
+export async function getOwnedProfileId(userId: UserId): Promise<ProviderProfileId | null> {
+	return getOwnedProfileIdDb(getDb(), userId);
+}
+
+export async function getOwnedProfileIdDb(
+	db: Database,
+	userId: UserId
+): Promise<ProviderProfileId | null> {
+	const rows = await db
+		.select({ id: providerProfiles.id })
+		.from(providerProfiles)
+		.where(eq(providerProfiles.ownerId, userId))
+		.limit(1);
+	return rows[0] ? (rows[0].id as ProviderProfileId) : null;
+}
+
+export async function getProfileOwnerDisplayName(
+	db: Database,
+	providerProfileId: ProviderProfileId
+): Promise<string> {
+	const rows = await db
+		.select({ ownerId: providerProfiles.ownerId })
+		.from(providerProfiles)
+		.where(eq(providerProfiles.id, providerProfileId))
+		.limit(1);
+	const ownerId = rows[0]?.ownerId;
+	if (!ownerId) return 'Therapist';
+	const identity = await getDisplayIdentity(db, asId<'UserId'>(ownerId));
+	return identity.isDeleted ? 'Former user' : identity.displayName;
+}
+
+export async function getOwnedProfileDashboard(
+	db: Database,
+	userId: UserId
+): Promise<{ profileId: ProviderProfileId; displayName: string } | null> {
+	const rows = await db
+		.select({ id: providerProfiles.id })
+		.from(providerProfiles)
+		.where(eq(providerProfiles.ownerId, userId))
+		.limit(1);
+	const row = rows[0];
+	if (!row) return null;
+	const identity = await getDisplayIdentity(db, userId);
+	return {
+		profileId: row.id as ProviderProfileId,
+		displayName: identity.displayName
+	};
+}
+
 export async function getPublicProfile(
 	db: Database,
 	providerProfileId: ProviderProfileId,

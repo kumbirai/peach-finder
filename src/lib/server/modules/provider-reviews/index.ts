@@ -1,6 +1,12 @@
 import type { UserId } from '../../shared/ids';
+import {
+	listReviewsWrittenBySeeker,
+	countReviewsOnProfile,
+	type SeekerReviewSummary
+} from './infra/read-reviews';
 
-/** Wave 0 stub — populated by later waves. */
+export { listReviewsWrittenBySeeker, countReviewsOnProfile, type SeekerReviewSummary };
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

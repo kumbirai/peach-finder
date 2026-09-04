@@ -26,9 +26,9 @@ FR-ACC-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ACC-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-04 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Implemented FR-ACC-08 dual-role capability per identity LLD §4.2/§5.1 endpoint #19: `resolveCapabilities()` composes `ownsProfile` + `getUserCapabilities`; `GET /api/identity/me/capabilities` exposes the DTO. Role switch is explicit navigation via new `RoleSwitch.svelte` (Seeker → `/messages`, Provider → `/provider/dashboard`) shown in `Navigation.svelte` when `capabilities.isProvider`. Provider routes enforce `_requiredRole: 'provider'` on `/provider/dashboard`; seeker-side data loads on `/messages` (conversations + reviews written). Provider dashboard shows inbox threads + analytics stats only — no seeker threads/reviews. Seed pack extended with dual-role user `dual@example.com` / `password123` (Jordan B.) plus separated thread/review fixtures.
+
+**Deviation:** No new migration — uses existing `direct_messaging` and `provider_profile` tables from Wave 0/US-ACC-01/02. Minimal read helpers added to `direct-messaging` (`listSeekerThreads`, `listProviderInbox`) and `provider-reviews` (`listReviewsWrittenBySeeker`, `countReviewsOnProfile`) to prove UI separation; full messaging/analytics modules remain later-wave scope. Provider analytics headline numbers (profile views, search appearances) are seeded static values until `provider-analytics` lands — contact requests and reviews received are live counts from DB.
+
+**Verification:** `npm run check`, `lint`, `test` (64), `test:integration` (11 incl. `one-person-both-roles.integration.test.ts`), `boundaries`, `build`, `test:e2e` `e2e/one-person-both-roles.e2e.ts` (3/3, TC-ACC-04a + axe on messages/dashboard).
+
+**Follow-ups:** Wire live analytics aggregates when `provider-analytics` (Wave 4+) ships; thread detail routes when US-MSG stories land.

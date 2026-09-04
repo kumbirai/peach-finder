@@ -19,6 +19,8 @@ import {
 	suggestTerm
 } from '../src/lib/server/modules/discovery-search/infra/schema';
 import { areas } from '../src/lib/server/modules/platform-configuration/infra/schema';
+import { threads, messages } from '../src/lib/server/modules/direct-messaging/infra/schema';
+import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
 
 const PLACEHOLDER_CARD = '/placeholder-photo.svg';
 const PLACEHOLDER_GALLERY = '/placeholder-photo.svg';
@@ -316,6 +318,15 @@ const PROVIDERS: ProviderSeed[] = [
 
 const REVIEWER_ID = '01900000-0000-7000-8000-000000000099';
 
+export const SEED_DUAL_ROLE_USER_ID = '01900000-0000-7000-8000-000000000098';
+export const SEED_DUAL_ROLE_PROFILE_ID = '01900000-0000-7000-8000-000000000198';
+export const SEED_DUAL_ROLE_EMAIL = 'dual@example.com';
+export const SEED_DUAL_ROLE_PASSWORD = 'password123';
+export const SEED_DUAL_ROLE_SEEKER_THREAD_PREVIEW =
+	'Hi Amara — looking for a deep tissue session this week.';
+export const SEED_DUAL_ROLE_PROVIDER_INBOX_PREVIEW =
+	'Are you free this afternoon for a Swedish massage?';
+
 export async function seedCore(db: Database): Promise<void> {
 	for (const lang of LANGUAGE_SEED) {
 		await db.insert(languages).values(lang).onConflictDoNothing();
@@ -531,6 +542,168 @@ export async function seedCore(db: Database): Promise<void> {
 	for (const row of suggestRows) {
 		await db.insert(suggestTerm).values(row).onConflictDoNothing();
 	}
+
+	await seedDualRoleUser(db, areaBySlug, publishedAt);
+}
+
+async function seedDualRoleUser(
+	db: Database,
+	areaBySlug: Map<string, string>,
+	publishedAt: Date
+): Promise<void> {
+	const amara = PROVIDERS[0]!;
+	const thandi = PROVIDERS[1]!;
+	const areaId = areaBySlug.get('rosebank');
+	if (!areaId) throw new Error('missing area rosebank for dual-role seed');
+
+	const passwordHash = await hashPassword(SEED_DUAL_ROLE_PASSWORD);
+
+	await db
+		.insert(users)
+		.values({
+			id: SEED_DUAL_ROLE_USER_ID,
+			displayName: 'Jordan B.',
+			email: SEED_DUAL_ROLE_EMAIL,
+			emailVerifiedAt: new Date('2026-08-01T10:00:00Z'),
+			phone: '+27821234098',
+			phoneVerifiedAt: new Date('2026-08-01T10:00:00Z'),
+			passwordHash,
+			status: 'active'
+		})
+		.onConflictDoNothing();
+
+	const tag = TAG_SEED[1]!;
+
+	await db
+		.insert(providerProfiles)
+		.values({
+			id: SEED_DUAL_ROLE_PROFILE_ID,
+			ownerId: SEED_DUAL_ROLE_USER_ID,
+			areaId,
+			intro: 'Swedish and deep tissue — book as a seeker, practice as a provider.',
+			publishState: 'published',
+			phoneVisible: true,
+			firstPublishedAt: publishedAt,
+			createdAt: publishedAt,
+			updatedAt: publishedAt
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(services)
+		.values({
+			id: '01900000-0000-7000-8000-000000000598',
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			name: '60 minute session',
+			durationMinutes: 60,
+			priceCents: 70000,
+			sortOrder: 0
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(listings)
+		.values({
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			state: 'free_listed',
+			updatedAt: publishedAt
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(searchProjection)
+		.values({
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			ownerId: SEED_DUAL_ROLE_USER_ID,
+			displayName: 'Jordan B.',
+			searchText: 'Swedish and deep tissue dual role provider',
+			serviceTagIds: [tag.id],
+			languageCodes: ['en'],
+			areaId,
+			priceMinCents: 70000,
+			priceMaxCents: 70000,
+			availabilityState: 'available',
+			availabilitySetAt: new Date('2026-09-04T14:00:00Z'),
+			ratingAverage: null,
+			ratingCount: 0,
+			badgeIdentityVerified: false,
+			badgeActiveThisWeek: true,
+			isFeatured: false,
+			featuredSince: null,
+			lastActivityAt: new Date('2026-09-04T14:00:00Z'),
+			photoPrimaryUrl: PLACEHOLDER_CARD,
+			publishedAt,
+			updatedAt: publishedAt
+		})
+		.onConflictDoNothing();
+
+	const seekerThreadId = '01900000-0000-7000-8000-000000000881';
+	await db
+		.insert(threads)
+		.values({
+			id: seekerThreadId,
+			seekerId: SEED_DUAL_ROLE_USER_ID,
+			providerProfileId: amara.profileId,
+			createdAt: new Date('2026-09-03T10:00:00Z'),
+			lastActivityAt: new Date('2026-09-03T10:00:00Z')
+		})
+		.onConflictDoNothing();
+	await db
+		.insert(messages)
+		.values({
+			id: '01900000-0000-7000-8000-000000000882',
+			threadId: seekerThreadId,
+			senderId: SEED_DUAL_ROLE_USER_ID,
+			body: SEED_DUAL_ROLE_SEEKER_THREAD_PREVIEW,
+			sentAt: new Date('2026-09-03T10:00:00Z')
+		})
+		.onConflictDoNothing();
+
+	const providerThreadId = '01900000-0000-7000-8000-000000000883';
+	await db
+		.insert(threads)
+		.values({
+			id: providerThreadId,
+			seekerId: REVIEWER_ID,
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			createdAt: new Date('2026-09-03T11:00:00Z'),
+			lastActivityAt: new Date('2026-09-03T11:00:00Z')
+		})
+		.onConflictDoNothing();
+	await db
+		.insert(messages)
+		.values({
+			id: '01900000-0000-7000-8000-000000000884',
+			threadId: providerThreadId,
+			senderId: REVIEWER_ID,
+			body: SEED_DUAL_ROLE_PROVIDER_INBOX_PREVIEW,
+			sentAt: new Date('2026-09-03T11:00:00Z')
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(reviews)
+		.values({
+			id: '01900000-0000-7000-8000-000000000885',
+			providerProfileId: thandi.profileId,
+			reviewerId: SEED_DUAL_ROLE_USER_ID,
+			rating: 5,
+			body: 'Great Swedish session — seeker review only.',
+			createdAt: new Date('2026-08-15T12:00:00Z')
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(reviews)
+		.values({
+			id: '01900000-0000-7000-8000-000000000886',
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			reviewerId: REVIEWER_ID,
+			rating: 4,
+			body: 'Professional and welcoming studio.',
+			createdAt: new Date('2026-08-20T12:00:00Z')
+		})
+		.onConflictDoNothing();
 }
 
 export const SEED_CORE_PRIMARY_PROFILE_ID = PROVIDERS[0]!.profileId;
