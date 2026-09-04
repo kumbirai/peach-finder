@@ -1,35 +1,113 @@
 <script lang="ts">
-	import Card from '$lib/components/Card.svelte';
+	import { goto } from '$app/navigation';
+	import Button from '$lib/components/Button.svelte';
+	import Chip from '$lib/components/Chip.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import OnboardingStepper from '$lib/components/onboarding/OnboardingStepper.svelte';
+	import StepTip from '$lib/components/onboarding/StepTip.svelte';
+
+	const INTRO_LIMIT = 600;
 
 	type OnboardingStep = 'photos' | 'intro' | 'services' | 'languages' | 'area' | 'publish';
-
-	type ProfileData = {
-		onboarding: {
-			steps: Array<{ step: OnboardingStep; complete: boolean }>;
-			currentStep: OnboardingStep;
-		};
-	};
-
-	const STEP_LABELS: Record<string, string> = {
-		photos: 'Add at least one photo',
-		intro: 'Write your introduction',
-		services: 'Add your services and pricing',
-		languages: 'Set your languages spoken',
-		area: 'Confirm your general area',
-		publish: 'Review and publish'
-	};
+	type AreaOption = { id: string; name: string };
+	type LanguageOption = { code: string; name: string };
+	type TagOption = { id: string; name: string; slug: string };
 
 	let {
-		data
+		data,
+		form
 	}: {
-		data: { profile: ProfileData };
+		data: {
+			profile: {
+				intro: string | null;
+				areaId: string | null;
+				areaName: string | null;
+				readiness: { ready: boolean };
+				onboarding: {
+					steps: Array<{ step: OnboardingStep; complete: boolean }>;
+				};
+				photos: Array<{ id: string; isPrimary: boolean; cardUrl: string }>;
+				services: Array<{
+					name: string;
+					durationMinutes: number;
+					priceCents: number;
+				}>;
+				languageCodes: string[];
+				selectedTagIds: string[];
+			};
+			activeStep: OnboardingStep;
+			missingSummary: string;
+			areas: AreaOption[];
+			languages: LanguageOption[];
+			serviceTags: TagOption[];
+		};
+		form?: {
+			issues?: Array<{ path: string; message: string }>;
+			intro?: string;
+			message?: string;
+		};
 	} = $props();
 
-	const completedCount = $derived(
+	let activeStep = $derived(data.activeStep);
+	let introValue = $state('');
+	let serviceName = $state('');
+	let durationMinutes = $state('60');
+	let priceRands = $state('');
+	let selectedAreaId = $state('');
+	let selectedLanguages = $state<string[]>([]);
+	let selectedTags = $state<string[]>([]);
+
+	$effect(() => {
+		if (form?.intro !== undefined) {
+			introValue = form.intro;
+			return;
+		}
+		if (activeStep === 'intro') {
+			introValue = data.profile.intro ?? '';
+		}
+		if (activeStep === 'area') {
+			selectedAreaId = data.profile.areaId ?? data.areas[0]?.id ?? '';
+		}
+		if (activeStep === 'languages') {
+			selectedLanguages = [...data.profile.languageCodes];
+		}
+		if (activeStep === 'services') {
+			selectedTags = [...data.profile.selectedTagIds];
+		}
+	});
+
+	const completedEssentials = $derived(
 		data.profile.onboarding.steps.filter((s) => s.complete && s.step !== 'publish').length
 	);
-	const totalEssentials = 5;
+	const introLength = $derived(introValue.length);
+
+	function selectStep(step: OnboardingStep) {
+		goto(`/provider/onboarding?step=${step}`);
+	}
+
+	function goBack() {
+		const index = data.profile.onboarding.steps.findIndex((s) => s.step === activeStep);
+		if (index > 0) {
+			const prior = data.profile.onboarding.steps[index - 1];
+			if (prior) selectStep(prior.step);
+		}
+	}
+
+	function toggleLanguage(code: string) {
+		selectedLanguages = selectedLanguages.includes(code)
+			? selectedLanguages.filter((c) => c !== code)
+			: [...selectedLanguages, code];
+	}
+
+	function toggleTag(id: string) {
+		selectedTags = selectedTags.includes(id)
+			? selectedTags.filter((t) => t !== id)
+			: [...selectedTags, id];
+	}
+
+	function formatPrice(cents: number): string {
+		return `R${(cents / 100).toFixed(0)}`;
+	}
 </script>
 
 <svelte:head>
@@ -41,69 +119,286 @@
 <main class="page">
 	<h1 class="display">Set up your profile</h1>
 	<p class="body intro">
-		{completedCount} of {totalEssentials} essentials complete. Pick up where you left off — your progress
-		is saved.
+		{completedEssentials} of 5 essentials complete. Pick up where you left off — your progress is saved.
 	</p>
 
 	<div class="progress-track" aria-hidden="true">
-		<div class="progress-fill" style:width={`${(completedCount / totalEssentials) * 100}%`}></div>
+		<div class="progress-fill" style:width={`${(completedEssentials / 5) * 100}%`}></div>
 	</div>
 
-	<Card>
-		<ul class="checklist" aria-label="Profile setup checklist">
-			{#each data.profile.onboarding.steps as item (item.step)}
-				<li class="checklist-item" data-complete={item.complete}>
-					<span class="check-circle" aria-hidden="true">
-						{#if item.complete}
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-								<path
-									d="M20 6L9 17l-5-5"
-									stroke="currentColor"
-									stroke-width="3"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						{/if}
-					</span>
-					<span class="label">{STEP_LABELS[item.step] ?? item.step}</span>
-					{#if item.step === data.profile.onboarding.currentStep && !item.complete}
-						<span class="current label">Current step</span>
-					{/if}
-				</li>
-			{/each}
-		</ul>
-	</Card>
+	<div class="onboarding-shell">
+		<OnboardingStepper
+			steps={data.profile.onboarding.steps}
+			currentStep={activeStep}
+			onSelect={selectStep}
+		/>
 
-	<p class="body hint">
-		Full step-by-step editing arrives in the next release. Your draft profile is ready — complete
-		each item above to publish when you are ready.
-	</p>
+		<div class="step-content">
+			{#if form?.message}
+				<p class="form-error" role="alert">{form.message}</p>
+			{/if}
+
+			{#if activeStep === 'photos'}
+				<h2 class="headline step-title">Add your photos</h2>
+				<StepTip>
+					Profiles with 3 or more photos get noticeably more messages. Use good natural light, no
+					filters, and show your actual treatment space — it is what makes a seeker comfortable
+					messaging first.
+				</StepTip>
+				<div class="upload-grid">
+					{#each data.profile.photos as photo (photo.id)}
+						<div class="upload-thumb">
+							<img src={photo.cardUrl} alt="" class="thumb-img" />
+							{#if photo.isPrimary}
+								<span class="primary-tag label">Primary</span>
+							{/if}
+						</div>
+					{/each}
+					{#if data.profile.photos.length < 12}
+						<form method="POST" action="?/savePhoto" class="upload-form">
+							<button type="submit" class="upload-dropzone">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+									<path
+										d="M12 5v14M5 12h14"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+									/>
+								</svg>
+								Add photo
+							</button>
+						</form>
+					{/if}
+				</div>
+				<div class="onboarding-actions">
+					<span></span>
+					{#if data.profile.photos.length > 0}
+						<Button variant="primary" type="button" onclick={() => selectStep('intro')}>
+							Continue
+						</Button>
+					{/if}
+				</div>
+			{:else if activeStep === 'intro'}
+				<h2 class="headline step-title">Write your introduction</h2>
+				<StepTip>
+					Mention your specialties and what a session with you feels like. "8 years treating sports
+					injuries, calm and focused sessions" tells a seeker more than "experienced and
+					professional."
+				</StepTip>
+				<form method="POST" action="?/saveIntro" class="step-form">
+					<label class="field-label" for="introField">Short introduction</label>
+					<textarea
+						class="field-textarea"
+						id="introField"
+						name="intro"
+						maxlength={INTRO_LIMIT}
+						bind:value={introValue}
+						required></textarea>
+					<div class="char-counter label" aria-live="polite">
+						<span>{introLength}</span> / {INTRO_LIMIT}
+					</div>
+					{#if form?.issues}
+						{#each form.issues as issue (issue.path)}
+							<p class="form-error" role="alert">{issue.message}</p>
+						{/each}
+					{/if}
+					<div class="onboarding-actions">
+						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+						<Button variant="primary" type="submit">Continue</Button>
+					</div>
+				</form>
+			{:else if activeStep === 'services'}
+				<h2 class="headline step-title">Add your services</h2>
+				<StepTip>
+					Each service needs a duration and a price so seekers can compare at a glance. You need at
+					least one to publish.
+				</StepTip>
+				{#if data.profile.services.length > 0}
+					<ul class="saved-services">
+						{#each data.profile.services as service (service.name)}
+							<li class="body">
+								{service.name} — {service.durationMinutes} min — {formatPrice(service.priceCents)}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<form method="POST" action="?/saveService" class="step-form">
+					<div class="service-row">
+						<div>
+							<label class="field-label" for="serviceName">Service name</label>
+							<input
+								class="field-input"
+								id="serviceName"
+								name="name"
+								bind:value={serviceName}
+								required
+							/>
+						</div>
+						<div>
+							<label class="field-label" for="durationMinutes">Duration (minutes)</label>
+							<input
+								class="field-input"
+								id="durationMinutes"
+								name="durationMinutes"
+								type="number"
+								min="1"
+								max="600"
+								bind:value={durationMinutes}
+								required
+							/>
+						</div>
+						<div>
+							<label class="field-label" for="priceRands">Price (Rands)</label>
+							<input
+								class="field-input"
+								id="priceRands"
+								name="priceRands"
+								type="number"
+								min="0"
+								step="1"
+								bind:value={priceRands}
+								required
+							/>
+						</div>
+					</div>
+					<p class="field-label">Service tags</p>
+					<div class="chip-row">
+						{#each data.serviceTags as tag (tag.id)}
+							<Chip selected={selectedTags.includes(tag.id)} onclick={() => toggleTag(tag.id)}>
+								{tag.name}
+							</Chip>
+						{/each}
+					</div>
+					{#each selectedTags as tagId (tagId)}
+						<input type="hidden" name="tagIds" value={tagId} />
+					{/each}
+					<div class="onboarding-actions">
+						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+						<Button variant="primary" type="submit">Continue</Button>
+					</div>
+				</form>
+			{:else if activeStep === 'languages'}
+				<h2 class="headline step-title">Languages you speak</h2>
+				<StepTip>
+					Seekers can filter and search by language, so this directly affects who finds you.
+				</StepTip>
+				<form method="POST" action="?/saveLanguages" class="step-form">
+					<div class="chip-row">
+						{#each data.languages as lang (lang.code)}
+							<Chip
+								selected={selectedLanguages.includes(lang.code)}
+								onclick={() => toggleLanguage(lang.code)}
+							>
+								{lang.name}
+							</Chip>
+						{/each}
+					</div>
+					{#each selectedLanguages as code (code)}
+						<input type="hidden" name="codes" value={code} />
+					{/each}
+					<div class="onboarding-actions">
+						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+						<Button variant="primary" type="submit" disabled={selectedLanguages.length === 0}>
+							Continue
+						</Button>
+					</div>
+				</form>
+			{:else if activeStep === 'area'}
+				<h2 class="headline step-title">Confirm your general area</h2>
+				<StepTip>
+					Only your general suburb or area is ever shown publicly. Your exact address is never
+					displayed or stored for display — you share precise directions yourself, in messaging,
+					once you have agreed to see someone.
+				</StepTip>
+				<form method="POST" action="?/saveArea" class="step-form">
+					<label class="field-label" for="areaField">General area / suburb</label>
+					<select
+						class="field-input"
+						id="areaField"
+						name="areaId"
+						bind:value={selectedAreaId}
+						required
+					>
+						{#each data.areas as area (area.id)}
+							<option value={area.id}>{area.name}</option>
+						{/each}
+					</select>
+					<div class="onboarding-actions">
+						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+						<Button variant="primary" type="submit">Continue</Button>
+					</div>
+				</form>
+			{:else if activeStep === 'publish'}
+				<h2 class="headline step-title">Review and publish</h2>
+				<div class="review-row">
+					<span class="label">Photos</span>
+					<span class="body value">{data.profile.photos.length} added</span>
+				</div>
+				<div class="review-row">
+					<span class="label">Introduction</span>
+					<span class="body value">{introLength} / {INTRO_LIMIT} characters</span>
+				</div>
+				<div class="review-row">
+					<span class="label">Services</span>
+					<span class="body value">{data.profile.services.length} added</span>
+				</div>
+				<div class="review-row">
+					<span class="label">Languages</span>
+					<span class="body value">
+						{data.languages
+							.filter((l) => data.profile.languageCodes.includes(l.code))
+							.map((l) => l.name)
+							.join(', ') || 'None yet'}
+					</span>
+				</div>
+				<div class="review-row">
+					<span class="label">Area</span>
+					<span class="body value">{data.profile.areaName ?? 'Not set'}</span>
+				</div>
+				{#if !data.profile.readiness.ready}
+					<p class="readiness-blocked body" role="status">
+						Publish is blocked until you complete: {data.missingSummary}.
+					</p>
+				{/if}
+				<StepTip>
+					Your profile goes live immediately when you publish — there is no review step. You can
+					unpublish it yourself at any time, with no data lost.
+				</StepTip>
+				<div class="onboarding-actions">
+					<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+					{#if data.profile.readiness.ready}
+						<Button variant="primary" href="/provider/dashboard">Finish setup</Button>
+					{:else}
+						<Button variant="primary" disabled>Complete essentials first</Button>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</div>
 </main>
 
 <style>
 	.page {
-		max-width: 40rem;
+		max-width: 56rem;
 		margin: 0 auto;
 		padding: var(--space-xl) var(--space-md);
 		display: grid;
 		gap: var(--space-lg);
 	}
-	.intro,
-	.hint {
+	.intro {
 		margin: 0;
 		color: var(--color-stone);
 	}
 	.progress-track {
 		height: 6px;
-		border-radius: 999px;
+		border-radius: var(--radius-pill);
 		background: var(--color-divider);
 		overflow: hidden;
 	}
 	.progress-fill {
 		height: 100%;
 		background: var(--color-peach-deep);
-		border-radius: 999px;
+		border-radius: var(--radius-pill);
 		transition: width 0.25s ease;
 	}
 	@media (prefers-reduced-motion: reduce) {
@@ -111,36 +406,169 @@
 			transition: none;
 		}
 	}
-	.checklist {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: grid;
-		gap: var(--space-sm);
-	}
-	.checklist-item {
+	.onboarding-shell {
 		display: flex;
-		align-items: center;
-		gap: var(--space-sm);
+		flex-direction: column;
+		gap: var(--space-lg);
+	}
+	@media (min-width: 768px) {
+		.onboarding-shell {
+			flex-direction: row;
+			align-items: flex-start;
+		}
+	}
+	.step-content {
+		flex: 1;
+		background: var(--color-paper);
+		border-radius: var(--radius-lg);
+		padding: var(--space-lg);
+		box-shadow: var(--shadow-rest);
+		min-width: 0;
+	}
+	.step-title {
+		margin: 0 0 var(--space-sm);
+		font-size: 1.5rem;
+	}
+	.field-label {
+		display: block;
+		font-weight: 600;
+		font-size: 0.9375rem;
+		margin: var(--space-md) 0 6px;
+	}
+	.field-input,
+	.field-textarea {
+		width: 100%;
+		border: 1px solid var(--color-stone);
+		border-radius: var(--radius-md);
+		padding: 12px 14px;
+		font-family: var(--font-body-family);
+		font-size: 1rem;
+		color: var(--color-ink);
+		background: var(--color-cream);
 		min-height: 44px;
 	}
-	.check-circle {
-		width: 24px;
-		height: 24px;
-		border-radius: 999px;
-		border: 2px solid var(--color-divider);
-		display: inline-flex;
+	.field-input:focus,
+	.field-textarea:focus {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+		border-color: var(--color-peach-deep);
+	}
+	.field-textarea {
+		resize: vertical;
+		min-height: 110px;
+	}
+	.char-counter {
+		text-align: right;
+		margin-top: 4px;
+		color: var(--color-stone);
+	}
+	.upload-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+		gap: var(--space-sm);
+	}
+	.upload-form {
+		display: contents;
+	}
+	.upload-dropzone {
+		aspect-ratio: 1 / 1;
+		border: 1.5px dashed var(--color-divider);
+		border-radius: var(--radius-md);
+		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		flex-shrink: 0;
-		color: var(--color-verified);
+		gap: 4px;
+		color: var(--color-stone);
+		background: none;
+		font-family: var(--font-body-family);
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		min-height: 44px;
+		width: 100%;
 	}
-	.checklist-item[data-complete='true'] .check-circle {
-		border-color: var(--color-verified);
-		background: color-mix(in srgb, var(--color-verified) 12%, transparent);
-	}
-	.current {
-		margin-left: auto;
+	.upload-dropzone:hover {
+		border-color: var(--color-peach-deep);
 		color: var(--color-peach-deep);
+	}
+	.upload-dropzone:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+	}
+	.upload-thumb {
+		position: relative;
+		aspect-ratio: 1 / 1;
+		border-radius: var(--radius-md);
+		background: linear-gradient(155deg, var(--color-blush) 0%, #ecd2bd 100%);
+		overflow: hidden;
+	}
+	.thumb-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.primary-tag {
+		position: absolute;
+		bottom: 4px;
+		left: 4px;
+		background: var(--color-ink);
+		color: var(--color-paper);
+		font-size: 0.625rem;
+		padding: 2px 6px;
+		border-radius: var(--radius-pill);
+	}
+	.service-row {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1fr;
+		gap: var(--space-sm);
+		margin-bottom: var(--space-sm);
+	}
+	@media (max-width: 560px) {
+		.service-row {
+			grid-template-columns: 1fr;
+		}
+	}
+	.chip-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
+		margin-bottom: var(--space-md);
+	}
+	.onboarding-actions {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-sm);
+		margin-top: var(--space-xl);
+		padding-top: var(--space-lg);
+		border-top: 1px solid var(--color-divider);
+	}
+	.review-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-md);
+		padding: var(--space-sm) 0;
+		border-bottom: 1px solid var(--color-divider);
+	}
+	.value {
+		color: var(--color-stone);
+	}
+	.readiness-blocked {
+		margin: var(--space-md) 0 0;
+		color: var(--color-peach-deep);
+		font-weight: 600;
+	}
+	.form-error {
+		color: var(--color-error);
+		margin: 0 0 var(--space-sm);
+	}
+	.saved-services {
+		margin: 0 0 var(--space-md);
+		padding-left: var(--space-lg);
+		color: var(--color-stone);
+	}
+	.step-form {
+		display: block;
 	}
 </style>

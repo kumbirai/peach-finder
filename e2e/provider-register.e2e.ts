@@ -33,7 +33,7 @@ test.describe('US-PONB-01 register as a provider', () => {
 
 		await expect(page).toHaveURL(/\/provider\/onboarding/, { timeout: 15_000 });
 		await expect(page.getByRole('heading', { name: 'Set up your profile' })).toBeVisible();
-		await expect(page.getByRole('list', { name: 'Profile setup checklist' })).toBeVisible();
+		await expect(page.getByRole('navigation', { name: 'Profile setup checklist' })).toBeVisible();
 	});
 
 	test('TC-PONB-01c: form values survive OTP failure', async ({ page, request }) => {

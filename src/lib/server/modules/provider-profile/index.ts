@@ -121,6 +121,23 @@ export async function listPublishedProfileIds(db: Database): Promise<ProviderPro
 export { unpublishProfileForOwner } from './infra/unpublish-profile';
 export { createDraftProfile } from './infra/create-draft-profile';
 export { loadOwnerProfile, type OwnerProfileDto } from './infra/read-owner-profile';
+export {
+	updateIntro,
+	updateArea,
+	addService,
+	setLanguages,
+	setServiceTags,
+	attachOnboardingPhoto,
+	listActiveLanguages,
+	listActiveServiceTags
+} from './infra/profile-commands';
+export { formatMissingFields, MISSING_FIELD_LABELS } from './domain/missing-field-labels';
+export { INTRO_MAX_LENGTH, validateIntro } from './domain/intro-policy';
+export {
+	ONBOARDING_STEPS,
+	type OnboardingStep,
+	type MissingField
+} from './domain/publish-readiness';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

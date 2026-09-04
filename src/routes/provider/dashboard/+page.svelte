@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 
 	let {
@@ -35,6 +36,14 @@
 	</p>
 
 	{#if data.profile && data.analytics}
+		<section class="section" aria-labelledby="setup-heading">
+			<h2 id="setup-heading" class="title">Profile setup</h2>
+			<Card>
+				<p class="body">Finish your profile so seekers can find and contact you.</p>
+				<Button variant="primary" href="/provider/onboarding">Continue setup</Button>
+			</Card>
+		</section>
+
 		<section class="section" aria-labelledby="inbox-heading">
 			<h2 id="inbox-heading" class="title">Messages from seekers</h2>
 			{#if data.inbox.length === 0}

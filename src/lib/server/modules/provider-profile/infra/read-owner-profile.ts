@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId, UserId } from '../../../shared/ids';
 import {
@@ -7,7 +7,22 @@ import {
 	type MissingField,
 	type OnboardingStep
 } from '../domain/publish-readiness';
-import { providerLanguages, providerPhotos, providerProfiles, services } from './schema';
+import { providerLanguages, providerProfiles, providerServiceTags, services } from './schema';
+
+export type OwnerProfilePhoto = {
+	id: string;
+	photoId: string;
+	isPrimary: boolean;
+	cardUrl: string;
+};
+
+export type OwnerProfileService = {
+	id: string;
+	name: string;
+	description: string | null;
+	durationMinutes: number;
+	priceCents: number;
+};
 
 export type OwnerProfileDto = {
 	profileId: ProviderProfileId;
@@ -15,11 +30,16 @@ export type OwnerProfileDto = {
 	phoneVisible: boolean;
 	intro: string | null;
 	areaId: string | null;
+	areaName: string | null;
 	readiness: { ready: boolean; missing: MissingField[] };
 	onboarding: {
 		steps: Array<{ step: OnboardingStep; complete: boolean }>;
 		currentStep: OnboardingStep;
 	};
+	photos: OwnerProfilePhoto[];
+	services: OwnerProfileService[];
+	languageCodes: string[];
+	selectedTagIds: string[];
 };
 
 export async function loadOwnerProfile(
@@ -43,26 +63,44 @@ export async function loadOwnerProfile(
 
 	const profileId = profile.id as ProviderProfileId;
 
-	const [photoRows, serviceRows, languageRows] = await Promise.all([
+	const [photoRows, serviceRows, languageRows, tagRows, areaRow] = await Promise.all([
+		db.execute<{ id: string; photo_id: string; is_primary: boolean; card_url: string }>(sql`
+			select pp.id, pp.photo_id, pp.is_primary, coalesce(mp.card_url, '/placeholder-photo.svg') as card_url
+			from provider_profile.provider_photo pp
+			left join media_processing.photo mp on mp.id = pp.photo_id
+			where pp.provider_profile_id = ${profileId}::uuid
+			  and pp.status = 'ready'
+			order by pp.sort_order
+		`),
 		db
-			.select({ count: sql<number>`count(*)::int` })
-			.from(providerPhotos)
-			.where(
-				and(eq(providerPhotos.providerProfileId, profileId), eq(providerPhotos.status, 'ready'))
-			),
-		db
-			.select({ count: sql<number>`count(*)::int` })
+			.select({
+				id: services.id,
+				name: services.name,
+				description: services.description,
+				durationMinutes: services.durationMinutes,
+				priceCents: services.priceCents
+			})
 			.from(services)
-			.where(eq(services.providerProfileId, profileId)),
+			.where(eq(services.providerProfileId, profileId))
+			.orderBy(services.sortOrder),
 		db
-			.select({ count: sql<number>`count(*)::int` })
+			.select({ code: providerLanguages.languageCode })
 			.from(providerLanguages)
-			.where(eq(providerLanguages.providerProfileId, profileId))
+			.where(eq(providerLanguages.providerProfileId, profileId)),
+		db
+			.select({ tagId: providerServiceTags.serviceTagId })
+			.from(providerServiceTags)
+			.where(eq(providerServiceTags.providerProfileId, profileId)),
+		profile.areaId
+			? db.execute<{ name: string }>(sql`
+					select name from platform_configuration.area where id = ${profile.areaId}::uuid limit 1
+				`)
+			: Promise.resolve({ rows: [] as { name: string }[] })
 	]);
 
-	const readyPhotoCount = photoRows[0]?.count ?? 0;
-	const pricedServiceCount = serviceRows[0]?.count ?? 0;
-	const languageCount = languageRows[0]?.count ?? 0;
+	const readyPhotoCount = photoRows.length;
+	const pricedServiceCount = serviceRows.length;
+	const languageCount = languageRows.length;
 	const hasArea = profile.areaId != null;
 	const intro = profile.intro;
 
@@ -102,7 +140,30 @@ export async function loadOwnerProfile(
 		phoneVisible: profile.phoneVisible,
 		intro,
 		areaId: profile.areaId,
+		areaName: (areaRow as { name: string }[])[0]?.name ?? null,
 		readiness: readiness.ready ? { ready: true, missing: [] } : readiness,
-		onboarding: { steps, currentStep }
+		onboarding: { steps, currentStep },
+		photos: (
+			photoRows as Array<{
+				id: string;
+				photo_id: string;
+				is_primary: boolean;
+				card_url: string;
+			}>
+		).map((row) => ({
+			id: row.id,
+			photoId: row.photo_id,
+			isPrimary: row.is_primary,
+			cardUrl: row.card_url
+		})),
+		services: serviceRows.map((row) => ({
+			id: row.id,
+			name: row.name,
+			description: row.description,
+			durationMinutes: row.durationMinutes,
+			priceCents: row.priceCents
+		})),
+		languageCodes: languageRows.map((row) => row.code),
+		selectedTagIds: tagRows.map((row) => row.tagId)
 	};
 }

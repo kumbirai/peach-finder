@@ -1,6 +1,6 @@
 ---
 title: DDD — US-PONB-02 — Guided onboarding that converts
-updated: 2026-09-04
+updated: 2026-09-05
 ---
 
 # US-PONB-02 — Guided onboarding that converts
@@ -27,9 +27,9 @@ FR-UX-07, FR-PROF-02.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,4 +45,20 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - All acceptance criteria in section 2 verified against the live-seeded stack (`seed-core` or the relevant seed pack) — no stubbed HTTP, no `page.route` interception, per this project's live-stack-seeded testing convention.
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-02 cross-references this DDD (applied in the stage-9 traceability pass).
-- No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+- Implementation complete on `feat/initial-implementation` (uncommitted; driver owns commits).
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Replaced the US-PONB-01 read-only checklist placeholder with a six-step onboarding wizard at `/provider/onboarding` (photos → intro → services → languages → area → publish), matching the prototype stepper layout and per-step conversion tips. Server-driven resumability uses `firstIncompleteOnboardingStep` / `computePublishReadiness` from `provider-profile/domain/publish-readiness.ts`; the active step is overridable via `?step=` while still defaulting to the first incomplete step on return. Extended `loadOwnerProfile` with gallery, services, languages, tags, and area name for the review step.
+
+**Backend:** Added `profile-commands.ts` with `updateIntro`, `updateArea`, `addService`, `setLanguages`, `setServiceTags`, and `attachOnboardingPhoto` (creates `media_processing.photo` + `provider_photo` rows with placeholder URLs — interim until US-PONB-03 wires real upload/processing). API routes: `PATCH /api/provider/profile`, `PUT …/area`, `POST …/services`, `PUT …/languages`, `PUT …/tags`, `POST …/photos`, `GET /api/provider/languages`, `GET /api/provider/service-tags`. Form actions on the onboarding page mirror the same commands for progressive enhancement. `ProfileUpdated` / `PhotoAdded` outbox events published on writes.
+
+**Frontend:** `OnboardingStepper.svelte`, `StepTip.svelte`, design-system `Button`/`Chip`/`Card` tokens; dashboard "Continue setup" links to onboarding. Publish step shows review rows plus a plain-language blocked message listing missing minimum fields (`formatMissingFields`).
+
+**Tests:** Unit (`intro-policy`, `service-policy`, existing `publish-readiness`); integration `guided-onboarding.integration.test.ts` (TC-PONB-02a/b logic); E2E `e2e/provider-onboarding-guided.e2e.ts` (TC-PONB-02a/b + axe). Verified: `check`, `lint`, `test` (82), `test:integration` (26), `boundaries`, `build`, onboarding + register E2E (6/6).
+
+**Deviations:** Photo attach uses placeholder image URLs and synchronous ready status (no `media-processing` upload pipeline) — sufficient for onboarding progress/readiness until US-PONB-03. Actual publish action remains US-PONB-04; publish step ends with "Finish setup" → dashboard when readiness passes. `?step=publish` is allowed before all essentials are complete so providers can inspect the readiness gate (TC-PONB-02b).
+
+**Follow-ups:** US-PONB-03 replaces placeholder photo attach with real upload/EXIF strip; US-PONB-04 adds `POST …/publish` and live listing.
