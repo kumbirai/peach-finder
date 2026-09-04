@@ -60,6 +60,19 @@ export function storeDevPasswordResetToken(email: string, rawToken: string): voi
 	}
 }
 
+const devOtpStore = new Map<string, string>();
+
+export function storeDevOtpCode(otpId: string, rawCode: string): void {
+	if (process.env.ALLOW_DEV_HELPERS === '1') {
+		devOtpStore.set(otpId, rawCode);
+	}
+}
+
+export function getDevOtpCode(otpId: string): string | null {
+	if (process.env.ALLOW_DEV_HELPERS !== '1') return null;
+	return devOtpStore.get(otpId) ?? null;
+}
+
 const devResetTokenStore = new Map<string, string>();
 
 export async function findUserIdByEmail(db: Database, email: string): Promise<UserId | null> {

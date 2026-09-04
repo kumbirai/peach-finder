@@ -2,6 +2,7 @@ import {
 	boolean,
 	index,
 	inet,
+	integer,
 	pgSchema,
 	text,
 	timestamp,
@@ -81,6 +82,37 @@ export const passwordResetTokens = identitySchema.table(
 	},
 	(table) => [index('prt_user_idx').on(table.userId), index('prt_expiry_idx').on(table.expiresAt)]
 );
+
+export const phoneOtps = identitySchema.table(
+	'phone_otp',
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		phone: text('phone').notNull(),
+		codeHash: text('code_hash').notNull(),
+		purpose: text('purpose').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+		attemptCount: integer('attempt_count').notNull().default(0),
+		consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'date' })
+	},
+	(table) => [
+		index('phone_otp_user_idx').on(table.userId),
+		index('phone_otp_expiry_idx').on(table.expiresAt)
+	]
+);
+
+export const phoneRegistryHistory = identitySchema.table('phone_registry_history', {
+	phoneHash: text('phone_hash').primaryKey(),
+	firstRegisteredAt: timestamp('first_registered_at', { withTimezone: true, mode: 'date' })
+		.notNull()
+		.defaultNow(),
+	lastRegisteredAt: timestamp('last_registered_at', { withTimezone: true, mode: 'date' })
+		.notNull()
+		.defaultNow()
+});
 
 export const sessions = identitySchema.table(
 	'session',

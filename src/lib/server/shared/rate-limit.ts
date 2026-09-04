@@ -60,6 +60,36 @@ export function bucketSpec(
 	};
 }
 
+/** SR-INT-02 / security-implementation.md §5.2 — phone 3/h & 10/day, IP 10/h. */
+export async function consumeOtpRequestRateLimits(
+	db: Database,
+	input: { phone: string; ip: string },
+	now: Date
+): Promise<Result<void, UseCaseError>> {
+	const ipLimited = await consumeRateLimit(
+		db,
+		bucketSpec('otp_request', 60 * 60_000, 10),
+		`ip:${input.ip}`,
+		now
+	);
+	if (!ipLimited.ok) return ipLimited;
+
+	const phoneHour = await consumeRateLimit(
+		db,
+		bucketSpec('otp_request', 60 * 60_000, 3),
+		`phone:${input.phone}`,
+		now
+	);
+	if (!phoneHour.ok) return phoneHour;
+
+	return consumeRateLimit(
+		db,
+		bucketSpec('otp_request', 24 * 60 * 60_000, 10),
+		`phone:${input.phone}`,
+		now
+	);
+}
+
 export async function consumeRateLimit(
 	db: Database,
 	spec: BucketSpec,

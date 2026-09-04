@@ -38,6 +38,23 @@ export {
 	type RegisterSeekerInput,
 	type LoginPasswordResult
 } from './infra/auth-commands';
+export {
+	registerProvider,
+	requestOtp,
+	verifyOtp,
+	isPhoneVerified,
+	type RegisterProviderInput,
+	type RegisterProviderResult,
+	type RequestOtpInput,
+	type VerifyOtpInput,
+	type VerifyOtpResult
+} from './infra/otp-commands';
+export {
+	getDevVerificationToken,
+	getDevPasswordResetToken,
+	getDevOtpCode,
+	findUserIdByEmail
+} from './infra/dev-verification';
 import { deleteAccount, anonymizePendingUsers } from './infra/account-deletion';
 export { deleteAccount, anonymizePendingUsers };
 import { getUserCapabilities } from './infra/session-commands';
@@ -61,11 +78,6 @@ export {
 	fetchGoogleUserInfo,
 	type GoogleUserInfo
 } from './infra/oauth-google';
-export {
-	getDevVerificationToken,
-	getDevPasswordResetToken,
-	findUserIdByEmail
-} from './infra/dev-verification';
 import { randomBytes } from 'node:crypto';
 
 export const ANON_COOKIE = 'pf_anon';

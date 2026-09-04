@@ -1,5 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../db';
 import { areas, config, lexiconEntries } from './infra/schema';
 import {
@@ -207,6 +207,18 @@ export async function updateConfig(
 
 export async function listAreas(db: Database) {
 	return db.select().from(areas);
+}
+
+export async function getActiveAreaById(
+	db: Database,
+	areaId: string
+): Promise<{ id: string; name: string } | null> {
+	const rows = await db
+		.select({ id: areas.id, name: areas.name })
+		.from(areas)
+		.where(and(eq(areas.id, areaId), eq(areas.isActive, true)))
+		.limit(1);
+	return rows[0] ?? null;
 }
 
 export async function createArea(

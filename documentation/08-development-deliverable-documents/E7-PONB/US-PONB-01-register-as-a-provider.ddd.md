@@ -29,9 +29,9 @@ FR-ACC-03, SR-INT-02, FR-UX-05.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Added migration `0004_us_ponb_01_provider_registration.sql` (`phone_otp`, `phone_registry_history`). Identity module gained `registerProvider`, `requestOtp`, `verifyOtp` with HMAC phone hashing, SR-INT-02 attempt limits, and `PhoneVerified` outbox publish. Provider-profile module gained `createDraftProfile` and `loadOwnerProfile` with publish-readiness/onboarding checklist derivation. Delivery layer: `/provider/register` (two-step form + OTP), `/provider/onboarding` checklist landing, `POST /api/identity/otp/request|verify`, `GET /api/provider/me/profile`, dev helper `POST /api/dev/otp-code`.
+
+**Deviations:** Full six-step onboarding wizard UI is US-PONB-02 scope — this story lands a read-only checklist on `/provider/onboarding` that reflects `isPublishReady` fields. `PHONE_PEPPER` uses a dev fallback when unset (production throws). SMS delivery is dev-store backed (`ALLOW_DEV_HELPERS=1`) until `user-notifications` wires outbound SMS.
+
+**Verification:** `npm run check`, `lint`, `test` (76), `test:integration` (20), `boundaries`, `build` green; `e2e/provider-register.e2e.ts` 3/3 (TC-PONB-01a/c + axe).
+
+**Follow-ups:** US-PONB-02 should replace the onboarding placeholder with the resumable stepper; wire real SMS in `user-notifications`; set `PHONE_PEPPER` in production secrets.

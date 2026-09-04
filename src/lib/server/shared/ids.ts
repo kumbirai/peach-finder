@@ -22,6 +22,7 @@ export type NotificationId = Brand<string, 'NotificationId'>;
 export type AnalyticsEventId = Brand<string, 'AnalyticsEventId'>;
 export type AuditLogEntryId = Brand<string, 'AuditLogEntryId'>;
 export type SessionId = Brand<string, 'SessionId'>;
+export type OtpId = Brand<string, 'OtpId'>;
 export type OutboxEventId = Brand<string, 'OutboxEventId'>;
 export type LexiconEntryId = Brand<string, 'LexiconEntryId'>;
 

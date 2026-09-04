@@ -24,4 +24,4 @@ export { log, maskEmail, maskPhone } from './logger';
 export { success, useCaseErrorToHttp, unauthenticatedHttp, internalHttp } from './api';
 export { publish, markProcessed, subscribersFor } from './outbox';
 export { writeAudit } from './audit';
-export { consumeRateLimit, RATE_LIMIT_BUCKETS } from './rate-limit';
+export { consumeRateLimit, consumeOtpRequestRateLimits, RATE_LIMIT_BUCKETS } from './rate-limit';
