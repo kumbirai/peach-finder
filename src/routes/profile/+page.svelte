@@ -16,6 +16,7 @@
 				emailVerified: boolean;
 				hasPassword: boolean;
 			} | null;
+			deleteConfirm: boolean;
 		};
 		form?: {
 			message?: string;
@@ -27,6 +28,41 @@
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let confirmPassword = $state('');
+	let showDeleteConfirm = $derived(data.deleteConfirm);
+	let deletePassword = $state('');
+	let deleteError = $state<string | null>(null);
+	let deleteBusy = $state(false);
+
+	async function deleteAccount() {
+		deleteError = null;
+		deleteBusy = true;
+		const passwordInput = document.getElementById('deletePassword') as HTMLInputElement | null;
+		const password = passwordInput?.value ?? deletePassword;
+		if (!password) {
+			deleteError = 'Enter your password to confirm deletion.';
+			deleteBusy = false;
+			return;
+		}
+		try {
+			const res = await fetch('/api/identity/account', {
+				method: 'DELETE',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ password, confirm: true })
+			});
+			if (res.ok) {
+				window.location.href = '/?accountDeleted=1';
+				return;
+			}
+			const body = (await res.json()) as {
+				error?: { message?: string };
+			};
+			deleteError = body.error?.message ?? 'We could not delete your account. Try again.';
+		} catch {
+			deleteError = 'We could not delete your account. Check your connection and try again.';
+		} finally {
+			deleteBusy = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -109,6 +145,50 @@
 				</Card>
 			</section>
 		{/if}
+
+		<section class="section danger-zone" aria-labelledby="delete-heading">
+			<h2 id="delete-heading" class="title">Delete account</h2>
+			<Card>
+				<p class="body hint">
+					Deleting your account is permanent. Your profile is removed from discovery immediately.
+					Message threads stay visible to the other person as <strong>Deleted account</strong>;
+					reviews you wrote stay as <strong>Former user</strong>. Personal data is irreversibly
+					removed within 30 days. Billing, tax, and moderation records we must keep by law are
+					retained without your name or contact details.
+				</p>
+				{#if !data.account.hasPassword}
+					<p class="body hint">
+						Set a password via reset email before deleting an account that only uses sign-in with
+						Google or Apple.
+					</p>
+				{:else if !showDeleteConfirm}
+					<Button href="/profile?deleteConfirm=1" variant="secondary">Delete my account</Button>
+				{:else}
+					<p class="body confirm-prompt" role="status">
+						Enter your password to confirm. This signs you out everywhere.
+					</p>
+					{#if deleteError}
+						<p class="error label" role="alert">{deleteError}</p>
+					{/if}
+					<div class="form">
+						<Input
+							id="deletePassword"
+							name="deletePassword"
+							type="password"
+							label="Password"
+							bind:value={deletePassword}
+							autocomplete="current-password"
+						/>
+						<div class="delete-actions">
+							<Button type="button" variant="primary" disabled={deleteBusy} onclick={deleteAccount}>
+								{deleteBusy ? 'Deleting…' : 'Yes, delete my account'}
+							</Button>
+							<Button href="/profile" variant="secondary" disabled={deleteBusy}>Cancel</Button>
+						</div>
+					</div>
+				{/if}
+			</Card>
+		</section>
 	{/if}
 </main>
 
@@ -160,5 +240,17 @@
 	.error {
 		color: var(--color-peach-deep);
 		margin: 0 0 var(--space-sm);
+	}
+	.danger-zone .title {
+		color: var(--color-peach-deep);
+	}
+	.confirm-prompt {
+		margin: 0 0 var(--space-md);
+		font-weight: 600;
+	}
+	.delete-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
 	}
 </style>

@@ -38,6 +38,8 @@ export {
 	type RegisterSeekerInput,
 	type LoginPasswordResult
 } from './infra/auth-commands';
+import { deleteAccount, anonymizePendingUsers } from './infra/account-deletion';
+export { deleteAccount, anonymizePendingUsers };
 import { getUserCapabilities } from './infra/session-commands';
 export {
 	createSession,

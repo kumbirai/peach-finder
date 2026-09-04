@@ -29,9 +29,9 @@ FR-ACC-07, FR-PRIV-03, SR-DATA-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ACC-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-05 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Implemented FR-ACC-07 / FR-PRIV-03 two-phase account deletion in `identity-and-access`: `DELETE /api/identity/account` (password + `confirm: true`) runs phase-1 in one transaction — `status=deleted`, session/oauth/token revocation, synchronous `provider-profile.unpublishProfileForOwner` + discovery projection removal + `listing-billing.cancelListingForOwner`, and `AccountDeletionRequested` outbox event. Phase-2 `anonymizePendingUsers` job runs on the worker tick (≤30-day window). Profile `/profile` adds a delete section with plain-language survivorship copy and a confirmation step (FR-UX-05). `direct-messaging` subscribes to `AccountDeletionRequested` to denormalize `is_deleted_sender_account`; thread/review labels resolve at read time via `getDisplayIdentity` ("Deleted account" / "Former user").
+
+**Deviations:** OAuth-only accounts without a password must set one (via reset email) before self-delete — LLD reauth is password-based and no OAuth re-proof flow exists in W1. Provider unpublish runs synchronously in the delete transaction (not only async) so TC-ACC-05b immediate-discovery removal holds without waiting for the outbox worker.
+
+**Verification:** `npm run check`, `lint`, `test`, `test:integration`, `boundaries`, `build`, `test:e2e` (incl. `e2e/delete-my-account.e2e.ts` TC-ACC-05a–c + axe).
+
+**Follow-ups:** Wire `provider-profile.unpublish-on-delete` and `listing-billing.cancel-on-delete` worker handlers as idempotent backups if synchronous path is ever split; add OAuth-native delete confirmation when SR-INT-04 gains a re-proof path.

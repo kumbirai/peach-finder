@@ -332,3 +332,13 @@ export async function listProviderInbox(db: Database, ownerId: UserId): Promise<
 	}
 	return summaries;
 }
+
+export async function markDeletedSenderAccountForUser(
+	tx: Transaction,
+	userId: UserId
+): Promise<void> {
+	await tx
+		.update(messages)
+		.set({ isDeletedSenderAccount: true })
+		.where(eq(messages.senderId, userId));
+}

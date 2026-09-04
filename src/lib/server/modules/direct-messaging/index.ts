@@ -24,7 +24,7 @@ export {
 	type SendOrHoldResult,
 	type ThreadSummary
 };
-export { handleEmailVerified } from './infra/subscriptions';
+export { handleEmailVerified, handleAccountDeletionRequested } from './infra/subscriptions';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

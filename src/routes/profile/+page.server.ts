@@ -11,14 +11,17 @@ import {
 
 export const _requiredRole: Role = 'anonymous';
 
-export async function load({ locals }) {
+export async function load({ locals, url }) {
 	if (!locals.auth.userId || locals.auth.role === 'anonymous') {
-		return { account: null };
+		return { account: null, deleteConfirm: false };
 	}
 
 	const db = getDb();
 	const account = await getSelfAccountSummary(db, locals.auth.userId);
-	return { account };
+	return {
+		account,
+		deleteConfirm: url.searchParams.get('deleteConfirm') === '1'
+	};
 }
 
 export const actions: Actions = {

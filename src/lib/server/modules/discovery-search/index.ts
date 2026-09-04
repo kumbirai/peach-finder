@@ -5,6 +5,8 @@ export { parseMapsTo, LEXICON_ENTRY_TYPES, type LexiconEntryType } from './domai
 export { runSearch, runSuggest, type SearchInput, type SearchResult };
 export type { SearchCard } from './app/serializers';
 
+export { removeSearchProjection } from './infra/projection-commands';
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

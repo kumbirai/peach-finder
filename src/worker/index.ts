@@ -5,7 +5,11 @@ import { bootApp, tickConfigRefresh } from '../lib/server/boot';
 import { deadLetter } from '../lib/server/shared/outbox';
 import { cleanupRateLimitBuckets } from '../lib/server/shared/rate-limit';
 import { handleConfigChanged } from '../lib/server/modules/platform-configuration';
-import { handleEmailVerified } from '../lib/server/modules/direct-messaging';
+import {
+	handleEmailVerified,
+	handleAccountDeletionRequested
+} from '../lib/server/modules/direct-messaging';
+import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
@@ -25,6 +29,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		}
 		if (subscriber === 'direct-messaging.release-held' && event.eventName === 'EmailVerified') {
 			await handleEmailVerified(db, event as never);
+		}
+		if (
+			subscriber === 'direct-messaging.mark-deleted-account' &&
+			event.eventName === 'AccountDeletionRequested'
+		) {
+			await handleAccountDeletionRequested(db, event as never);
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';
@@ -68,6 +78,7 @@ setInterval(() => {
 			await boss.send(QUEUE, payload, { retryLimit: MAX_ATTEMPTS - 1 });
 		});
 		await cleanupRateLimitBuckets(db, new Date());
+		await anonymizePendingUsers(db, new Date());
 		await tickConfigRefresh();
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

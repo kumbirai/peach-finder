@@ -118,6 +118,8 @@ export async function listPublishedProfileIds(db: Database): Promise<ProviderPro
 	return listPublishedIds(db);
 }
 
+export { unpublishProfileForOwner } from './infra/unpublish-profile';
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

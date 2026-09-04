@@ -1,4 +1,5 @@
 import type { Database } from '../src/lib/server/db';
+import { eq } from 'drizzle-orm';
 import { users } from '../src/lib/server/modules/identity-and-access/infra/schema';
 import {
 	languages,
@@ -704,6 +705,72 @@ async function seedDualRoleUser(
 			createdAt: new Date('2026-08-20T12:00:00Z')
 		})
 		.onConflictDoNothing();
+
+	// Idempotent restore so E2E re-runs can reset a deleted dual-role fixture.
+	await db
+		.update(users)
+		.set({
+			displayName: 'Jordan B.',
+			email: SEED_DUAL_ROLE_EMAIL,
+			emailVerifiedAt: new Date('2026-08-01T10:00:00Z'),
+			phone: '+27821234098',
+			phoneVerifiedAt: new Date('2026-08-01T10:00:00Z'),
+			passwordHash,
+			status: 'active',
+			deletedAt: null,
+			anonymizedAt: null,
+			updatedAt: publishedAt
+		})
+		.where(eq(users.id, SEED_DUAL_ROLE_USER_ID));
+
+	await db
+		.update(providerProfiles)
+		.set({
+			publishState: 'published',
+			unpublishReason: null,
+			updatedAt: publishedAt
+		})
+		.where(eq(providerProfiles.id, SEED_DUAL_ROLE_PROFILE_ID));
+
+	await db
+		.update(listings)
+		.set({ state: 'free_listed', updatedAt: publishedAt })
+		.where(eq(listings.providerProfileId, SEED_DUAL_ROLE_PROFILE_ID));
+
+	await db
+		.insert(searchProjection)
+		.values({
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			ownerId: SEED_DUAL_ROLE_USER_ID,
+			displayName: 'Jordan B.',
+			searchText: 'Swedish and deep tissue dual role provider',
+			serviceTagIds: [tag.id],
+			languageCodes: ['en'],
+			areaId,
+			priceMinCents: 70000,
+			priceMaxCents: 70000,
+			availabilityState: 'available',
+			availabilitySetAt: new Date('2026-09-04T14:00:00Z'),
+			ratingAverage: null,
+			ratingCount: 0,
+			badgeIdentityVerified: false,
+			badgeActiveThisWeek: true,
+			isFeatured: false,
+			featuredSince: null,
+			lastActivityAt: new Date('2026-09-04T14:00:00Z'),
+			photoPrimaryUrl: PLACEHOLDER_CARD,
+			publishedAt,
+			updatedAt: publishedAt
+		})
+		.onConflictDoUpdate({
+			target: searchProjection.providerProfileId,
+			set: {
+				ownerId: SEED_DUAL_ROLE_USER_ID,
+				displayName: 'Jordan B.',
+				searchText: 'Swedish and deep tissue dual role provider',
+				updatedAt: publishedAt
+			}
+		});
 }
 
 export const SEED_CORE_PRIMARY_PROFILE_ID = PROVIDERS[0]!.profileId;
