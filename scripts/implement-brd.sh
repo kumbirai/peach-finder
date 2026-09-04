@@ -405,7 +405,7 @@ TASK
 Bootstrap the Peach Finder V1 application from scratch: a working
 SvelteKit 2 (Svelte 5) monolith on Node LTS, the shared-kernel and API/
 event/security foundation modules the LLD already specifies, a
-`platform-configuration` bootstrap, and this delivery's frontend
+\`platform-configuration\` bootstrap, and this delivery's frontend
 design-system implementation -- token pipeline, component library, motion
 primitives, and performance-budget scaffolding -- so that every one of the
 76 story DDDs under documentation/08-development-deliverable-documents/
@@ -461,41 +461,41 @@ with observed output.
   launch. Drizzle ORM (schema-as-code, generates versioned forward-only
   SQL migrations). pg-boss for the in-Postgres job queue/event-bus
   transport (no Kafka/RabbitMQ). sharp for image processing. ws for the
-  WebSocket upgrade. MinIO for media (two buckets: public `media`,
-  deny-by-default `identity-docs`).
+  WebSocket upgrade. MinIO for media (two buckets: public \`media\`,
+  deny-by-default \`identity-docs\`).
 - Module layout per HLD SS6.1's naming registry: one
-  `src/lib/server/modules/<module>/` directory per bounded context
+  \`src/lib/server/modules/<module>/\` directory per bounded context
   (identity-and-access, provider-profile, provider-availability,
   discovery-search, direct-messaging, provider-reviews, trust-and-safety,
   listing-billing, provider-analytics, user-notifications,
   media-processing, platform-configuration), each with its own Postgres
-  schema (snake_case of the kebab context name); `src/lib/server/shared/`
-  for the shared kernel; `src/routes/admin/` for moderation-admin (a
+  schema (snake_case of the kebab context name); \`src/lib/server/shared/\`
+  for the shared kernel; \`src/routes/admin/\` for moderation-admin (a
   delivery surface, not an extracted module -- no domain logic there).
   Bootstrap the directory skeleton and the shared-kernel module for real
   in this wave; you do not need every business module's domain logic yet
   (that is Waves 1-6), but the module folders, schema-per-module DB
   convention, and the event-bus/outbox mechanism must be real and working.
-- Hexagonal layering inside every module: `domain/` imports nothing but
-  shared-kernel types (no framework, no Drizzle, no fetch); `infra/` is
+- Hexagonal layering inside every module: \`domain/\` imports nothing but
+  shared-kernel types (no framework, no Drizzle, no fetch); \`infra/\` is
   the only layer that knows Drizzle/MinIO/Paystack/etc.; the delivery
-  layer (`src/routes`) stays thin -- Zod-validate input, call a handler,
+  layer (\`src/routes\`) stays thin -- Zod-validate input, call a handler,
   shape the response, no business logic, no SQL in routes.
-- RBAC: `src/hooks.server.ts` resolves the auth context once per request
-  and attaches it to `event.locals.auth`; every route under `src/routes/`
-  declares its minimum role via a co-located `+page.server.ts`/
-  `+server.ts` export (`export const requiredRole = 'seeker'`), checked
+- RBAC: \`src/hooks.server.ts\` resolves the auth context once per request
+  and attaches it to \`event.locals.auth\`; every route under \`src/routes/\`
+  declares its minimum role via a co-located \`+page.server.ts\`/
+  \`+server.ts\` export (\`export const requiredRole = 'seeker'\`), checked
   BEFORE any application code runs, per security-implementation.md SS2.
 - Establish the test toolchain now, for every later wave to reuse without
   re-deciding it: Vitest for unit tests (the natural pairing with
   SvelteKit's Vite build), an integration-test mechanism against a real
-  Postgres instance (the `testcontainers` npm package, or an equivalent
+  Postgres instance (the \`testcontainers\` npm package, or an equivalent
   Docker-Compose-based test service -- self-skipping if Docker is
   unavailable), and a Playwright config at the repo root targeting the
-  live dev/compose stack -- `execution: live-stack-seeded`,
-  `stub_mode: forbidden` (every stage-8 spec-design's own Document
-  Control table says so; no `page.route`, no fixture JSON standing in for
-  HTTP, no `E2E_LIVE=0`-style skip-by-stub path -- `test.skip` if the
+  live dev/compose stack -- \`execution: live-stack-seeded\`,
+  \`stub_mode: forbidden\` (every stage-8 spec-design's own Document
+  Control table says so; no \`page.route\`, no fixture JSON standing in for
+  HTTP, no \`E2E_LIVE=0\`-style skip-by-stub path -- \`test.skip\` if the
   live stack is down, never mock). Document the exact commands and
   directory conventions you establish in this DDD's own Implementation
   Notes -- every subsequent wave's prompt tells the agent to follow what
@@ -506,8 +506,8 @@ with observed output.
   at build time) -- no hand-copied hex values in component code. Build
   every component in the DDD's SS3 (Button, Chip, Card/Container, Input,
   the Availability Pill signature component, Badge, Navigation, the
-  admin Ink strip) as a single reusable implementation. `Two-Hue`,
-  `Never-Color-Alone`, `Warm-Shadow`, `One-Serif`, and pill-shape rules
+  admin Ink strip) as a single reusable implementation. \`Two-Hue\`,
+  \`Never-Color-Alone\`, \`Warm-Shadow\`, \`One-Serif\`, and pill-shape rules
   are enforced by construction in these primitives, not left to each
   future story to remember.
 - A Docker Compose file for local Postgres/MinIO (dev-and-test topology)
@@ -576,18 +576,18 @@ By the time you declare this bootstrap done, the working tree must contain:
   adapter-node) that boots with a dev command and serves at least a
   placeholder homepage using the real design-system tokens (not
   Skeleton/Tailwind defaults).
-- The `src/lib/server/modules/<module>/` skeleton for all twelve business
-  modules plus `src/lib/server/shared/` (shared kernel: branded ID types,
+- The \`src/lib/server/modules/<module>/\` skeleton for all twelve business
+  modules plus \`src/lib/server/shared/\` (shared kernel: branded ID types,
   Result/UseCaseError, Clock port, Money, the outbox event mechanism,
   append-only audit log, AuthContext, Zod conventions).
 - Drizzle configured with the schema-per-module convention and an initial
-  forward-only migration; `platform-configuration`'s schema populated with
+  forward-only migration; \`platform-configuration\`'s schema populated with
   the LLD's documented bootstrap/seed defaults.
-- `src/hooks.server.ts` implementing the RBAC resolution sequence from
+- \`src/hooks.server.ts\` implementing the RBAC resolution sequence from
   security-implementation.md SS2.
 - The frontend component library (SS3 of the DDD) with tokens generated
-  programmatically from DESIGN.md/`.impeccable/design.json`, plus a
-  Storybook-equivalent or a simple `/dev/components` preview route so
+  programmatically from DESIGN.md/\`.impeccable/design.json\`, plus a
+  Storybook-equivalent or a simple \`/dev/components\` preview route so
   later waves can see each component in isolation.
 - A Docker Compose file for local Postgres + MinIO.
 - The test toolchain: Vitest configured and running (even a trivial
@@ -1095,21 +1095,25 @@ run_one() {
   log "[RUN] $wave $sid — $title"
   log "      plan: $rel_ddd"
 
-  if [[ $DRY_RUN -eq 1 ]]; then
-    log "      (dry-run) would run implementation, then review-and-fix, then commit unconditionally"
-    return 0
-  fi
-
   ts="$(date '+%Y%m%d-%H%M%S')"
   prompt_file="$LOG_DIR/${sid}-${ts}.prompt.txt"
   log_file="$LOG_DIR/${sid}-${ts}.${OUTPUT_FORMAT}.log"
   before_manifest="$LOG_DIR/${sid}-${ts}.before.dirty.txt"
 
+  # Always render the prompt, including --dry-run, so we catch unquoted-
+  # heredoc backtick expansion (which silently strips identifiers like
+  # `platform-configuration`) before any agent is launched.
   "$prompt_builder" "$prompt_file"
-  snapshot_dirty_hashes "$before_manifest"
   log "      prompt: ${prompt_file#$ROOT/}"
   log "      log:    ${log_file#$ROOT/}"
   log "      model:  $MODEL"
+
+  if [[ $DRY_RUN -eq 1 ]]; then
+    log "      (dry-run) would run implementation, then review-and-fix, then commit unconditionally"
+    return 0
+  fi
+
+  snapshot_dirty_hashes "$before_manifest"
 
   if run_agent "$prompt_file" "$log_file"; then
     log "[OK]  $sid implementation pass complete"

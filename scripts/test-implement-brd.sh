@@ -90,4 +90,53 @@ test_body="$(printf '%s\n' "$test_awk" | sed -n '/awk /,/'\'' "\$SEQUENCE_DOC"/p
 [[ "$driver_body" == "$test_body" ]] || fail "collect_stories awk in implement-brd.sh drifted from this test's copy"
 pass "collect_stories awk in implement-brd.sh matches this test"
 
+# Unquoted <<TASK prompt bodies must escape backticks. An unescaped
+# `platform-configuration` is command-substituted away when the prompt
+# is rendered, which is how the first driver run launched a corrupted
+# FOUNDATION prompt.
+python3 - "$DRIVER" <<'PY' || fail "unescaped backticks in unquoted <<TASK prompt bodies"
+import sys
+from pathlib import Path
+src = Path(sys.argv[1]).read_text().splitlines()
+in_unquoted = False
+offenders = []
+for i, line in enumerate(src, 1):
+    stripped = line.lstrip()
+    if not in_unquoted:
+        if "<<" in stripped and stripped.rstrip().endswith("TASK") and "<<'TASK'" not in line and '<<"TASK"' not in line:
+            opener = stripped.split("<<", 1)[1].strip()
+            if opener == "TASK":
+                in_unquoted = True
+        continue
+    if line == "TASK":
+        in_unquoted = False
+        continue
+    j = 0
+    while j < len(line):
+        if line[j] == "`" and (j == 0 or line[j - 1] != "\\"):
+            offenders.append(f"{i}:{line}")
+            break
+        j += 1
+if in_unquoted:
+    raise SystemExit("unclosed <<TASK heredoc")
+if offenders:
+    print("unescaped backticks:\n" + "\n".join(offenders[:20]), file=sys.stderr)
+    raise SystemExit(1)
+PY
+pass "unquoted <<TASK prompt bodies escape backticks"
+
+# Render the FOUNDATION prompt (no agent) and assert identifiers survive.
+DUMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$DUMP_DIR"' EXIT
+LOG_DIR="$DUMP_DIR" "$DRIVER" --dry-run --only FOUNDATION --resume-dirty >/dev/null
+prompt="$(find "$DUMP_DIR" -name 'FOUNDATION-*.prompt.txt' -print | sort | tail -n1)"
+[[ -n "$prompt" && -f "$prompt" ]] || fail "dry-run did not write a FOUNDATION prompt"
+grep -Fq '`platform-configuration`' "$prompt" \
+  || fail "FOUNDATION prompt lost \`platform-configuration\` (unquoted-heredoc expansion)"
+grep -Fq '`src/hooks.server.ts`' "$prompt" \
+  || fail "FOUNDATION prompt lost \`src/hooks.server.ts\`"
+grep -Fq '`src/lib/server/modules/<module>/`' "$prompt" \
+  || fail "FOUNDATION prompt lost module-layout path"
+pass "dry-run FOUNDATION prompt preserves backtick-quoted identifiers"
+
 echo "all checks passed"

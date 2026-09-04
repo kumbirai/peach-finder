@@ -6,9 +6,36 @@ Peach Finder is a mobile-first people discovery platform designed to help seeker
 
 ## Project status
 
-Peach Finder is currently in the design phase. The business, functional, system, user-story, architecture, and low-level design documents are complete; a UI/UX design system plus interactive prototype exist under `documentation/06-ui-ux-design/`; and the test strategy, plan, story-level test cases, traceability matrix, and Playwright E2E designs are written under `documentation/07-test-artifacts/`. Per-story Development Deliverable Documents (implementation blueprints for all 76 user stories) are complete under `documentation/08-development-deliverable-documents/`. Application code, deployment assets, and executable test specs have not yet been created.
+Wave 0 (frontend and platform foundations) is in progress on `feat/initial-implementation`. The SvelteKit 2 / Svelte 5 app boots, migrations and platform-configuration seed against local Postgres, and the design-system token pipeline plus component library exist. Product stories (Waves 1–6) are not implemented yet.
 
-There is therefore no runnable development environment or build command at this stage. This README should be updated when implementation begins.
+## Local development
+
+Requires Node.js 24 LTS, Docker, and npm.
+
+```bash
+cp .env.example .env
+docker compose up -d
+npm install
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+The app serves at http://127.0.0.1:5173. Design-system primitives: http://127.0.0.1:5173/dev/components.
+
+| Command                    | Purpose                                                   |
+| -------------------------- | --------------------------------------------------------- |
+| `npm run dev`              | Vite/SvelteKit dev server                                 |
+| `npm run worker`           | Outbox dispatcher + minute tick                           |
+| `npm run check`            | svelte-check + tsc                                        |
+| `npm run lint`             | Prettier + ESLint                                         |
+| `npm run test`             | Vitest unit tests                                         |
+| `npm run test:integration` | Testcontainers Postgres integration tests                 |
+| `npm run test:e2e`         | Playwright against the live dev server (stack must be up) |
+| `npm run boundaries`       | dependency-cruiser module-boundary gate                   |
+| `npm run check:bundle`     | SR-PERF-05 ≤300KB compressed JS (after `npm run build`)   |
+
+Default local DB credentials match the repo convention: `PGPASSWORD=secret psql -h localhost -p 5432 -U postgres -d peach_finder`. The application role is `peach_app` (see `.env.example`).
 
 ## V1 product scope
 
@@ -44,18 +71,18 @@ The design favors deterministic behavior, strong module boundaries, privacy by c
 
 The `documentation/` directory is the canonical source for product and technical decisions:
 
-| Path | Contents | Status |
-|---|---|---|
-| `00-business-requirements/` | Product goals, V1 scope, constraints, and business requirements | Complete |
-| `01-functional-requirements-specification/` | Actors, modules, functional behavior, and traceability | Complete |
-| `02-system-requirements-specification/` | Platform, data, security, performance, and operational requirements | Complete |
-| `03-user-stories/` | Epics, stories, acceptance criteria, and process flows | Complete |
-| `04-solution-architecture/` | High-level architecture and module-level clean-code rules | Complete |
-| `05-low-level-design/` | Shared contracts, schemas, APIs, state machines, algorithms, and module designs | Complete |
-| `06-ui-ux-design/` | Design system, tokens, and interactive prototype | Living — prototype plus known-gaps list |
-| `07-test-artifacts/` | Test strategy, plan, story-level test cases, traceability matrix, and Playwright E2E designs | Written — strategy, plan, cases, traceability, and 11 live-stack-seeded Playwright designs; executable specs come later at implementation time |
-| `08-development-deliverable-documents/` | Per-story implementation blueprints (DDDs) bridging design to code, plus build-wave sequencing and the frontend design-system implementation guide | Written — 76 per-story DDDs across 14 epics, an index, and two foundation docs; documentation only, no application code |
-| `09-deployment-operational-documents/` (not yet created) | Deployment assets, provisioning, and operational runbooks | Not started |
+| Path                                                     | Contents                                                                                                                                           | Status                                                                                                                                         |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `00-business-requirements/`                              | Product goals, V1 scope, constraints, and business requirements                                                                                    | Complete                                                                                                                                       |
+| `01-functional-requirements-specification/`              | Actors, modules, functional behavior, and traceability                                                                                             | Complete                                                                                                                                       |
+| `02-system-requirements-specification/`                  | Platform, data, security, performance, and operational requirements                                                                                | Complete                                                                                                                                       |
+| `03-user-stories/`                                       | Epics, stories, acceptance criteria, and process flows                                                                                             | Complete                                                                                                                                       |
+| `04-solution-architecture/`                              | High-level architecture and module-level clean-code rules                                                                                          | Complete                                                                                                                                       |
+| `05-low-level-design/`                                   | Shared contracts, schemas, APIs, state machines, algorithms, and module designs                                                                    | Complete                                                                                                                                       |
+| `06-ui-ux-design/`                                       | Design system, tokens, and interactive prototype                                                                                                   | Living — prototype plus known-gaps list                                                                                                        |
+| `07-test-artifacts/`                                     | Test strategy, plan, story-level test cases, traceability matrix, and Playwright E2E designs                                                       | Written — strategy, plan, cases, traceability, and 11 live-stack-seeded Playwright designs; executable specs come later at implementation time |
+| `08-development-deliverable-documents/`                  | Per-story implementation blueprints (DDDs) bridging design to code, plus build-wave sequencing and the frontend design-system implementation guide | Written — 76 per-story DDDs across 14 epics, an index, and two foundation docs; documentation only, no application code                        |
+| `09-deployment-operational-documents/` (not yet created) | Deployment assets, provisioning, and operational runbooks                                                                                          | Not started                                                                                                                                    |
 
 Start with these documents:
 

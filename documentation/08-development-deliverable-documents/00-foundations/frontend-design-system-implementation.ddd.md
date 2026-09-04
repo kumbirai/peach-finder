@@ -60,7 +60,65 @@ Perceived-performance requirements that are implementation decisions, not just t
 
 ## 6. Definition of Done for this foundation
 
-- Token pipeline generates CSS/theme values from `DESIGN.md`'s frontmatter (or `.impeccable/design.json`) programmatically — no hand-copied hex values in component code.
-- Every component in §3 exists as a single reusable implementation before any story DDD's frontend task is started against it.
-- `e2e-visual-quality-design-system.spec-design.md`'s token-conformance and accessibility assertions pass against the component library in isolation, before they're asked to pass per-screen.
-- Performance budgets in §5 are treated as build constraints (bundle-size CI check, SSR-by-default for discovery/profile routes) — not discovered as test failures after the fact.
+- [x] Token pipeline generates CSS/theme values from `DESIGN.md`'s frontmatter (or `.impeccable/design.json`) programmatically — no hand-copied hex values in component code.
+- [x] Every component in §3 exists as a single reusable implementation before any story DDD's frontend task is started against it.
+- [x] `e2e-visual-quality-design-system.spec-design.md`'s token-conformance and accessibility assertions pass against the component library in isolation (`e2e/components.e2e.ts` + `/dev/components`), before they're asked to pass per-screen.
+- [x] Performance budgets in §5 are treated as build constraints (`npm run check:bundle` for SR-PERF-05, SSR homepage, reserved `aspect-ratio` on card photos, Skeleton primitive) — not discovered as test failures after the fact.
+
+## Implementation Notes (Wave 0)
+
+Conventions later waves must follow. Package manager is **npm**. Node **24** LTS.
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `docker compose up -d` | Local Postgres 17 + MinIO (`media` public, `identity-docs` deny-by-default) |
+| `npm run db:migrate` | Applies `drizzle/migrations/*.sql` as the migrate role |
+| `npm run db:seed` | Idempotent platform-configuration bootstrap (config defaults, small ZA gazetteer, intent/language lexicon) |
+| `npm run dev` | SvelteKit / Vite on 5173 |
+| `npm run worker` | pg-boss outbox fan-out + rate-limit cleanup + config TTL refresh |
+| `npm run test` | Vitest unit tests |
+| `npm run test:integration` | Testcontainers Postgres (skips/fails loudly if Docker is down — never stubs) |
+| `npm run test:e2e` | Playwright against the live dev server (`stub_mode: forbidden`) |
+| `npm run boundaries` | dependency-cruiser hexagonal import rules |
+| `npm run check:bundle` | gzip JS under `build/client` ≤ 300KB |
+
+Copy `.env.example` to `.env`. App role `peach_app`; migrate role `postgres`.
+
+### Layout
+
+- Shared kernel: `src/lib/server/shared/`
+- Modules: `src/lib/server/modules/<kebab-name>/{domain,app,infra,index.ts}` — import another module **only** via `index.ts`
+- Delivery: `src/routes/` (thin). Admin is `src/routes/admin/` (no domain logic)
+- UI primitives: `src/lib/components/`
+- Tokens: `scripts/generate-tokens.ts` → `src/lib/styles/tokens.css` (run on `predev`/`prebuild`/`pretest`)
+- Worker: `src/worker/index.ts`
+- Custom Node + WS: `server.js` attaches `/ws` (401 if no session)
+
+### Adding a module
+
+1. Folder under `src/lib/server/modules/<kebab>/` with `domain/`, `app/`, `infra/`, `index.ts`
+2. Postgres schema = snake_case of the kebab name; add DDL as a new forward-only SQL file in `drizzle/migrations/`
+3. Re-export tables from `src/lib/server/db/schema.ts`
+4. Cross-schema FKs only onto `identity_and_access.user(id)` and `platform_configuration.area(id)`
+
+### Adding a component
+
+1. Put it in `src/lib/components/` using `var(--…)` tokens only — no raw hex (unit test enforces this)
+2. Add a state gallery on `/dev/components`
+3. Pill-shaped interactive controls; Fraunces only for Display/Headline
+
+### RBAC
+
+Every `+page.server.ts` / `+server.ts` (or a layout) exports `_requiredRole` (underscore prefix: SvelteKit only allows known universal exports plus `_`-prefixed names from `+page.server.ts` / `+layout.server.ts`). The hook in `src/hooks.server.ts` enforces it before application code. Default public floor is `anonymous`. Dual-role: `admin` from `is_admin`; `provider` is a lazy `ownsProfile` check (false until Wave 1).
+
+### Config
+
+Read runtime config only through `platform-configuration.getConfig(key)`. Unknown keys are a compile error. Startup crashes on missing/malformed stored values. Admin JSON APIs: `/admin/api/platform/{config,areas,lexicon}`. Full GeoNames ZA import and `service_term` lexicon rows wait on later waves.
+
+### Tests
+
+- Unit: `src/**/*.test.ts`
+- Integration: `src/**/*.integration.test.ts`
+- E2E: `e2e/*.e2e.ts` — live stack, no `page.route`

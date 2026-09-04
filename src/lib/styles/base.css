@@ -1,0 +1,58 @@
+html,
+body {
+	margin: 0;
+	background: var(--color-cream);
+	color: var(--color-ink);
+	font-family: var(--font-body-family);
+	font-size: var(--font-body-size);
+	font-weight: var(--font-body-weight);
+	line-height: var(--font-body-line-height);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+:focus-visible {
+	outline: 2px solid var(--color-peach-deep);
+	outline-offset: 2px;
+}
+
+.display {
+	font-family: var(--font-display-family);
+	font-size: var(--font-display-size);
+	font-weight: var(--font-display-weight);
+	line-height: var(--font-display-line-height);
+	letter-spacing: var(--font-display-letter-spacing);
+	margin: 0;
+}
+
+.headline {
+	font-family: var(--font-headline-family);
+	font-size: var(--font-headline-size);
+	font-weight: var(--font-headline-weight);
+	line-height: var(--font-headline-line-height);
+	margin: 0;
+}
+
+.title {
+	font-family: var(--font-title-family);
+	font-size: var(--font-title-size);
+	font-weight: var(--font-title-weight);
+	line-height: var(--font-title-line-height);
+	margin: 0;
+}
+
+.body {
+	max-width: 70ch;
+}
+
+.label {
+	font-family: var(--font-label-family);
+	font-size: var(--font-label-size);
+	font-weight: var(--font-label-weight);
+	line-height: var(--font-label-line-height);
+	letter-spacing: var(--font-label-letter-spacing);
+}

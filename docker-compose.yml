@@ -1,0 +1,56 @@
+# Local Postgres + MinIO for development and tests.
+# Production compose (no published host ports) is a later deployment-docs stage.
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: peach_finder
+    ports:
+      - '5432:5432'
+    volumes:
+      - peach_pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d peach_finder']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: peachfinder
+      MINIO_ROOT_PASSWORD: peachfinder-dev-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - peach_minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      i=0;
+      until mc alias set local http://minio:9000 peachfinder peachfinder-dev-secret; do
+        i=$$((i+1));
+        if [ $$i -gt 30 ]; then exit 1; fi;
+        sleep 1;
+      done &&
+      mc mb --ignore-existing local/media &&
+      mc mb --ignore-existing local/identity-docs &&
+      mc anonymous set download local/media &&
+      mc anonymous set none local/identity-docs &&
+      echo buckets ready
+      "
+
+volumes:
+  peach_pg_data:
+  peach_minio_data:

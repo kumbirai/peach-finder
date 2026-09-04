@@ -2,7 +2,10 @@
 build/
 dist/
 .svelte-kit/
+.output/
 coverage/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
 
 # Node / frontend
 node_modules/
@@ -58,3 +61,7 @@ blob-report/
 # Temporary files
 *.tmp
 *.temp
+
+# Python bytecode (local helper scripts)
+__pycache__/
+*.pyc

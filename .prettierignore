@@ -1,0 +1,17 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Miscellaneous
+/static/
+/drizzle/
+/documentation/
+/logs/
+DESIGN.md
+.impeccable/
+src/lib/styles/tokens.css
+src/lib/styles/tokens.generated.json
+

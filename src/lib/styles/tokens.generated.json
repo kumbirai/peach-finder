@@ -1,0 +1,33 @@
+{
+	"colors": {
+		"peach": "#E8794F",
+		"peach-deep": "#B34625",
+		"pine": "#2F5D50",
+		"pine-deep": "#1E3A32",
+		"blush": "#F6E4D8",
+		"cream": "#FBF7F2",
+		"paper": "#FFFCF9",
+		"ink": "#2B2622",
+		"stone": "#6E6459",
+		"divider": "#C9BDAE"
+	},
+	"extras": {
+		"color-peach-deep-hover": "#9C3A1D",
+		"color-error": "#A5432B",
+		"color-peach-deep-pulse": "rgba(179, 70, 37, 0.4)",
+		"color-peach-deep-pulse-end": "rgba(179, 70, 37, 0)",
+		"color-focus-ring": "rgba(179, 70, 37, 0.15)"
+	},
+	"canonicalFromJson": {
+		"peach": "#E8794F",
+		"peach-deep": "#B34625",
+		"pine": "#2F5D50",
+		"pine-deep": "#1E3A32",
+		"blush": "#F6E4D8",
+		"ink": "#2B2622",
+		"stone": "#6E6459",
+		"divider": "#C9BDAE",
+		"cream": "#FBF7F2",
+		"paper": "#FFFCF9"
+	}
+}
