@@ -1,5 +1,4 @@
 import { and, eq, isNull, gt } from 'drizzle-orm';
-import { createHash, randomBytes } from 'node:crypto';
 import type { Database } from '../../db';
 import { sessions, users } from './infra/schema';
 import {
@@ -10,25 +9,52 @@ import {
 } from '../../shared/auth-context';
 import { asId, type SessionId, type UserId } from '../../shared/ids';
 import { ownsProfile } from '../provider-profile';
+import {
+	hashSessionToken,
+	newSessionToken,
+	createSession,
+	getUserCapabilities,
+	SEEKER_IDLE_MS
+} from './infra/session-commands';
+import { randomBytes } from 'node:crypto';
 
 export { exportFor } from './export-stub';
 export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
 export { parseGatedAction, type GatedAction, type SignInIntent } from './domain/sign-in-intent';
+export { buildPostAuthRedirect } from './domain/post-auth-redirect';
 export { getDisplayIdentity, getContactPhone } from './infra/display-identity';
+export {
+	registerSeeker,
+	loginPassword,
+	verifyEmailToken,
+	isEmailVerified,
+	findOAuthLink,
+	createOAuthUser,
+	linkOAuthToUser,
+	type RegisterSeekerInput,
+	type LoginPasswordResult
+} from './infra/auth-commands';
+export { createSession, getUserCapabilities };
+export {
+	buildGoogleAuthUrl,
+	googleRedirectUri,
+	isGoogleOAuthConfigured,
+	newOAuthState,
+	newPkceVerifier,
+	oauthPkceCookieName,
+	oauthStateCookieName,
+	pkceChallenge,
+	exchangeGoogleCode,
+	fetchGoogleUserInfo,
+	type GoogleUserInfo
+} from './infra/oauth-google';
+export { getDevVerificationToken, findUserIdByEmail } from './infra/dev-verification';
 
 export const SESSION_COOKIE = 'pf_session';
 export const ANON_COOKIE = 'pf_anon';
-export const SEEKER_IDLE_MS = 90 * 24 * 60 * 60_000;
 export const ADMIN_IDLE_MS = 12 * 60 * 60_000;
 export const LAST_SEEN_THROTTLE_MS = 60 * 60_000;
-
-export function hashSessionToken(token: string): string {
-	return createHash('sha256').update(token).digest('hex');
-}
-
-export function newSessionToken(): string {
-	return randomBytes(32).toString('hex');
-}
+export { SEEKER_IDLE_MS, hashSessionToken, newSessionToken };
 
 export function newAnonId(): string {
 	return randomBytes(16).toString('hex');

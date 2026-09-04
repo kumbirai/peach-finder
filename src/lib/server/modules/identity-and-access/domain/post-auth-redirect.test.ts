@@ -1,0 +1,35 @@
+import { describe, expect, it } from 'vitest';
+import { buildPostAuthRedirect } from './post-auth-redirect';
+
+describe('buildPostAuthRedirect', () => {
+	it('routes message action to compose page', () => {
+		expect(
+			buildPostAuthRedirect({
+				returnTo: '/provider/abc',
+				action: 'message',
+				providerProfileId: '01900000-0000-7000-8000-000000000101'
+			})
+		).toBe('/messages/compose/01900000-0000-7000-8000-000000000101');
+	});
+
+	it('preserves message draft on compose redirect', () => {
+		expect(
+			buildPostAuthRedirect({
+				returnTo: '/provider/abc',
+				action: 'message',
+				providerProfileId: '01900000-0000-7000-8000-000000000101',
+				messageDraft: 'Hello there'
+			})
+		).toBe('/messages/compose/01900000-0000-7000-8000-000000000101?draft=Hello%20there');
+	});
+
+	it('falls back to returnTo for other actions', () => {
+		expect(
+			buildPostAuthRedirect({
+				returnTo: '/provider/abc',
+				action: 'review',
+				providerProfileId: 'abc'
+			})
+		).toBe('/provider/abc');
+	});
+});

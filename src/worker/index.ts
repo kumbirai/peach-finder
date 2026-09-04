@@ -5,6 +5,7 @@ import { bootApp, tickConfigRefresh } from '../lib/server/boot';
 import { deadLetter } from '../lib/server/shared/outbox';
 import { cleanupRateLimitBuckets } from '../lib/server/shared/rate-limit';
 import { handleConfigChanged } from '../lib/server/modules/platform-configuration';
+import { handleEmailVerified } from '../lib/server/modules/direct-messaging';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
@@ -21,6 +22,9 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		) {
 			const payload = event.payload as { configKey: string };
 			await handleConfigChanged(payload, db);
+		}
+		if (subscriber === 'direct-messaging.release-held' && event.eventName === 'EmailVerified') {
+			await handleEmailVerified(db, event as never);
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';

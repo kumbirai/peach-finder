@@ -3,11 +3,13 @@
 
 	let {
 		messageHref,
+		messageDraftKey,
 		reviewHref,
 		reportHref,
 		blockHref
 	}: {
 		messageHref: string;
+		messageDraftKey?: string;
 		reviewHref: string;
 		reportHref: string;
 		blockHref: string;
@@ -15,7 +17,7 @@
 </script>
 
 <div class="contact-bar" role="group" aria-label="Contact actions">
-	<Button href={messageHref} variant="primary">Message</Button>
+	<Button href={messageHref} variant="primary" {messageDraftKey}>Message</Button>
 	<Button href={reviewHref} variant="secondary">Review</Button>
 	<Button href={reportHref} variant="ghost">Report</Button>
 	<Button href={blockHref} variant="ghost">Block</Button>

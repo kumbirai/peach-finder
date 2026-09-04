@@ -10,9 +10,12 @@
 	}: {
 		data: {
 			profile: PublicProfile;
+			providerProfileId: string;
 			actions: { message: string; review: string; report: string; block: string };
 		};
 	} = $props();
+
+	const messageDraftKey = $derived(`pf_message_draft_${data.providerProfileId}`);
 
 	const ratingLabel = $derived(
 		'state' in data.profile.rating
@@ -121,6 +124,7 @@
 
 <ProfileContactBar
 	messageHref={data.actions.message}
+	{messageDraftKey}
 	reviewHref={data.actions.review}
 	reportHref={data.actions.report}
 	blockHref={data.actions.block}

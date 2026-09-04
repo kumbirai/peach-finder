@@ -35,6 +35,38 @@ export const users = identitySchema.table(
 	]
 );
 
+export const oauthLinks = identitySchema.table(
+	'oauth_link',
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		provider: text('provider').notNull(),
+		providerSubject: text('provider_subject').notNull(),
+		emailAtLink: text('email_at_link'),
+		linkedAt: timestamp('linked_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
+	},
+	(table) => [uniqueIndex('oauth_provider_subject_uq').on(table.provider, table.providerSubject)]
+);
+
+export const emailVerificationTokens = identitySchema.table(
+	'email_verification_token',
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		email: text('email').notNull(),
+		tokenHash: text('token_hash').notNull().unique(),
+		purpose: text('purpose').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+		consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'date' })
+	},
+	(table) => [index('evt_user_idx').on(table.userId), index('evt_expiry_idx').on(table.expiresAt)]
+);
+
 export const sessions = identitySchema.table(
 	'session',
 	{

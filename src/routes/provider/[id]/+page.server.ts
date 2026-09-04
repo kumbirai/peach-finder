@@ -19,6 +19,7 @@ export async function load({ params, locals, url }) {
 
 	return {
 		profile: result.value,
+		providerProfileId: params.id,
 		actions: {
 			message: gatedActionHref('message', profilePath, params.id, origin),
 			review: gatedActionHref('review', profilePath, params.id, origin),

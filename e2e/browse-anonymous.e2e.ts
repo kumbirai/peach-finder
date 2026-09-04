@@ -37,7 +37,9 @@ test.describe('US-ACC-01 anonymous browse', () => {
 
 		await message.click();
 		await expect(page).toHaveURL(/\/sign-in\?/);
-		await expect(page.getByRole('heading', { level: 1 })).toContainText('Sign in to continue');
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(
+			/sign in|create your account/i
+		);
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		await block.click();

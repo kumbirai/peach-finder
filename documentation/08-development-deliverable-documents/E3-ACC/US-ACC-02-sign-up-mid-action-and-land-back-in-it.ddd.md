@@ -29,9 +29,9 @@ FR-ACC-02, FR-ACC-05, FR-UX-06, SR-INT-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,31 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ACC-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-04 — feat/initial-implementation — Cursor
+
+**Approach**
+
+- Extended `identity-and-access` with seeker registration, password login, email verification, Google OAuth PKCE (Apple deferred per SRS D-7), session cookies, and `buildPostAuthRedirect` that routes gated `message` actions to `/messages/compose/:id` preserving `?draft=` query param.
+- Added `direct-messaging` schema (`thread`, `message`, `pending_message`) and commands: `sendOrHoldMessage` (holds first message when email unverified), `releaseHeldMessagesForUser` (on `EmailVerified`), thread queries.
+- Migration `drizzle/migrations/0002_us_acc_02_auth_messaging.sql` adds `oauth_link`, `email_verification_token`, and direct-messaging tables.
+- UI: single-screen `/sign-in` (Google OAuth + email/password toggle), `/verify-email`, `/messages/compose/[providerId]` with server form action for send (progressive enhancement), profile contact bar appends sessionStorage draft via `static/message-draft-nav.js` (CSP-safe capture-phase listener).
+- Dev helpers gated by `ALLOW_DEV_HELPERS=1`: verification token lookup, message-state probe for E2E.
+
+**Deviations**
+
+- Apple OAuth not implemented (Google only at launch per product scope).
+- Compose send uses SvelteKit form action `?/send` rather than client-only fetch, so held-message status SSRs without waiting for hydration (required for Playwright live-stack tests).
+- OAuth callback does not yet thread `messageDraft` through state cookie (email/password path fully supports draft continuity).
+
+**Verification**
+
+- `npm run check`, `npm run lint`, `npm run test` (59), `npm run test:integration` (3), `npm run boundaries`, `npm run build` — pass.
+- `CI=1 npx playwright test e2e/sign-up-mid-action.e2e.ts` — 4/4 pass (TC-ACC-02a/c/d + axe on sign-in).
+
+**Follow-ups**
+
+- Thread `messageDraft` through Google OAuth state for TC-ACC-02b parity when OAuth credentials are configured in CI.
+- Update `.env.example` with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOW_DEV_HELPERS`.

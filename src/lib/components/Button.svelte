@@ -8,22 +8,35 @@
 		type = 'button',
 		disabled = false,
 		href,
+		onclick,
+		messageDraftKey,
 		children
 	}: {
 		variant?: Variant;
 		type?: 'button' | 'submit';
 		disabled?: boolean;
 		href?: string;
+		onclick?: (event: MouseEvent) => void;
+		messageDraftKey?: string | undefined;
 		children: Snippet;
 	} = $props();
 </script>
 
-{#if href}
-	<a class="btn btn-{variant}" {href} aria-disabled={disabled}>
+{#if href && messageDraftKey}
+	<a
+		class="btn btn-{variant}"
+		{href}
+		aria-disabled={disabled}
+		data-message-draft-key={messageDraftKey}
+	>
+		{@render children()}
+	</a>
+{:else if href}
+	<a class="btn btn-{variant}" {href} aria-disabled={disabled} {onclick}>
 		{@render children()}
 	</a>
 {:else}
-	<button class="btn btn-{variant}" {type} {disabled}>
+	<button class="btn btn-{variant}" {type} {disabled} {onclick}>
 		{@render children()}
 	</button>
 {/if}

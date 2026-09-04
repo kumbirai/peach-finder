@@ -30,5 +30,5 @@ export function resolveE2eBaseUrl(port: number, raw = process.env.E2E_BASE_URL):
 }
 
 export function buildWebServerCommand(port: number): string {
-	return `npm run db:migrate && SEED_PACK=seed-core npm run db:seed && npm run dev -- --host 127.0.0.1 --port ${port}`;
+	return `npm run db:migrate && SEED_PACK=seed-core npm run db:seed && ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`;
 }
