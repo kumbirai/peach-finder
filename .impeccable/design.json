@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-23T00:00:00.000Z",
+  "title": "Design System: peach-finder",
+  "extensions": {
+    "colorMeta": {
+      "peach": { "role": "primary", "displayName": "Ripe Peach", "canonical": "#E8794F", "tonalRamp": ["#441A0E", "#762E18", "#A94223", "#D55A34", "#E08367", "#EAAC9A", "#F5D6CC", "#FBEEEA"] },
+      "peach-deep": { "role": "primary", "displayName": "Terracotta Deep", "canonical": "#B34625", "tonalRamp": ["#441A0E", "#762E18", "#A94223", "#D55A34", "#E08367", "#EAAC9A", "#F5D6CC", "#FBEEEA"] },
+      "pine": { "role": "secondary", "displayName": "Verified Pine", "canonical": "#2F5D50", "tonalRamp": ["#1B362F", "#305F52", "#448875", "#5CAD96", "#85C1B0", "#AED6CB", "#D6EAE5", "#EEF6F4"] },
+      "pine-deep": { "role": "secondary", "displayName": "Pine Deep", "canonical": "#1E3A32", "tonalRamp": ["#1B362F", "#305F52", "#448875", "#5CAD96", "#85C1B0", "#AED6CB", "#D6EAE5", "#EEF6F4"] },
+      "blush": { "role": "tertiary", "displayName": "Blush Sand", "canonical": "#F6E4D8" },
+      "ink": { "role": "neutral", "displayName": "Ink Clay", "canonical": "#2B2622", "tonalRamp": ["#2E2824", "#50463F", "#72655A", "#938376", "#AEA298", "#C9C1BB", "#E4E0DD", "#F4F2F1"] },
+      "stone": { "role": "neutral", "displayName": "Warm Stone", "canonical": "#6E6459" },
+      "divider": { "role": "neutral", "displayName": "Oat Divider", "canonical": "#C9BDAE" },
+      "cream": { "role": "neutral", "displayName": "Cloud Linen", "canonical": "#FBF7F2" },
+      "paper": { "role": "neutral", "displayName": "Warm Paper", "canonical": "#FFFCF9" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "One hero headline per screen only." },
+      "headline": { "displayName": "Headline", "purpose": "Section headers, therapist name on profile." },
+      "title": { "displayName": "Title", "purpose": "Card titles, therapist name in result cards, modal titles." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, messages, form copy. Cap at 70ch." },
+      "label": { "displayName": "Label", "purpose": "Chips, badges, nav labels, timestamps." }
+    },
+    "shadows": [
+      { "name": "ambient-rest", "value": "0 1px 2px rgba(43, 38, 34, 0.06)", "purpose": "Default resting separation of a card from the page background." },
+      { "name": "lift-hover", "value": "0 12px 24px rgba(179, 70, 37, 0.14)", "purpose": "Hover/focus/press lift on cards and buttons. Warm-tinted, never neutral gray." },
+      { "name": "sheet", "value": "0 -8px 32px rgba(43, 38, 34, 0.12)", "purpose": "Bottom sheets and modals rising over content (message composer, filter sheet)." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing for entrances, sheet opens, hover lifts. No bounce, no elastic." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Hover/focus state changes, chip selection." },
+      { "name": "duration-standard", "value": "240ms", "purpose": "Sheet/modal open-close, card lift." },
+      { "name": "pulse-availability", "value": "2000ms", "purpose": "Slow pulse on the availability dot; disabled entirely under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "480px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single most important action on a screen (Send message, Search).",
+      "html": "<button class=\"ds-btn-primary\">Send message</button>",
+      "css": ".ds-btn-primary { background: #B34625; color: #FFFCF9; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 1.125rem; border: none; border-radius: 999px; padding: 14px 28px; cursor: pointer; transition: background 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: #9C3A1D; box-shadow: 0 12px 24px rgba(179,70,37,0.14); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid #B34625; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action alongside a primary button.",
+      "html": "<button class=\"ds-btn-secondary\">View gallery</button>",
+      "css": ".ds-btn-secondary { background: #FFFCF9; color: #2F5D50; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 1.125rem; border: 1px solid #6E6459; border-radius: 999px; padding: 13px 27px; cursor: pointer; transition: background 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background: #F6E4D8; } .ds-btn-secondary:focus-visible { outline: 2px solid #2F5D50; outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "The primary discovery input, sticky at the top of search screens.",
+      "html": "<div class=\"ds-input-search\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\"><circle cx=\"11\" cy=\"11\" r=\"7\" stroke=\"#6E6459\" stroke-width=\"2\"/><path d=\"M20 20L16.5 16.5\" stroke=\"#6E6459\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg><input type=\"text\" placeholder=\"Search by area, language, or specialty\" /></div>",
+      "css": ".ds-input-search { display: flex; align-items: center; gap: 12px; background: #FFFCF9; border: 1px solid #6E6459; border-radius: 999px; padding: 14px 20px; } .ds-input-search input { border: none; outline: none; background: transparent; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1rem; color: #2B2622; width: 100%; } .ds-input-search input::placeholder { color: #6E6459; } .ds-input-search:focus-within { border-color: #B34625; box-shadow: 0 0 0 3px rgba(179,70,37,0.15); }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Faceted filter, shown inline above search results. Selected state inverts fill, not just color.",
+      "html": "<button class=\"ds-chip\">Deep tissue</button><button class=\"ds-chip ds-chip--selected\">Available now</button>",
+      "css": ".ds-chip { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.02em; background: #FFFCF9; color: #2B2622; border: 1px solid #6E6459; border-radius: 999px; padding: 8px 16px; cursor: pointer; transition: background 150ms cubic-bezier(0.16,1,0.3,1); } .ds-chip--selected { background: #2B2622; color: #FFFCF9; border-color: #2B2622; }"
+    },
+    {
+      "name": "Availability Pill",
+      "kind": "custom",
+      "refersTo": "badge-available",
+      "description": "Signature component. Real-time status shown on every therapist photo, before anything else.",
+      "html": "<span class=\"ds-availability\"><span class=\"ds-availability__dot\"></span>Available now</span>",
+      "css": ".ds-availability { display: inline-flex; align-items: center; gap: 6px; background: #F6E4D8; color: #B34625; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.02em; border-radius: 999px; padding: 4px 10px 4px 8px; } .ds-availability__dot { width: 6px; height: 6px; border-radius: 50%; background: #B34625; animation: ds-pulse 2000ms cubic-bezier(0.16,1,0.3,1) infinite; } @media (prefers-reduced-motion: reduce) { .ds-availability__dot { animation: none; } } @keyframes ds-pulse { 0% { box-shadow: 0 0 0 0 rgba(179,70,37,0.4); } 100% { box-shadow: 0 0 0 6px rgba(179,70,37,0); } }"
+    },
+    {
+      "name": "Verified Badge",
+      "kind": "custom",
+      "refersTo": "badge-verified",
+      "description": "Identity-verified trust signal. Always icon plus label, never color alone.",
+      "html": "<span class=\"ds-verified\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M9 12l2 2 4-4\" stroke=\"#2F5D50\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"#2F5D50\" stroke-width=\"1.5\"/></svg>Identity verified</span>",
+      "css": ".ds-verified { display: inline-flex; align-items: center; gap: 5px; background: #F6E4D8; color: #2F5D50; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.02em; border-radius: 999px; padding: 4px 10px; }"
+    },
+    {
+      "name": "Therapist Result Card",
+      "kind": "card",
+      "refersTo": "card-therapist",
+      "description": "Photo-forward primary unit of the search results screen. Never a table row. Availability pill sits on the photo; therapist name uses Title (Plus Jakarta Sans); verified badge is icon plus label.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card__photo-wrap\"><img class=\"ds-card__photo\" src=\"\" alt=\"\" /><span class=\"ds-availability\"><span class=\"ds-availability__dot\"></span>Available now</span></div><div class=\"ds-card__body\"><div class=\"ds-card__row\"><h3 class=\"ds-card__name\">Amara T.</h3><span class=\"ds-verified\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M9 12l2 2 4-4\" stroke=\"#2F5D50\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"12\" cy=\"12\" r=\"10\" stroke=\"#2F5D50\" stroke-width=\"1.5\"/></svg>Identity verified</span></div><p class=\"ds-card__meta\">Deep tissue &middot; Sports massage &middot; 2.1 km away</p></div></article>",
+      "css": ".ds-card { background: #FFFCF9; border-radius: 20px; overflow: hidden; box-shadow: 0 1px 2px rgba(43,38,34,0.06); transition: box-shadow 240ms cubic-bezier(0.16,1,0.3,1), transform 240ms cubic-bezier(0.16,1,0.3,1); } .ds-card:hover { box-shadow: 0 12px 24px rgba(179,70,37,0.14); transform: translateY(-2px); } .ds-card__photo-wrap { position: relative; } .ds-card__photo { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; } .ds-card__photo-wrap .ds-availability { position: absolute; top: 12px; left: 12px; } .ds-card__body { padding: 24px; } .ds-card__row { display: flex; align-items: center; gap: 8px; } .ds-card__name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 1.125rem; line-height: 1.3; color: #2B2622; margin: 0; } .ds-card__meta { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.875rem; color: #6E6459; margin: 6px 0 0; }"
+    },
+    {
+      "name": "Bottom Tab Nav",
+      "kind": "nav",
+      "refersTo": "nav-bottom",
+      "description": "Mobile primary navigation. Icon plus label always together. V1 seeker chrome is Search, Messages, and Profile (Favorites is not an FRS feature).",
+      "html": "<nav class=\"ds-tabbar\"><button class=\"ds-tab ds-tab--active\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\"><circle cx=\"11\" cy=\"11\" r=\"7\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M20 20L16.5 16.5\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>Search</button><button class=\"ds-tab\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"/></svg>Messages</button><button class=\"ds-tab\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\"><circle cx=\"12\" cy=\"8\" r=\"4\" stroke=\"currentColor\" stroke-width=\"2\"/><path d=\"M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Profile</button></nav>",
+      "css": ".ds-tabbar { display: flex; background: #FFFCF9; box-shadow: 0 -8px 32px rgba(43,38,34,0.12); } .ds-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 8px; border: none; background: none; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.02em; color: #6E6459; } .ds-tab--active { color: #B34625; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trusted Concierge",
+    "overview": "peach-finder should feel like a warm, capable person who already vetted this therapist for you, not a directory of contractors and not a clinical booking portal. The system is built around one idea: trust and warmth are not decoration, they are the interface. Every screen leads with a real photo, a real name, a visible verification signal, and a visible available-now state, before it asks the seeker to do any work. This explicitly rejects cold enterprise SaaS defaults, clinical white-and-teal medical portal styling, dense spreadsheet-style directory listings, and anything moody or overly intimate in photography or tone.",
+    "keyCharacteristics": [
+      "Warm cream and paper surfaces, never stark white, never cold gray.",
+      "One confident peach-terracotta accent for action and availability; a deep pine green carries trust and verification.",
+      "Large, real photography with generous whitespace; nothing reduced to a data row.",
+      "Soft, pill-shaped, human-scaled components, no sharp enterprise rectangles.",
+      "Calm at rest, warm on interaction."
+    ],
+    "rules": [
+      { "name": "The Two-Hue Rule", "body": "Only two hues ever carry meaning: Terracotta for action/availability, Pine for trust/verification.", "section": "colors" },
+      { "name": "The Never-Color-Alone Rule", "body": "Availability and verification are never conveyed by color alone; always icon plus text label.", "section": "colors" },
+      { "name": "The One-Serif Rule", "body": "Fraunces appears only at Display and Headline sizes, never in body copy or UI chrome.", "section": "typography" },
+      { "name": "The Warm Shadow Rule", "body": "Shadows are tinted toward Terracotta or Ink, never neutral gray.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do lead every therapist card and profile with a real photo, first name, availability pill, and verified badge, in that order.",
+      "Do use full-pill shapes (999px) for every interactive control.",
+      "Do tint every shadow toward Terracotta or Ink, never neutral gray.",
+      "Do pair every color-coded status with an icon and a text label.",
+      "Do cap body text measure at 65-75ch and keep Fraunces confined to Display/Headline sizes only."
+    ],
+    "donts": [
+      "Don't use navy-and-gray dashboard styling, hero-metric tiles, or identical icon-card grids.",
+      "Don't use clinical white-and-teal medical-portal styling.",
+      "Don't present therapists as dense spreadsheet/directory rows.",
+      "Don't use moody, dim, or intimate photography, lighting, or copy tone anywhere.",
+      "Don't use border-left/border-right as a colored accent stripe.",
+      "Don't use gradient text for emphasis.",
+      "Don't add a booking calendar or date/time picker anywhere.",
+      "Don't use Ripe Peach for small text or icons; use Terracotta Deep instead."
+    ]
+  }
+}

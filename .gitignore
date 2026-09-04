@@ -1,0 +1,60 @@
+# Build
+build/
+dist/
+.svelte-kit/
+coverage/
+
+# Node / frontend
+node_modules/
+.npm/
+.pnpm-store/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Claude
+.claude/
+.claude-flow/
+.claude-flow-prompts/
+CLAUDE.md
+
+# Codex
+.codex/
+
+# Cursor
+.cursor/
+.cursorrules
+
+# Agents
+.agents/
+AGENTS.md
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+/logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.auth/
+
+# Temporary files
+*.tmp
+*.temp
