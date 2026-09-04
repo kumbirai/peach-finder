@@ -49,6 +49,19 @@ export function getDevVerificationToken(email: string): string | null {
 	return devTokenStore.get(email.trim().toLowerCase()) ?? null;
 }
 
+export function getDevPasswordResetToken(email: string): string | null {
+	if (process.env.ALLOW_DEV_HELPERS !== '1') return null;
+	return devResetTokenStore.get(email.trim().toLowerCase()) ?? null;
+}
+
+export function storeDevPasswordResetToken(email: string, rawToken: string): void {
+	if (process.env.ALLOW_DEV_HELPERS === '1') {
+		devResetTokenStore.set(email.trim().toLowerCase(), rawToken);
+	}
+}
+
+const devResetTokenStore = new Map<string, string>();
+
 export async function findUserIdByEmail(db: Database, email: string): Promise<UserId | null> {
 	const rows = await db
 		.select({ id: users.id })

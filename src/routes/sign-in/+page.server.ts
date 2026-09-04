@@ -9,8 +9,7 @@ import {
 	loginPassword,
 	parseGatedAction,
 	registerSeeker,
-	SESSION_COOKIE,
-	SEEKER_IDLE_MS
+	setSessionCookie
 } from '$lib/server/modules/identity-and-access';
 
 export const _requiredRole: Role = 'anonymous';
@@ -19,12 +18,14 @@ export function load({ url }) {
 	const returnTo = url.searchParams.get('returnTo') ?? '/';
 	const action = parseGatedAction(url.searchParams.get('action'));
 	const providerProfileId = url.searchParams.get('providerProfileId');
+	const flow = url.searchParams.get('flow');
 
 	return {
 		returnTo,
 		action,
 		providerProfileId,
-		messageDraft: url.searchParams.get('draft') ?? ''
+		messageDraft: url.searchParams.get('draft') ?? '',
+		initialMode: flow === 'sign-in' ? ('sign-in' as const) : ('sign-up' as const)
 	};
 }
 
@@ -32,14 +33,8 @@ function clientIp(request: Request): string {
 	return request.headers.get('cf-connecting-ip') ?? '127.0.0.1';
 }
 
-function setSessionCookie(cookies: Cookies, token: string): void {
-	cookies.set(SESSION_COOKIE, token, {
-		path: '/',
-		httpOnly: true,
-		secure: false,
-		sameSite: 'lax',
-		maxAge: SEEKER_IDLE_MS / 1000
-	});
+function setSessionCookieOnRequest(cookies: Cookies, token: string): void {
+	setSessionCookie(cookies, token, false);
 }
 
 async function finishAuth(input: {
@@ -59,7 +54,7 @@ async function finishAuth(input: {
 		userAgent: input.request.headers.get('user-agent'),
 		now
 	});
-	setSessionCookie(input.cookies, token);
+	setSessionCookieOnRequest(input.cookies, token);
 	const redirectTo = buildPostAuthRedirect({
 		returnTo: input.returnTo,
 		action: input.action,

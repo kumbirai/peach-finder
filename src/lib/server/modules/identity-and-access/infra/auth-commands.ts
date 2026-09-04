@@ -2,14 +2,21 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import { publish } from '../../../shared/outbox';
-import { newId, type UserId } from '../../../shared/ids';
+import { newId, type SessionId, type UserId } from '../../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
-import { emailVerificationTokens, oauthLinks, users } from './schema';
+import { emailVerificationTokens, oauthLinks, passwordResetTokens, users } from './schema';
 import { hashPassword, verifyPassword } from './password-hash';
-import { storeDevVerificationToken } from './dev-verification';
+import { storeDevVerificationToken, storeDevPasswordResetToken } from './dev-verification';
 import { validateDisplayName, validateEmail, validatePassword } from '../domain/password-policy';
+import { PASSWORD_RESET_TTL_MS } from '../domain/session-policy';
+import { writeAudit } from '../../../shared/audit';
+import {
+	revokeAllSessionsForUser,
+	revokeOtherSessionsForUser,
+	stampReauth
+} from './session-commands';
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60_000;
 
@@ -298,6 +305,192 @@ export function safeCompare(a: string, b: string): boolean {
 	const bufB = Buffer.from(b);
 	if (bufA.length !== bufB.length) return false;
 	return timingSafeEqual(bufA, bufB);
+}
+
+export type RequestPasswordResetResult = {
+	requested: true;
+	resetToken?: string;
+};
+
+export async function requestPasswordReset(
+	db: Database,
+	email: string,
+	now: Date
+): Promise<Result<RequestPasswordResetResult, UseCaseError>> {
+	const emailErr = validateEmail(email);
+	if (emailErr) {
+		return Err({ kind: 'validation_failed', issues: [{ path: 'email', message: emailErr }] });
+	}
+
+	const normalizedEmail = email.trim().toLowerCase();
+	const rows = await db
+		.select({ id: users.id, status: users.status })
+		.from(users)
+		.where(eq(users.email, normalizedEmail))
+		.limit(1);
+
+	const row = rows[0];
+	if (row?.status === 'active') {
+		const rawToken = newEmailVerificationToken();
+		const tokenHash = hashToken(rawToken);
+		await db.insert(passwordResetTokens).values({
+			id: newId(),
+			userId: row.id,
+			tokenHash,
+			expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS)
+		});
+		storeDevPasswordResetToken(normalizedEmail, rawToken);
+		return Ok({
+			requested: true,
+			...(process.env.ALLOW_DEV_HELPERS === '1' ? { resetToken: rawToken } : {})
+		});
+	}
+
+	return Ok({ requested: true });
+}
+
+export async function completePasswordReset(
+	db: Database,
+	rawToken: string,
+	newPassword: string,
+	now: Date
+): Promise<Result<{ ok: true }, UseCaseError>> {
+	const passwordErr = validatePassword(newPassword);
+	if (passwordErr) {
+		return Err({
+			kind: 'validation_failed',
+			issues: [{ path: 'newPassword', message: passwordErr }]
+		});
+	}
+
+	const tokenHash = hashToken(rawToken);
+	const rows = await db
+		.select({
+			id: passwordResetTokens.id,
+			userId: passwordResetTokens.userId,
+			expiresAt: passwordResetTokens.expiresAt,
+			consumedAt: passwordResetTokens.consumedAt
+		})
+		.from(passwordResetTokens)
+		.where(eq(passwordResetTokens.tokenHash, tokenHash))
+		.limit(1);
+
+	const row = rows[0];
+	if (!row || row.consumedAt || row.expiresAt < now) {
+		return Err({ kind: 'not_found', resource: 'password_reset_token' });
+	}
+
+	const passwordHash = await hashPassword(newPassword);
+	const userId = asUserId(row.userId);
+	let tokenLostRace = false;
+
+	await db.transaction(async (tx) => {
+		const updated = await tx
+			.update(passwordResetTokens)
+			.set({ consumedAt: now })
+			.where(and(eq(passwordResetTokens.id, row.id), isNull(passwordResetTokens.consumedAt)))
+			.returning({ id: passwordResetTokens.id });
+
+		if (updated.length === 0) {
+			tokenLostRace = true;
+			return;
+		}
+
+		await tx.update(users).set({ passwordHash, updatedAt: now }).where(eq(users.id, userId));
+
+		await revokeAllSessionsForUser(tx, userId, now);
+	});
+
+	if (tokenLostRace) {
+		return Err({ kind: 'not_found', resource: 'password_reset_token' });
+	}
+
+	return Ok({ ok: true });
+}
+
+export async function reauthWithPassword(
+	db: Database,
+	input: { userId: UserId; sessionId: SessionId; password: string },
+	now: Date
+): Promise<Result<{ reauthedUntil: string }, UseCaseError>> {
+	const rows = await db
+		.select({ passwordHash: users.passwordHash, status: users.status })
+		.from(users)
+		.where(eq(users.id, input.userId))
+		.limit(1);
+
+	const row = rows[0];
+	if (!row?.passwordHash || row.status !== 'active') {
+		return Err({ kind: 'forbidden', reason: 'invalid password' });
+	}
+
+	const valid = await verifyPassword(input.password, row.passwordHash);
+	if (!valid) {
+		return Err({ kind: 'forbidden', reason: 'invalid password' });
+	}
+
+	await stampReauth(db, input.sessionId, now);
+	return Ok({ reauthedUntil: new Date(now.getTime() + 15 * 60_000).toISOString() });
+}
+
+export async function changePassword(
+	db: Database,
+	input: {
+		userId: UserId;
+		sessionId: SessionId;
+		currentPassword: string;
+		newPassword: string;
+	},
+	now: Date,
+	correlationId: string
+): Promise<Result<{ ok: true }, UseCaseError>> {
+	const passwordErr = validatePassword(input.newPassword);
+	if (passwordErr) {
+		return Err({
+			kind: 'validation_failed',
+			issues: [{ path: 'newPassword', message: passwordErr }]
+		});
+	}
+
+	const rows = await db
+		.select({ passwordHash: users.passwordHash, status: users.status })
+		.from(users)
+		.where(eq(users.id, input.userId))
+		.limit(1);
+
+	const row = rows[0];
+	if (!row?.passwordHash || row.status !== 'active') {
+		return Err({ kind: 'forbidden', reason: 'invalid password' });
+	}
+
+	const valid = await verifyPassword(input.currentPassword, row.passwordHash);
+	if (!valid) {
+		return Err({ kind: 'forbidden', reason: 'invalid password' });
+	}
+
+	const passwordHash = await hashPassword(input.newPassword);
+
+	await db.transaction(async (tx) => {
+		await tx.update(users).set({ passwordHash, updatedAt: now }).where(eq(users.id, input.userId));
+
+		const revokedCount = await revokeOtherSessionsForUser(tx, input.userId, input.sessionId, now);
+		await stampReauth(tx, input.sessionId, now);
+
+		if (revokedCount > 0) {
+			await writeAudit(tx, {
+				actorId: input.userId,
+				actorRole: 'seeker',
+				action: 'session.revoke_others',
+				targetType: 'user',
+				targetId: input.userId,
+				reason: 'password_change',
+				metadata: { revokedCount },
+				correlationId
+			});
+		}
+	});
+
+	return Ok({ ok: true });
 }
 
 function asUserId(id: string): UserId {

@@ -9,20 +9,18 @@ import {
 } from '../../shared/auth-context';
 import { asId, type SessionId, type UserId } from '../../shared/ids';
 import { ownsProfile } from '../provider-profile';
-import {
-	hashSessionToken,
-	newSessionToken,
-	createSession,
-	getUserCapabilities,
-	SEEKER_IDLE_MS
-} from './infra/session-commands';
-import { randomBytes } from 'node:crypto';
+import { hashSessionToken, newSessionToken, SEEKER_IDLE_MS } from './infra/session-commands';
 
 export { exportFor } from './export-stub';
 export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
+export { setSessionCookie, clearSessionCookie, SESSION_COOKIE } from './app/session-cookie';
 export { parseGatedAction, type GatedAction, type SignInIntent } from './domain/sign-in-intent';
 export { buildPostAuthRedirect } from './domain/post-auth-redirect';
-export { getDisplayIdentity, getContactPhone } from './infra/display-identity';
+export {
+	getDisplayIdentity,
+	getContactPhone,
+	getSelfAccountSummary
+} from './infra/display-identity';
 export {
 	registerSeeker,
 	loginPassword,
@@ -31,10 +29,20 @@ export {
 	findOAuthLink,
 	createOAuthUser,
 	linkOAuthToUser,
+	requestPasswordReset,
+	completePasswordReset,
+	reauthWithPassword,
+	changePassword,
 	type RegisterSeekerInput,
 	type LoginPasswordResult
 } from './infra/auth-commands';
-export { createSession, getUserCapabilities };
+export {
+	createSession,
+	getUserCapabilities,
+	revokeSession,
+	revokeOtherSessionsForUser,
+	revokeAllSessionsForUser
+} from './infra/session-commands';
 export {
 	buildGoogleAuthUrl,
 	googleRedirectUri,
@@ -48,9 +56,13 @@ export {
 	fetchGoogleUserInfo,
 	type GoogleUserInfo
 } from './infra/oauth-google';
-export { getDevVerificationToken, findUserIdByEmail } from './infra/dev-verification';
+export {
+	getDevVerificationToken,
+	getDevPasswordResetToken,
+	findUserIdByEmail
+} from './infra/dev-verification';
+import { randomBytes } from 'node:crypto';
 
-export const SESSION_COOKIE = 'pf_session';
 export const ANON_COOKIE = 'pf_anon';
 export const ADMIN_IDLE_MS = 12 * 60 * 60_000;
 export const LAST_SEEN_THROTTLE_MS = 60 * 60_000;

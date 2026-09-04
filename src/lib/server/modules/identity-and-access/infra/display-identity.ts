@@ -39,3 +39,34 @@ export async function getContactPhone(db: Database, userId: UserId): Promise<str
 	if (!row?.phone || !row.phoneVerifiedAt) return null;
 	return row.phone;
 }
+
+export type SelfAccountSummary = {
+	displayName: string;
+	email: string | null;
+	emailVerified: boolean;
+	hasPassword: boolean;
+};
+
+export async function getSelfAccountSummary(
+	db: Database,
+	userId: UserId
+): Promise<SelfAccountSummary | null> {
+	const rows = await db
+		.select({
+			displayName: users.displayName,
+			email: users.email,
+			emailVerifiedAt: users.emailVerifiedAt,
+			passwordHash: users.passwordHash
+		})
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+	const row = rows[0];
+	if (!row) return null;
+	return {
+		displayName: row.displayName,
+		email: row.email,
+		emailVerified: row.emailVerifiedAt !== null,
+		hasPassword: row.passwordHash !== null
+	};
+}

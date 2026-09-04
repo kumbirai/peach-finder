@@ -67,6 +67,21 @@ export const emailVerificationTokens = identitySchema.table(
 	(table) => [index('evt_user_idx').on(table.userId), index('evt_expiry_idx').on(table.expiresAt)]
 );
 
+export const passwordResetTokens = identitySchema.table(
+	'password_reset_token',
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		tokenHash: text('token_hash').notNull().unique(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+		consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'date' })
+	},
+	(table) => [index('prt_user_idx').on(table.userId), index('prt_expiry_idx').on(table.expiresAt)]
+);
+
 export const sessions = identitySchema.table(
 	'session',
 	{

@@ -13,11 +13,13 @@
 			action: string | null;
 			providerProfileId: string | null;
 			messageDraft: string;
+			initialMode: 'sign-in' | 'sign-up';
 		};
 		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
 	} = $props();
 
-	let mode = $state<'sign-in' | 'sign-up'>('sign-up');
+	let modeOverride = $state<'sign-in' | 'sign-up' | null>(null);
+	const mode = $derived(modeOverride ?? data.initialMode);
 	let email = $state('');
 	let password = $state('');
 	let displayName = $state('');
@@ -111,13 +113,21 @@
 		</Button>
 	</form>
 
+	{#if mode === 'sign-in'}
+		<p class="toggle label">
+			<a class="link" href="/forgot-password">Forgot password?</a>
+		</p>
+	{/if}
+
 	<p class="toggle label">
 		{#if mode === 'sign-up'}
 			Already have an account?
-			<button type="button" class="link" onclick={() => (mode = 'sign-in')}>Sign in</button>
+			<button type="button" class="link" onclick={() => (modeOverride = 'sign-in')}>Sign in</button>
 		{:else}
 			New here?
-			<button type="button" class="link" onclick={() => (mode = 'sign-up')}>Create account</button>
+			<button type="button" class="link" onclick={() => (modeOverride = 'sign-up')}
+				>Create account</button
+			>
 		{/if}
 	</p>
 </main>
@@ -177,6 +187,14 @@
 		text-decoration: underline;
 		padding: 0;
 		min-height: 44px;
+	}
+	a.link {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+	}
+	a.link:hover {
+		text-decoration: underline;
 	}
 	.link:focus-visible {
 		outline: 2px solid var(--color-peach-deep);

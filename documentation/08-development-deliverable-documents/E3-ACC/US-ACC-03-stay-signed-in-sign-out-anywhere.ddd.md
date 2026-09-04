@@ -27,9 +27,9 @@ FR-ACC-06, FR-ACC-09, SR-SEC-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ACC-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-04 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Extended `identity-and-access` with password-reset tokens (migration `0003_us_acc_03_password_reset.sql`), session revocation helpers, password reset / change-password / reauth commands, and cookie helpers. Delivery routes: `POST /api/identity/logout`, `POST /api/identity/account/reauth`, `POST /api/identity/account/password`, `/forgot-password`, `/reset-password`, and account settings on `/profile`. Navigation exposes sign-out when `signedIn` (root layout); profile holds sign-out and change-password forms. Sessions default to 90-day rolling idle via existing hook touch + cookie max-age (`domain/session-policy.ts`).
+
+**Deviations:** Email/phone change endpoints (LLD #14–15) deferred to US-ACC-05 / provider onboarding — this story’s test matrix exercises password reset and password change only; reauth API is implemented for downstream credential flows. Password-reset emails are dev-store backed (`ALLOW_DEV_HELPERS=1`) until `user-notifications` wires outbound mail. Sign-in accepts `?flow=sign-in` so returning users land directly on login without toggling modes.
+
+**Verification:** `npm run check`, `lint`, `test` (62), `test:integration` (8), `boundaries`, `build`, `test:e2e` (17 incl. `e2e/stay-signed-in.e2e.ts` TC-ACC-03a–d + axe on profile/forgot-password).
+
+**Follow-ups:** Wire real reset email via `user-notifications`; add email/phone change UI when US-ACC-05 lands; mobile nav could expose sign-out without visiting profile (optional polish).

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+
 	let {
 		current = 'search',
 		variant = 'auto'
@@ -6,6 +8,8 @@
 		current?: 'search' | 'messages' | 'profile';
 		variant?: 'auto' | 'tabs' | 'top';
 	} = $props();
+
+	const signedIn = $derived(page.data.signedIn === true);
 </script>
 
 <nav class="nav nav-{variant}" aria-label="Primary">
@@ -14,6 +18,11 @@
 		<a class="top-link" class:active={current === 'search'} href="/">Search</a>
 		<a class="top-link" class:active={current === 'messages'} href="/messages">Messages</a>
 		<a class="top-link" class:active={current === 'profile'} href="/profile">Profile</a>
+		{#if signedIn}
+			<form class="sign-out" method="POST" action="/api/identity/logout">
+				<button type="submit" class="sign-out-btn label">Sign out</button>
+			</form>
+		{/if}
 	</div>
 	<div class="tabs">
 		<a class="tab" class:active={current === 'search'} href="/">
@@ -114,5 +123,26 @@
 		.nav-auto .tabs {
 			display: none;
 		}
+	}
+	.sign-out {
+		margin: 0;
+		margin-left: auto;
+	}
+	.sign-out-btn {
+		background: none;
+		border: none;
+		color: var(--color-peach-deep);
+		cursor: pointer;
+		min-height: 44px;
+		padding: 0 var(--space-sm);
+		font-family: var(--font-label-family);
+		font-size: var(--font-label-size);
+		font-weight: var(--font-label-weight);
+		letter-spacing: var(--font-label-letter-spacing);
+	}
+	.sign-out-btn:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+		border-radius: 999px;
 	}
 </style>

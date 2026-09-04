@@ -1,10 +1,11 @@
-import { eq } from 'drizzle-orm';
-import type { Database } from '../../../db';
+import { and, eq, isNull, ne } from 'drizzle-orm';
+import type { Database, Transaction } from '../../../db';
 import { newId, type SessionId, type UserId } from '../../../shared/ids';
 import { sessions, users } from './schema';
+import { SESSION_IDLE_MS } from '../domain/session-policy';
 import { createHash, randomBytes } from 'node:crypto';
 
-export const SEEKER_IDLE_MS = 90 * 24 * 60 * 60_000;
+export const SEEKER_IDLE_MS = SESSION_IDLE_MS;
 
 export function hashSessionToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
@@ -68,4 +69,59 @@ export async function getUserCapabilities(
 		emailVerified: row?.emailVerifiedAt != null,
 		phoneVerified: row?.phoneVerifiedAt != null
 	};
+}
+
+export async function revokeSession(
+	db: Database | Transaction,
+	sessionId: SessionId,
+	now: Date
+): Promise<void> {
+	await db
+		.update(sessions)
+		.set({ revokedAt: now })
+		.where(and(eq(sessions.id, sessionId), isNull(sessions.revokedAt)));
+}
+
+export async function revokeAllSessionsForUser(
+	db: Database | Transaction,
+	userId: UserId,
+	now: Date
+): Promise<void> {
+	await db
+		.update(sessions)
+		.set({ revokedAt: now })
+		.where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
+export async function revokeOtherSessionsForUser(
+	db: Database | Transaction,
+	userId: UserId,
+	keepSessionId: SessionId,
+	now: Date
+): Promise<number> {
+	const updated = await db
+		.update(sessions)
+		.set({ revokedAt: now })
+		.where(
+			and(eq(sessions.userId, userId), ne(sessions.id, keepSessionId), isNull(sessions.revokedAt))
+		)
+		.returning({ id: sessions.id });
+	return updated.length;
+}
+
+export async function stampReauth(
+	db: Database | Transaction,
+	sessionId: SessionId,
+	now: Date
+): Promise<void> {
+	await db.update(sessions).set({ reauthAt: now }).where(eq(sessions.id, sessionId));
+}
+
+export async function getSessionReauthAt(db: Database, sessionId: SessionId): Promise<Date | null> {
+	const rows = await db
+		.select({ reauthAt: sessions.reauthAt })
+		.from(sessions)
+		.where(eq(sessions.id, sessionId))
+		.limit(1);
+	return rows[0]?.reauthAt ?? null;
 }

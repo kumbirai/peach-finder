@@ -7,6 +7,9 @@ export default defineConfig({
 		include: ['src/**/*.integration.test.ts'],
 		testTimeout: 90_000,
 		hookTimeout: 90_000,
-		fileParallelism: false
+		fileParallelism: false,
+		env: {
+			ALLOW_DEV_HELPERS: '1'
+		}
 	}
 });
