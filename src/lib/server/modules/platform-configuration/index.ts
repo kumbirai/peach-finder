@@ -297,6 +297,17 @@ export async function listLexicon(db: Database) {
 	return db.select().from(lexiconEntries);
 }
 
+export async function getActiveLexiconForSearch(db: Database) {
+	return db
+		.select({
+			term: lexiconEntries.term,
+			entryType: lexiconEntries.entryType,
+			mapsTo: lexiconEntries.mapsTo
+		})
+		.from(lexiconEntries)
+		.where(eq(lexiconEntries.isActive, true));
+}
+
 export async function createLexiconEntry(
 	db: Database,
 	input: {

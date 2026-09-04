@@ -50,7 +50,9 @@ describe('playwright-env', () => {
 
 	it('keeps webServer port aligned with resolved E2E port', () => {
 		const port = resolveE2ePort('5199');
-		expect(buildWebServerCommand(port)).toBe('npm run dev -- --host 127.0.0.1 --port 5199');
+		expect(buildWebServerCommand(port)).toBe(
+			`npm run db:migrate && SEED_PACK=seed-core npm run db:seed && npm run dev -- --host 127.0.0.1 --port ${port}`
+		);
 		expect(resolveE2eBaseUrl(port)).toBe('http://127.0.0.1:5199');
 	});
 

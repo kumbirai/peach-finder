@@ -12,6 +12,9 @@ import { asId, type SessionId, type UserId } from '../../shared/ids';
 import { ownsProfile } from '../provider-profile';
 
 export { exportFor } from './export-stub';
+export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
+export { parseGatedAction, type GatedAction, type SignInIntent } from './domain/sign-in-intent';
+export { getDisplayIdentity, getContactPhone } from './infra/display-identity';
 
 export const SESSION_COOKIE = 'pf_session';
 export const ANON_COOKIE = 'pf_anon';

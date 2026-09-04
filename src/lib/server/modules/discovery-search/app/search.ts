@@ -1,0 +1,171 @@
+import { sql } from 'drizzle-orm';
+import type { Database } from '../../../db';
+import type { AuthContext } from '../../../shared/auth-context';
+import { dedupeIntents, parseQuery } from '../domain/parse-query';
+import type { StructuredQuery } from '../domain/structured-query';
+import { toSearchCard, type SearchCard, type SearchCardRow } from './serializers';
+
+export type SearchInput = {
+	q?: string;
+	available?: boolean;
+	verified?: boolean;
+	minRating?: number;
+	lang?: string[];
+	tag?: string[];
+	priceMin?: number;
+	priceMax?: number;
+	lat?: number;
+	lng?: number;
+	limit?: number;
+	cursor?: string;
+	lexicon: Array<{ term: string; entryType: string; mapsTo: unknown }>;
+};
+
+export type SearchResult = {
+	cards: SearchCard[];
+	nextCursor: string | null;
+	appliedIntents: Array<{ key: string; label: string; source: string }>;
+};
+
+function buildStructuredQuery(input: SearchInput): StructuredQuery {
+	const sq = parseQuery(input.q ?? '', input.lexicon as never, {
+		...(input.available !== undefined ? { availableNow: input.available } : {}),
+		...(input.verified !== undefined ? { verified: input.verified } : {}),
+		...(input.lang ? { languageCodes: input.lang } : {}),
+		...(input.tag ? { serviceTagIds: input.tag } : {}),
+		...(input.minRating !== undefined ? { minRating: input.minRating } : {}),
+		...(input.priceMin !== undefined ? { priceMin: input.priceMin } : {}),
+		...(input.priceMax !== undefined ? { priceMax: input.priceMax } : {}),
+		...(input.lat && input.lng ? { nearMe: true } : {})
+	});
+	sq.appliedIntents = dedupeIntents(sq.appliedIntents);
+	return sq;
+}
+
+export async function runSearch(
+	db: Database,
+	input: SearchInput,
+	viewer: AuthContext
+): Promise<SearchResult> {
+	const sq = buildStructuredQuery(input);
+	const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
+	const viewerId = viewer.userId;
+	const langCodes = sq.languageCodes;
+	const tagIds = sq.serviceTagIds;
+	const lat = input.lat ?? null;
+	const lng = input.lng ?? null;
+	const skipLang = langCodes.length === 0;
+	const skipTags = tagIds.length === 0;
+	const langClause = skipLang
+		? sql`true`
+		: sql`p.language_codes && ARRAY[${sql.join(
+				langCodes.map((code) => sql`${code}`),
+				sql`, `
+			)}]::text[]`;
+	const tagClause = skipTags
+		? sql`true`
+		: sql`p.service_tag_ids @> ARRAY[${sql.join(
+				tagIds.map((id) => sql`${id}::uuid`),
+				sql`, `
+			)}]::uuid[]`;
+
+	const rows = await db.execute(sql`
+		SELECT
+			p.provider_profile_id,
+			p.display_name,
+			p.photo_primary_url,
+			p.availability_state,
+			p.availability_set_at,
+			p.rating_average,
+			p.rating_count,
+			p.badge_identity_verified,
+			p.badge_active_this_week,
+			p.is_featured,
+			p.price_min_cents,
+			a.name AS area_name,
+			CASE WHEN ${lat}::double precision IS NULL THEN NULL ELSE
+				6371 * acos(LEAST(1, GREATEST(-1,
+					cos(radians(${lat}::double precision)) * cos(radians(a.centroid_lat)) *
+					cos(radians(a.centroid_lng) - radians(${lng}::double precision)) +
+					sin(radians(${lat}::double precision)) * sin(radians(a.centroid_lat))
+				)))
+			END AS distance_km
+		FROM discovery_search.search_projection p
+		JOIN platform_configuration.area a ON a.id = p.area_id
+		WHERE
+			(${sq.availableNow} = false OR p.availability_state = 'available')
+			AND (${sq.verified} = false OR p.badge_identity_verified = true)
+			AND (
+				${sq.minRating}::double precision IS NULL
+				OR (p.rating_average >= ${sq.minRating}::double precision AND p.rating_count >= ${sq.minRatingCount})
+			)
+			AND (${langClause})
+			AND (${tagClause})
+			AND (${sq.priceMax}::integer IS NULL OR p.price_min_cents <= ${sq.priceMax}::integer)
+			AND (${sq.priceMin}::integer IS NULL OR p.price_max_cents >= ${sq.priceMin}::integer)
+			AND (
+				${sq.freeText} = ''
+				OR p.intro_tsvector @@ plainto_tsquery('english', ${sq.freeText})
+				OR p.search_text % ${sq.freeText}
+			)
+			AND (
+				${viewerId}::uuid IS NULL
+				OR NOT EXISTS (
+					SELECT 1 FROM discovery_search.blocked_pair b
+					WHERE b.blocker_id = p.owner_id AND b.blocked_id = ${viewerId}::uuid
+				)
+			)
+		ORDER BY
+			(p.availability_state = 'available') DESC,
+			p.availability_set_at DESC NULLS LAST,
+			p.is_featured DESC,
+			distance_km ASC NULLS LAST,
+			p.badge_active_this_week DESC,
+			p.last_activity_at DESC NULLS LAST,
+			p.rating_average DESC NULLS LAST,
+			p.rating_count DESC,
+			p.provider_profile_id
+		LIMIT ${limit + 1}
+	`);
+
+	const resultRows = (rows as unknown as Record<string, unknown>[]).map((row) => ({
+		providerProfileId: String(row.provider_profile_id),
+		displayName: String(row.display_name),
+		photoPrimaryUrl: row.photo_primary_url ? String(row.photo_primary_url) : null,
+		availabilityState: String(row.availability_state),
+		availabilitySetAt: row.availability_set_at ? new Date(String(row.availability_set_at)) : null,
+		ratingAverage: row.rating_average != null ? String(row.rating_average) : null,
+		ratingCount: Number(row.rating_count ?? 0),
+		badgeIdentityVerified: Boolean(row.badge_identity_verified),
+		badgeActiveThisWeek: Boolean(row.badge_active_this_week),
+		isFeatured: Boolean(row.is_featured),
+		priceMinCents: row.price_min_cents != null ? Number(row.price_min_cents) : null,
+		areaName: String(row.area_name),
+		distanceKm: row.distance_km != null ? Number(row.distance_km) : null
+	})) satisfies SearchCardRow[];
+	const hasMore = resultRows.length > limit;
+	const page = hasMore ? resultRows.slice(0, limit) : resultRows;
+	const cards = page.map((row) => toSearchCard(row, viewer));
+
+	return {
+		cards,
+		nextCursor: null,
+		appliedIntents: sq.appliedIntents
+	};
+}
+
+export async function runSuggest(
+	db: Database,
+	prefix: string,
+	limit = 8
+): Promise<Array<{ term: string; kind: string }>> {
+	if (!prefix.trim()) return [];
+	const rows = await db.execute(sql`
+		SELECT term, kind
+		FROM discovery_search.suggest_term
+		WHERE is_active = true AND term ILIKE ${`${prefix.toLowerCase()}%`}
+		ORDER BY length(term), term
+		LIMIT ${limit}
+	`);
+	return rows as unknown as Array<{ term: string; kind: string }>;
+}

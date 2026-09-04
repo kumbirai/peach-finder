@@ -1,8 +1,9 @@
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { readFileSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import * as schema from './schema';
 
 export async function withTestDatabase<T>(
@@ -31,8 +32,12 @@ export async function withTestDatabase<T>(
 		END
 		$$;
 	`);
-	const migration = readFileSync(path.resolve('drizzle/migrations/0000_foundation.sql'), 'utf8');
-	await sql.unsafe(migration);
+	const migrationDir = path.resolve('drizzle/migrations');
+	const migrationFiles = (await readdir(migrationDir)).filter((f) => f.endsWith('.sql')).sort();
+	for (const file of migrationFiles) {
+		const body = readFileSync(path.join(migrationDir, file), 'utf8');
+		await sql.unsafe(body);
+	}
 	const db = drizzle(sql, { schema });
 	try {
 		return await fn(db);

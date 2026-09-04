@@ -27,9 +27,9 @@ FR-ACC-01, FR-ACC-05.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,4 +45,14 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - All acceptance criteria in section 2 verified against the live-seeded stack (`seed-core` or the relevant seed pack) — no stubbed HTTP, no `page.route` interception, per this project's live-stack-seeded testing convention.
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ACC-01 cross-references this DDD (applied in the stage-9 traceability pass).
-- No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+- Implementation complete in working tree (2026-09-04); see §7 Implementation Notes.
+
+## 7. Implementation Notes
+
+### Session 2026-09-04 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Delivered anonymous browse as a vertical slice: migration `drizzle/migrations/0001_us_acc_01_browse.sql` (provider-profile read tables, discovery `search_projection`, supporting availability/reviews/badges/listing/media tables), `scripts/seed-core.ts` (12 published providers per test-plan `seed-core`), `discovery-search` query/parser/serializers (`GET /api/discovery/search`, `GET /api/discovery/suggest`), `provider-profile` public read (`GET /api/provider/profile/:id`, SSR `/provider/[id]`), and `identity-and-access` sign-in intent helpers (`gatedActionHref` → `/sign-in?returnTo=…&action=…`). Homepage `/` SSR-loads search results with filter chips; profile contact bar shows Message/Review/Report linking to sign-in (registration itself is US-ACC-02).
+
+**Deviation:** DDD lists only `identity-and-access` as primary module, but FR-ACC-01/TC-ACC-01 require live search and profile data — minimal read paths were implemented in `provider-profile` and `discovery-search` (projection seeded directly in `seed-core`; event subscribers deferred to Wave 2). `playwright-env.ts` webServer now runs `db:migrate` + `SEED_PACK=seed-core db:seed` before dev for live-stack E2E.
+
+**Follow-ups:** Wire projection maintenance to domain events (US-DISC-*); replace sign-in placeholder form with US-ACC-02 registration/OAuth; add cursor-pagination adversarial tests; Chip filter navigation currently client-side `goto` — consider `<a href>` progressive enhancement.
