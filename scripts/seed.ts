@@ -13,6 +13,10 @@ if (process.env.SEED_PACK === 'seed-availability') {
 } else if (process.env.SEED_PACK === 'seed-core' || process.env.SEED_CORE === '1') {
 	await seedCore(db);
 	console.info('seed-core complete');
+} else if (process.env.SEED_PACK === 'seed-blocking') {
+	const { seedBlocking } = await import('./seed-blocking');
+	await seedBlocking(db);
+	console.info('seed-blocking complete');
 } else {
 	console.info(
 		'platform seed complete (set SEED_PACK=seed-core or seed-availability for browse fixtures)'

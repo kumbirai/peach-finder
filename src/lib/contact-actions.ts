@@ -19,3 +19,15 @@ export function appendMessageDraftToUrl(href: string, draft: string): string {
 	url.searchParams.set('draft', draft);
 	return url.href;
 }
+
+/** Service-context prefill for US-MSG-01 (FR-MSG-04). */
+export function appendServiceContextToUrl(href: string, serviceName: string): string {
+	const url = new URL(href, 'https://peachfinder.test');
+	url.searchParams.set('context', serviceName);
+	if (href.startsWith('http')) return url.href;
+	return `${url.pathname}${url.search}`;
+}
+
+export function buildServiceMessageHref(providerProfileId: string, serviceName: string): string {
+	return appendServiceContextToUrl(`/messages/compose/${providerProfileId}`, serviceName);
+}

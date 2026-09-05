@@ -31,6 +31,16 @@ export const badgeState = trustAndSafetySchema.table('badge_state', {
 	updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 });
 
+export const blocks = trustAndSafetySchema.table(
+	'block',
+	{
+		blockerId: uuid('blocker_id').notNull(),
+		blockedId: uuid('blocked_id').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
+	},
+	(table) => [{ pk: { columns: [table.blockerId, table.blockedId] } }]
+);
+
 export const verificationCases = trustAndSafetySchema.table('verification_case', {
 	id: uuid('id').primaryKey(),
 	providerProfileId: uuid('provider_profile_id').notNull(),

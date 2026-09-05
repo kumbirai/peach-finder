@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { appendMessageDraftToUrl, messageButtonLabel, resolveCallHref } from './contact-actions';
+import {
+	appendMessageDraftToUrl,
+	appendServiceContextToUrl,
+	buildServiceMessageHref,
+	messageButtonLabel,
+	resolveCallHref
+} from './contact-actions';
 
 describe('contact-actions', () => {
 	it('resolveCallHref returns tel link when phone is present', () => {
@@ -34,6 +40,15 @@ describe('contact-actions', () => {
 		const href = 'https://example.com/messages/compose/01900000-0000-7000-8000-000000000101';
 		expect(appendMessageDraftToUrl(href, 'Hi there')).toBe(
 			'https://example.com/messages/compose/01900000-0000-7000-8000-000000000101?draft=Hi+there'
+		);
+	});
+
+	it('buildServiceMessageHref adds context query for service prefill', () => {
+		expect(buildServiceMessageHref('profile-1', '60 minute session')).toBe(
+			'/messages/compose/profile-1?context=60+minute+session'
+		);
+		expect(appendServiceContextToUrl('/messages/compose/abc', 'Deep tissue')).toBe(
+			'/messages/compose/abc?context=Deep+tissue'
 		);
 	});
 });

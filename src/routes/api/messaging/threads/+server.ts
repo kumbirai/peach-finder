@@ -2,10 +2,10 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
-import { bucketSpec, consumeRateLimit } from '$lib/server/shared/rate-limit';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
 import { zId } from '$lib/server/shared/zod';
 import { sendOrHoldMessage } from '$lib/server/modules/direct-messaging';
+import { applyMessagingRateLimitsBeforeSend } from '$lib/server/modules/direct-messaging/infra/messaging-rate-limits';
 import { isEmailVerified } from '$lib/server/modules/identity-and-access';
 import { parseProviderProfileId } from '$lib/server/modules/provider-profile';
 
@@ -13,7 +13,8 @@ export const _requiredRole: Role = 'seeker';
 
 const CreateThreadSchema = z.object({
 	providerProfileId: zId<'ProviderProfileId'>(),
-	body: z.string().min(1).max(4000)
+	body: z.string().min(1).max(4000),
+	serviceContext: z.string().min(1).max(200).optional()
 });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -28,16 +29,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const db = getDb();
 	const now = new Date();
-	const limited = await consumeRateLimit(
-		db,
-		bucketSpec('message_send'),
-		`account:${locals.auth.userId}`,
-		now
-	);
-	if (!limited.ok) {
-		const mapped = useCaseErrorToHttp(limited.error);
-		return json(mapped.body, { status: mapped.status });
-	}
 
 	let body: unknown;
 	try {
@@ -75,6 +66,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const profileId = parseProviderProfileId(parsed.data.providerProfileId);
 	if (!profileId.ok) {
 		const mapped = useCaseErrorToHttp(profileId.error);
+		return json(mapped.body, { status: mapped.status });
+	}
+
+	const limited = await applyMessagingRateLimitsBeforeSend(
+		db,
+		locals.auth.userId,
+		profileId.value,
+		now
+	);
+	if (!limited.ok) {
+		const mapped = useCaseErrorToHttp(limited.error);
 		return json(mapped.body, { status: mapped.status });
 	}
 

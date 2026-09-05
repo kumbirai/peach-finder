@@ -7,6 +7,8 @@ import {
 	listSeekerThreads,
 	listProviderInbox,
 	validateMessageBody,
+	canSeekerMessageProvider,
+	threadExistsForSeekerProvider,
 	type SendOrHoldResult,
 	type ThreadSummary
 } from './infra/messaging-commands';
@@ -22,6 +24,8 @@ export {
 	listSeekerThreads,
 	listProviderInbox,
 	validateMessageBody,
+	canSeekerMessageProvider,
+	threadExistsForSeekerProvider,
 	getDevMessageState,
 	getPresence,
 	getResponseTime,
@@ -32,7 +36,12 @@ export {
 };
 export type { PresenceBucket } from './domain/presence-buckets';
 export type { ResponseTimeBucket } from './domain/response-time-bucket';
-export { handleEmailVerified, handleAccountDeletionRequested } from './infra/subscriptions';
+export {
+	handleEmailVerified,
+	handleAccountDeletionRequested,
+	handleUserBlocked,
+	handleUserUnblocked
+} from './infra/subscriptions';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

@@ -20,24 +20,28 @@ export function success<T>(data: T, meta?: SuccessEnvelope<T>['meta']): SuccessE
 
 export function useCaseErrorToHttp(error: UseCaseError): { status: number; body: ErrorEnvelope } {
 	switch (error.kind) {
-		case 'not_found':
-			return {
-				status: 404,
-				body: {
-					error: {
-						code: ERROR_CODES.NOT_FOUND,
-						message: 'We could not find that.',
-						fields: null
-					}
-				}
-			};
 		case 'forbidden':
 			return {
 				status: 403,
 				body: {
 					error: {
-						code: ERROR_CODES.FORBIDDEN,
-						message: 'You cannot do that.',
+						code: error.reason === 'blocked' ? ERROR_CODES.BLOCKED : ERROR_CODES.FORBIDDEN,
+						message:
+							error.reason === 'blocked'
+								? 'You cannot message this person.'
+								: 'You cannot do that.',
+						fields: null
+					}
+				}
+			};
+		case 'not_found':
+			return {
+				status: 404,
+				body: {
+					error: {
+						code:
+							error.resource === 'thread' ? ERROR_CODES.THREAD_NOT_FOUND : ERROR_CODES.NOT_FOUND,
+						message: 'We could not find that.',
 						fields: null
 					}
 				}

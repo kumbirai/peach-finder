@@ -7,7 +7,9 @@ import { cleanupRateLimitBuckets } from '../lib/server/shared/rate-limit';
 import { handleConfigChanged } from '../lib/server/modules/platform-configuration';
 import {
 	handleEmailVerified,
-	handleAccountDeletionRequested
+	handleAccountDeletionRequested,
+	handleUserBlocked,
+	handleUserUnblocked
 } from '../lib/server/modules/direct-messaging';
 import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
 import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
@@ -49,6 +51,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			event.eventName === 'AccountDeletionRequested'
 		) {
 			await handleAccountDeletionRequested(db, event as never);
+		}
+		if (subscriber === 'direct-messaging.block-cache' && event.eventName === 'UserBlocked') {
+			await handleUserBlocked(db, event as never);
+		}
+		if (subscriber === 'direct-messaging.unblock-cache' && event.eventName === 'UserUnblocked') {
+			await handleUserUnblocked(db, event as never);
 		}
 		if (subscriber === 'provider-profile.attach-photo' && event.eventName === 'MediaProcessed') {
 			await handleMediaProcessed(db, event as never);

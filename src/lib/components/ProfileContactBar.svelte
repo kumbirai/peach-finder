@@ -6,12 +6,14 @@
 		messageHref,
 		messageDraftKey,
 		callHref,
-		displayName
+		displayName,
+		showMessage = true
 	}: {
 		messageHref: string;
 		messageDraftKey?: string;
 		callHref?: string | undefined;
 		displayName: string;
+		showMessage?: boolean;
 	} = $props();
 
 	const messageLabel = $derived(messageButtonLabel(displayName));
@@ -21,7 +23,9 @@
 	{#if callHref}
 		<Button href={callHref} variant="secondary">Call</Button>
 	{/if}
-	<Button href={messageHref} variant="primary" {messageDraftKey}>{messageLabel}</Button>
+	{#if showMessage}
+		<Button href={messageHref} variant="primary" {messageDraftKey}>{messageLabel}</Button>
+	{/if}
 </div>
 
 <style>

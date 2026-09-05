@@ -29,9 +29,9 @@ FR-MSG-01, FR-MSG-04, FR-TRUST-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-MSG-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-MSG-01 implemented**
+
+- **Backend (`direct-messaging`):** `POST /api/messaging/threads` now applies `thread_create` rate limit on first thread only plus `message_send`; optional `serviceContext` accepted in schema (client prefill primarily via `?context=` on compose). Block enforcement via `direct_messaging.block_cache` mirror with `UserBlocked`/`UserUnblocked` subscribers (`handleUserBlocked`, `handleUserUnblocked`). Send returns `BLOCKED` (403); compose/thread read returns 404 when blocked (anti-enumeration). Idempotent one-thread-per-pair via existing unique constraint + `sendOrHoldMessage`.
+- **Supporting (`trust-and-safety`):** `trust_and_safety.block` table migration (0014); `insertBlock`/`removeBlock` publish outbox events — full block API deferred to trust stories; mirror populated by subscriber and `seed-blocking`.
+- **Frontend:** Per-service Message buttons on profile services list with `?context=` prefill (`Re: <service>`); sticky Message CTA hidden when signed-in seeker is blocked. Compose page uses `resolveComposerDraft` (draft > pending > service context for new threads only).
+- **Tests:** `start-conversation.integration.test.ts` (TC-MSG-01a/c), `service-context.test.ts`, `contact-actions.test.ts`; Playwright TC-MSG-01a–c in `testing/playwright/search-to-contact.e2e.ts`; `scripts/seed-blocking.ts` wired into e2e webServer after `seed-core`.
+- **Assumption:** Service-context prefill uses URL `context` param and compose-server `resolveComposerDraft` — not persisted server-side on thread row (FR-MSG-04 plain-text convenience only).

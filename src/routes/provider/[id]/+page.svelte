@@ -10,6 +10,7 @@
 			providerProfileId: string;
 			shareUrl: string;
 			actions: { message: string; review: string; report: string; block: string };
+			showMessage: boolean;
 			og: { title: string; description: string; image: string | null };
 			canonical: string;
 		};
@@ -36,6 +37,7 @@
 		primaryHeading
 		shareUrl={data.shareUrl}
 		actions={data.actions}
+		showMessage={data.showMessage}
 		messageDraftKey={`pf_message_draft_${data.providerProfileId}`}
 	/>
 </main>

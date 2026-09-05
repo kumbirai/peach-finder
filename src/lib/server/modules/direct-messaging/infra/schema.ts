@@ -55,3 +55,16 @@ export const presence = directMessagingSchema.table('presence', {
 	userId: uuid('user_id').primaryKey(),
 	lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true, mode: 'date' }).notNull()
 });
+
+export const blockCache = directMessagingSchema.table(
+	'block_cache',
+	{
+		blockerId: uuid('blocker_id').notNull(),
+		blockedId: uuid('blocked_id').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull()
+	},
+	(table) => [
+		{ pk: { columns: [table.blockerId, table.blockedId] } },
+		index('block_cache_blocked_idx').on(table.blockedId)
+	]
+);

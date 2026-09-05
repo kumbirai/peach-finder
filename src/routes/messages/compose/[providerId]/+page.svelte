@@ -27,6 +27,10 @@
 	let status = $state<'idle' | 'sending' | 'held' | 'sent' | 'error'>('idle');
 	let statusMessage = $state('');
 
+	function handleSubmit() {
+		status = 'sending';
+	}
+
 	$effect(() => {
 		if (data.draft) body = data.draft;
 	});
@@ -82,7 +86,7 @@
 		</ul>
 	{/if}
 
-	<form class="composer" method="POST" action="?/send">
+	<form class="composer" method="POST" action="?/send" onsubmit={handleSubmit}>
 		<Input id="message-body" label="Your message" name="body" bind:value={body} />
 		<Button type="submit" variant="primary" disabled={status === 'sending'}>
 			{status === 'sending' ? 'Sending…' : 'Send message'}

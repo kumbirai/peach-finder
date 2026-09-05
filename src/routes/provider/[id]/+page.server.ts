@@ -2,6 +2,7 @@ import type { Role } from '$lib/server/shared/auth-context';
 import { error } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
 import { resolveProfileActionHrefs } from '$lib/server/modules/identity-and-access';
+import { canSeekerMessageProvider } from '$lib/server/modules/direct-messaging';
 import {
 	buildShareMetadata,
 	getPublicProfile,
@@ -29,11 +30,17 @@ export async function load({ params, locals, url }) {
 		origin
 	);
 
+	let showMessage = true;
+	if (locals.auth.userId && locals.auth.hasRole('seeker')) {
+		showMessage = await canSeekerMessageProvider(db, locals.auth.userId, parsed.value);
+	}
+
 	return {
 		profile: result.value,
 		providerProfileId: params.id,
 		shareUrl: new URL(profilePath, origin).href,
 		actions: resolveProfileActionHrefs(params.id, profilePath, locals.auth, origin),
+		showMessage,
 		og,
 		canonical: url.href
 	};

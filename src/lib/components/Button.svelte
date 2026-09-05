@@ -31,12 +31,13 @@
 		class="btn btn-{variant}"
 		{href}
 		aria-disabled={disabled}
+		aria-label={ariaLabel}
 		data-message-draft-key={messageDraftKey}
 	>
 		{@render children()}
 	</a>
 {:else if href}
-	<a class="btn btn-{variant}" {href} aria-disabled={disabled} {onclick}>
+	<a class="btn btn-{variant}" {href} aria-disabled={disabled} aria-label={ariaLabel} {onclick}>
 		{@render children()}
 	</a>
 {:else}

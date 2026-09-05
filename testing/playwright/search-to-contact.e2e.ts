@@ -10,6 +10,29 @@ import {
 
 const DRAFT = 'Hi, are you available this afternoon?';
 
+async function registerAndVerifySeeker(
+	page: import('@playwright/test').Page,
+	request: import('@playwright/test').APIRequestContext,
+	email: string,
+	password: string,
+	name: string
+) {
+	await page.goto('/sign-in?returnTo=/profile');
+	await page.getByLabel('Your name').fill(name);
+	await page.getByLabel('Email').fill(email);
+	await page.getByLabel('Password').fill(password);
+	await page.locator('input[name="acceptedTerms"]').check();
+	await page.getByRole('button', { name: 'Create account' }).click();
+	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+
+	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+	expect(tokenRes.ok()).toBe(true);
+	const { data } = (await tokenRes.json()) as { data: { token: string } };
+	await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
+	await page.getByRole('button', { name: 'Verify email' }).click();
+	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+}
+
 test.describe('E2E-1 search to contact', () => {
 	test('TC-PRIV-01a: anonymous responses omit phone when visibility is OFF', async ({
 		browser
@@ -371,5 +394,95 @@ test.describe('E2E-1 search to contact', () => {
 			(v) => v.impact === 'critical' || v.impact === 'serious'
 		);
 		expect(serious).toEqual([]);
+	});
+
+	test.describe.configure({ mode: 'serial' });
+
+	test('TC-MSG-01a: re-tapping Message reopens the same thread with history', async ({
+		browser
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const email = `msg01a-${Date.now()}@example.com`;
+		const firstMessage = 'Hi Amara — are you free this week?';
+		const secondMessage = 'Still interested if you have time.';
+
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg01a Seeker');
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: /^Message / })
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`));
+		await page.getByLabel('Your message').fill(firstMessage);
+		const sendFirst = page.waitForResponse(
+			(response) =>
+				response.request().method() === 'POST' &&
+				response.url().includes(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)
+		);
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await sendFirst;
+		await expect(page.getByText('Message sent.')).toBeVisible();
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: /^Message / })
+			.click();
+		await expect(
+			page.getByRole('list', { name: 'Conversation' }).getByText(firstMessage)
+		).toBeVisible();
+		await page.getByLabel('Your message').fill(secondMessage);
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await expect(page.getByText('Message sent.')).toBeVisible({ timeout: 10_000 });
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: /^Message / })
+			.click();
+		const history = page.getByRole('list', { name: 'Conversation' });
+		await expect(history.getByText(firstMessage)).toHaveCount(1);
+		await expect(history.getByText(secondMessage)).toHaveCount(1);
+
+		await context.close();
+	});
+
+	test('TC-MSG-01b: service Message button prefills editable Re: context', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const email = `msg01b-${Date.now()}@example.com`;
+
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg01b Seeker');
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page.getByRole('link', { name: 'Message about 60 minute session' }).click();
+		await expect(page).toHaveURL(/context=60\+minute\+session/);
+		await expect(page.getByLabel('Your message')).toHaveValue('Re: 60 minute session');
+
+		await context.close();
+	});
+
+	test('TC-MSG-01c: blocked seeker cannot see Message or open compose URL', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+
+		await page.goto('/sign-in?flow=sign-in&returnTo=/profile');
+		await page.getByLabel('Email').fill('msg01-blocked@example.com');
+		await page.getByLabel('Password').fill('password123');
+		await page.getByRole('button', { name: 'Sign in' }).click();
+		await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await expect(
+			page.getByRole('group', { name: 'Contact actions' }).getByRole('link', { name: /^Message / })
+		).toHaveCount(0);
+		await expect(page.getByRole('link', { name: /Message about/ })).toHaveCount(0);
+
+		const compose = await page.goto(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		expect(compose?.status()).toBe(404);
+
+		await context.close();
 	});
 });

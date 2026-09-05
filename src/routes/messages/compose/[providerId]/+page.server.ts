@@ -6,10 +6,13 @@ import { isEmailVerified } from '$lib/server/modules/identity-and-access';
 import {
 	getThreadForSeekerProvider,
 	getPendingForSeekerProvider,
-	sendOrHoldMessage
+	sendOrHoldMessage,
+	canSeekerMessageProvider
 } from '$lib/server/modules/direct-messaging';
+import { resolveComposerDraft } from '$lib/server/modules/direct-messaging/domain/service-context';
 import { getPublicProfile, parseProviderProfileId } from '$lib/server/modules/provider-profile';
-import { bucketSpec, consumeRateLimit } from '$lib/server/shared/rate-limit';
+import { applyMessagingRateLimitsBeforeSend } from '$lib/server/modules/direct-messaging/infra/messaging-rate-limits';
+import { useCaseErrorToHttp } from '$lib/server/shared/api';
 
 export const _requiredRole: Role = 'seeker';
 
@@ -24,6 +27,13 @@ export async function load({ params, locals, url }) {
 
 	if (!locals.auth.userId) error(401, 'Sign in required');
 
+	const canMessage = await canSeekerMessageProvider(
+		db,
+		locals.auth.userId,
+		parsed.value as ProviderProfileId
+	);
+	if (!canMessage) error(404, 'Profile not found');
+
 	const thread = await getThreadForSeekerProvider(
 		db,
 		locals.auth.userId,
@@ -36,7 +46,12 @@ export async function load({ params, locals, url }) {
 	);
 	const emailVerified = await isEmailVerified(db, locals.auth.userId);
 
-	const draft = url.searchParams.get('draft') ?? pending?.body ?? '';
+	const draft = resolveComposerDraft({
+		draftParam: url.searchParams.get('draft'),
+		serviceContextParam: url.searchParams.get('context'),
+		pendingBody: pending?.body ?? null,
+		hasExistingThread: thread !== null
+	});
 
 	return {
 		providerProfileId: params.providerId,
@@ -57,15 +72,19 @@ export const actions: Actions = {
 		if (!parsed.ok) error(404, 'Profile not found');
 
 		const db = getDb();
+		const canMessage = await canSeekerMessageProvider(db, locals.auth.userId, parsed.value);
+		if (!canMessage) error(404, 'Profile not found');
+
 		const now = new Date();
-		const limited = await consumeRateLimit(
+		const limited = await applyMessagingRateLimitsBeforeSend(
 			db,
-			bucketSpec('message_send'),
-			`account:${locals.auth.userId}`,
+			locals.auth.userId,
+			parsed.value,
 			now
 		);
 		if (!limited.ok) {
-			return fail(429, { message: 'Too many attempts. Try again in a moment.' });
+			const mapped = useCaseErrorToHttp(limited.error);
+			return fail(mapped.status, { message: mapped.body.error.message });
 		}
 
 		const data = await request.formData();
@@ -80,11 +99,15 @@ export const actions: Actions = {
 		});
 
 		if (!result.ok) {
+			if (result.error.kind === 'forbidden' && result.error.reason === 'blocked') {
+				error(404, 'Profile not found');
+			}
 			if (result.error.kind === 'validation_failed') {
 				const message = result.error.issues[0]?.message ?? 'Invalid message.';
 				return fail(422, { message });
 			}
-			return fail(400, { message: 'Could not send message.' });
+			const mapped = useCaseErrorToHttp(result.error);
+			return fail(mapped.status, { message: mapped.body.error.message });
 		}
 
 		if (result.value.kind === 'held') {

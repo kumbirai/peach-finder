@@ -1,9 +1,10 @@
 <script lang="ts">
 	import AvailabilityPill from '$lib/components/AvailabilityPill.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import ProfileContactBar from '$lib/components/ProfileContactBar.svelte';
 	import ProfileSafetyActions from '$lib/components/ProfileSafetyActions.svelte';
-	import { resolveCallHref } from '$lib/contact-actions';
+	import { resolveCallHref, buildServiceMessageHref } from '$lib/contact-actions';
 	import { formatOnlineStatus, formatRatingLabel, formatResponseTime } from '$lib/profile-display';
 	import type { PublicProfile } from '$lib/types/profile';
 
@@ -13,7 +14,8 @@
 		primaryHeading = false,
 		shareUrl,
 		actions,
-		messageDraftKey
+		messageDraftKey,
+		showMessage = true
 	}: {
 		profile: PublicProfile;
 		previewMode?: boolean;
@@ -21,6 +23,7 @@
 		shareUrl?: string;
 		actions?: { message: string; review: string; report: string; block: string };
 		messageDraftKey?: string;
+		showMessage?: boolean;
 	} = $props();
 
 	let selectedPhotoIndex = $state(0);
@@ -139,14 +142,26 @@
 			<h3 id="services-heading-{profile.id}" class="title">Services</h3>
 			<ul class="services" data-testid="profile-services">
 				{#each profile.services as service (service.id)}
-					<li>
-						<strong>{service.name}</strong>
-						{#if service.description}
-							<span class="service-description"> — {service.description}</span>
+					<li class="service-row">
+						<div class="service-details">
+							<strong>{service.name}</strong>
+							{#if service.description}
+								<span class="service-description"> — {service.description}</span>
+							{/if}
+							<span class="service-price">
+								R{(service.priceCents / 100).toFixed(0)} · {service.durationMinutes} min
+							</span>
+						</div>
+						{#if !previewMode && showMessage && actions}
+							<Button
+								href={buildServiceMessageHref(profile.id, service.name)}
+								variant="secondary"
+								ariaLabel={`Message about ${service.name}`}
+								{...messageDraftKey ? { messageDraftKey } : {}}
+							>
+								Message
+							</Button>
 						{/if}
-						<span class="service-price">
-							R{(service.priceCents / 100).toFixed(0)} · {service.durationMinutes} min
-						</span>
 					</li>
 				{/each}
 			</ul>
@@ -228,6 +243,7 @@
 		{messageHref}
 		{callHref}
 		displayName={profile.displayName}
+		{showMessage}
 		{...messageDraftKey ? { messageDraftKey } : {}}
 	/>
 </article>
@@ -338,9 +354,20 @@
 		display: grid;
 		gap: var(--space-md);
 	}
-	.services li {
+	.services li,
+	.service-row {
 		display: grid;
 		gap: 2px;
+	}
+	.service-row {
+		grid-template-columns: 1fr auto;
+		align-items: start;
+		gap: var(--space-sm);
+	}
+	@media (max-width: 560px) {
+		.service-row {
+			grid-template-columns: 1fr;
+		}
 	}
 	.service-description {
 		color: var(--color-stone);

@@ -12,10 +12,45 @@ import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result'
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
 import { isEmailVerified, getDisplayIdentity } from '../../identity-and-access';
-import { getOwnedProfileIdDb, getProfileOwnerDisplayName } from '../../provider-profile';
+import {
+	getOwnedProfileIdDb,
+	getProfileOwnerDisplayName,
+	getProfileOwnerIdDb
+} from '../../provider-profile';
+import { isBlockedBetween } from './block-cache';
 import { messages, pendingMessages, threads } from './schema';
 
 const MAX_BODY_LENGTH = 4000;
+
+const messagingBlockedError = (): UseCaseError => ({
+	kind: 'forbidden',
+	reason: 'blocked'
+});
+
+const messagingNotFoundError = (): UseCaseError => ({
+	kind: 'not_found',
+	resource: 'thread'
+});
+
+async function isMessagingBlockedForSeekerProvider(
+	db: Database | Transaction,
+	seekerId: UserId,
+	providerProfileId: ProviderProfileId
+): Promise<boolean> {
+	const ownerId = await getProfileOwnerIdDb(db, providerProfileId);
+	if (!ownerId) return true;
+	return isBlockedBetween(db, seekerId, ownerId);
+}
+
+export async function canSeekerMessageProvider(
+	db: Database,
+	seekerId: UserId,
+	providerProfileId: ProviderProfileId
+): Promise<boolean> {
+	const ownerId = await getProfileOwnerIdDb(db, providerProfileId);
+	if (!ownerId) return false;
+	return !(await isBlockedBetween(db, seekerId, ownerId));
+}
 
 export function validateMessageBody(body: string): string | null {
 	const trimmed = body.trim();
@@ -43,6 +78,12 @@ export async function sendOrHoldMessage(
 	const bodyErr = validateMessageBody(input.body);
 	if (bodyErr) {
 		return Err({ kind: 'validation_failed', issues: [{ path: 'body', message: bodyErr }] });
+	}
+
+	const ownerId = await getProfileOwnerIdDb(db, input.providerProfileId);
+	if (!ownerId) return Err(messagingNotFoundError());
+	if (await isBlockedBetween(db, input.seekerId, ownerId)) {
+		return Err(messagingBlockedError());
 	}
 
 	const verified = await isEmailVerified(db, input.seekerId);
@@ -215,6 +256,10 @@ export async function getThreadForSeekerProvider(
 	threadId: ThreadId;
 	messages: Array<{ id: string; body: string; sentAt: Date; senderId: string }>;
 } | null> {
+	if (await isMessagingBlockedForSeekerProvider(db, seekerId, providerProfileId)) {
+		return null;
+	}
+
 	const threadRows = await db
 		.select({ id: threads.id })
 		.from(threads)
@@ -246,6 +291,10 @@ export async function getPendingForSeekerProvider(
 	seekerId: UserId,
 	providerProfileId: ProviderProfileId
 ): Promise<{ body: string } | null> {
+	if (await isMessagingBlockedForSeekerProvider(db, seekerId, providerProfileId)) {
+		return null;
+	}
+
 	const rows = await db
 		.select({ body: pendingMessages.body })
 		.from(pendingMessages)
@@ -331,6 +380,19 @@ export async function listProviderInbox(db: Database, ownerId: UserId): Promise<
 		});
 	}
 	return summaries;
+}
+
+export async function threadExistsForSeekerProvider(
+	db: Database,
+	seekerId: UserId,
+	providerProfileId: ProviderProfileId
+): Promise<boolean> {
+	const rows = await db
+		.select({ id: threads.id })
+		.from(threads)
+		.where(and(eq(threads.seekerId, seekerId), eq(threads.providerProfileId, providerProfileId)))
+		.limit(1);
+	return rows.length > 0;
 }
 
 export async function markDeletedSenderAccountForUser(
