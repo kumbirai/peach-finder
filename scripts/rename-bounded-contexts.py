@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-ROOT = Path("/home/coach/code/peach-finder")
+ROOT = Path("~/code/peach-finder").expanduser()
 DOC = ROOT / "documentation"
 
 # old short → (kebab context, snake schema)

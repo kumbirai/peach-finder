@@ -75,7 +75,7 @@
 # Environment overrides:
 #   MODEL          cursor-agent model slug          (default: composer-2.5)
 #   AGENT_BIN      cursor-agent executable          (default: cursor-agent)
-#   PROMPT_DIR     dir holding agent role prompts   (default: /home/coach/code/claude-code-prompts/complete-prompts/agent-prompts)
+#   PROMPT_DIR     dir holding agent role prompts   (default: $HOME/code/claude-code-prompts/complete-prompts/agent-prompts)
 #   LOG_DIR        per-story json log directory     (default: <repo>/logs/implementation-brd)
 #   OUTPUT_FORMAT  cursor-agent --output-format     (default: json)
 
@@ -110,7 +110,7 @@ PRODUCT_MD="$ROOT/PRODUCT.md"
 
 MODEL="${MODEL:-composer-2.5}"
 AGENT_BIN="${AGENT_BIN:-cursor-agent}"
-PROMPT_DIR="${PROMPT_DIR:-/home/coach/code/claude-code-prompts/complete-prompts/agent-prompts}"
+PROMPT_DIR="${PROMPT_DIR:-$HOME/code/claude-code-prompts/complete-prompts/agent-prompts}"
 LOG_DIR="${LOG_DIR:-$ROOT/logs/implementation-brd}"
 OUTPUT_FORMAT="${OUTPUT_FORMAT:-json}"
 
