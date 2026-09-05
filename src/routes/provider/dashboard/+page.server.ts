@@ -14,6 +14,11 @@ import {
 	getAvailabilityStatusForOwner,
 	setAvailabilityForOwner
 } from '$lib/server/modules/provider-availability';
+import {
+	listUnreadInAppNotifications,
+	markAvailabilityRenewalReadForOwner,
+	markInAppNotificationsRead
+} from '$lib/server/modules/user-notifications';
 
 export const _requiredRole: Role = 'provider';
 
@@ -26,7 +31,14 @@ export async function load({ locals, url }) {
 			inbox: [],
 			analytics: null,
 			publishState: null,
-			unpublishConfirm: false
+			unpublishConfirm: false,
+			availability: {
+				state: 'not_available' as const,
+				setAt: null,
+				expiresAt: null,
+				expiresInSeconds: null
+			},
+			renewalNotification: null
 		};
 	}
 
@@ -37,14 +49,22 @@ export async function load({ locals, url }) {
 			inbox: [],
 			analytics: null,
 			publishState: ownerProfile.publishState,
-			unpublishConfirm: false
+			unpublishConfirm: false,
+			availability: {
+				state: 'not_available' as const,
+				setAt: null,
+				expiresAt: null,
+				expiresInSeconds: null
+			},
+			renewalNotification: null
 		};
 	}
 
-	const [inbox, reviewCount, availabilityResult] = await Promise.all([
+	const [inbox, reviewCount, availabilityResult, notifications] = await Promise.all([
 		listProviderInbox(db, locals.auth.userId!),
 		countReviewsOnProfile(db, dashboard.profileId),
-		getAvailabilityStatusForOwner(db, locals.auth.userId!, new Date())
+		getAvailabilityStatusForOwner(db, locals.auth.userId!, new Date()),
+		listUnreadInAppNotifications(db, locals.auth.userId!, 5)
 	]);
 
 	const availability =
@@ -57,12 +77,18 @@ export async function load({ locals, url }) {
 					expiresInSeconds: null
 				};
 
+	const renewalNotification =
+		availability.state !== 'not_available'
+			? (notifications.find((n) => n.category === 'availability_expiry_warning') ?? null)
+			: null;
+
 	return {
 		profile: dashboard,
 		publishState: ownerProfile.publishState,
 		unpublishConfirm: url.searchParams.get('unpublishConfirm') === '1',
 		inbox,
 		availability,
+		renewalNotification,
 		analytics: {
 			profileViews: 142,
 			searchAppearances: 89,
@@ -124,5 +150,26 @@ export const actions: Actions = {
 		}
 
 		return { availability: result.value };
+	},
+
+	renewAvailability: async ({ locals, request }) => {
+		const db = getDb();
+		const now = new Date();
+		const correlationId = crypto.randomUUID();
+		const form = await request.formData();
+		const notificationId = form.get('notificationId');
+
+		const result = await setAvailabilityForOwner(db, locals.auth.userId!, correlationId, now);
+		if (!result.ok) {
+			return fail(400, { message: 'Could not renew your availability.' });
+		}
+
+		if (typeof notificationId === 'string' && notificationId.length > 0) {
+			await markInAppNotificationsRead(db, locals.auth.userId!, [notificationId], now);
+		} else {
+			await markAvailabilityRenewalReadForOwner(db, locals.auth.userId!, now);
+		}
+
+		return { availability: result.value, renewalNotification: null };
 	}
 };

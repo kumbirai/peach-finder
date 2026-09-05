@@ -23,6 +23,7 @@
 	let userOverride = $state<boolean | null>(null);
 
 	const serverLive = $derived(availability.state !== 'not_available');
+	const warned = $derived(availability.state === 'expiry_warned');
 	const live = $derived(userOverride ?? serverLive);
 	const expiresAtLabel = $derived(formatExpiryLabel(availability.expiresAt));
 
@@ -32,13 +33,18 @@
 		return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	}
 
-	function statusHeadline(isLive: boolean): string {
-		return isLive ? "You're available now" : "You're away";
+	function statusHeadline(isLive: boolean, isWarned: boolean): string {
+		if (!isLive) return "You're away";
+		if (isWarned) return 'Your availability expires soon';
+		return "You're available now";
 	}
 
-	function statusCopy(isLive: boolean, expiryLabel: string | null): string {
+	function statusCopy(isLive: boolean, isWarned: boolean, expiryLabel: string | null): string {
 		if (!isLive) {
 			return 'Your profile remains listed, but you no longer appear in the available-now group.';
+		}
+		if (isWarned && expiryLabel) {
+			return `Expires at ${expiryLabel}. Tap Still available below to stay visible to seekers.`;
 		}
 		if (expiryLabel) {
 			return `Shown first to nearby seekers. Expires at ${expiryLabel}, and we'll remind you before it does.`;
@@ -78,8 +84,12 @@
 	}}
 >
 	<div class="copy">
-		<h2 class="status-headline" id="availability-status-label">{statusHeadline(live)}</h2>
-		<p class="body status-copy" id="availability-status-copy">{statusCopy(live, expiresAtLabel)}</p>
+		<h2 class="status-headline" id="availability-status-label">
+			{statusHeadline(live, warned)}
+		</h2>
+		<p class="body status-copy" id="availability-status-copy">
+			{statusCopy(live, warned, expiresAtLabel)}
+		</p>
 		{#if live}
 			<p class="live-hint label" aria-live="polite">
 				<span class="live-dot" aria-hidden="true"></span>

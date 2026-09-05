@@ -4,6 +4,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
+	import AvailabilityRenewalBanner from '$lib/components/provider/AvailabilityRenewalBanner.svelte';
 
 	let {
 		data,
@@ -30,6 +31,11 @@
 				expiresAt: string | null;
 				expiresInSeconds: number | null;
 			};
+			renewalNotification: {
+				id: string;
+				title: string;
+				body: string;
+			} | null;
 		};
 		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
 	} = $props();
@@ -51,6 +57,9 @@
 		{#if data.publishState === 'published'}
 			<section class="section" aria-labelledby="availability-heading">
 				<h2 id="availability-heading" class="visually-hidden">Your availability</h2>
+				{#if data.renewalNotification}
+					<AvailabilityRenewalBanner notification={data.renewalNotification} />
+				{/if}
 				<AvailabilityToggle availability={data.availability} variant="hero" />
 			</section>
 		{/if}

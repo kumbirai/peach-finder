@@ -4,7 +4,11 @@ import { asInstant } from '../../../shared/clock';
 import {
 	clear,
 	discoveryAvailabilityState,
+	expire,
 	setAvailable,
+	warn,
+	windowInWarnBand,
+	windowIsOverdue,
 	type AvailabilityStatus
 } from './availability-status';
 
@@ -77,5 +81,41 @@ describe('availability-status domain', () => {
 			warnedAt: asInstant('2026-09-05T13:45:00Z')
 		};
 		expect(discoveryAvailabilityState(status)).toBe('available');
+	});
+
+	it('windowIsOverdue is true when expiresAt <= now', () => {
+		expect(windowIsOverdue(expiresAt, expiresAt)).toBe(true);
+		expect(windowIsOverdue(expiresAt, asInstant('2026-09-05T15:00:00Z'))).toBe(true);
+		expect(windowIsOverdue(expiresAt, asInstant('2026-09-05T13:59:59Z'))).toBe(false);
+	});
+
+	it('windowInWarnBand matches the lead-time band', () => {
+		const bandNow = asInstant('2026-09-05T13:46:00Z');
+		expect(windowInWarnBand(expiresAt, bandNow, 15)).toBe(true);
+		expect(windowInWarnBand(expiresAt, asInstant('2026-09-05T10:00:00Z'), 15)).toBe(false);
+		expect(windowInWarnBand(expiresAt, asInstant('2026-09-05T14:00:01Z'), 15)).toBe(false);
+	});
+
+	it('warn transitions Available to ExpiryWarned', () => {
+		const status: AvailabilityStatus = {
+			kind: 'Available',
+			providerProfileId: profileId,
+			setAt: now,
+			expiresAt
+		};
+		const warned = warn(status, asInstant('2026-09-05T13:45:00Z'));
+		expect(warned.kind).toBe('ExpiryWarned');
+		expect(warned.warnedAt).toBe(asInstant('2026-09-05T13:45:00Z'));
+	});
+
+	it('expire transitions live states to NotAvailable', () => {
+		const status: AvailabilityStatus = {
+			kind: 'ExpiryWarned',
+			providerProfileId: profileId,
+			setAt: now,
+			expiresAt,
+			warnedAt: asInstant('2026-09-05T13:45:00Z')
+		};
+		expect(expire(status)).toEqual({ kind: 'NotAvailable', providerProfileId: profileId });
 	});
 });

@@ -22,6 +22,8 @@ import {
 	handleBadgeFlagEvent,
 	handleIdentityAttributesChanged
 } from '../lib/server/modules/trust-and-safety';
+import { runAvailabilityLifecycleTick } from '../lib/server/modules/provider-availability';
+import { handleAvailabilityExpiryWarned } from '../lib/server/modules/user-notifications';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
@@ -143,6 +145,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			await handleIdentityAttributesChanged(db, event as never);
 		}
 		if (
+			subscriber === 'user-notifications.renewal-prompt' &&
+			event.eventName === 'AvailabilityExpiryWarned'
+		) {
+			await handleAvailabilityExpiryWarned(db, event as never);
+		}
+		if (
 			subscriber === 'discovery-search.badge-flag' &&
 			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
 		) {
@@ -183,6 +191,8 @@ await boss.work(QUEUE, async (jobs) => {
 
 await bootApp();
 
+let lastAvailabilityTickAt = 0;
+
 setInterval(() => {
 	void (async () => {
 		const db = getDb();
@@ -192,6 +202,13 @@ setInterval(() => {
 		await cleanupRateLimitBuckets(db, new Date());
 		await anonymizePendingUsers(db, new Date());
 		await tickConfigRefresh();
+
+		const nowMs = Date.now();
+		if (nowMs - lastAvailabilityTickAt >= 60_000) {
+			lastAvailabilityTickAt = nowMs;
+			const now = new Date();
+			await runAvailabilityLifecycleTick(db, now, `availability-tick-${now.toISOString()}`);
+		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {
 			err: error instanceof Error ? error.message : 'unknown'

@@ -58,3 +58,27 @@ export function discoveryAvailabilityState(
 	}
 	return 'not_available';
 }
+
+export function windowIsOverdue(expiresAt: Instant, now: Instant): boolean {
+	return new Date(expiresAt).getTime() <= new Date(now).getTime();
+}
+
+export function windowInWarnBand(expiresAt: Instant, now: Instant, leadMinutes: number): boolean {
+	const expiresMs = new Date(expiresAt).getTime();
+	const nowMs = new Date(now).getTime();
+	const leadMs = leadMinutes * 60_000;
+	return expiresMs > nowMs && expiresMs <= nowMs + leadMs;
+}
+
+export function warn(
+	status: Extract<AvailabilityStatus, { kind: 'Available' }>,
+	now: Instant
+): Extract<AvailabilityStatus, { kind: 'ExpiryWarned' }> {
+	return { ...status, kind: 'ExpiryWarned', warnedAt: now };
+}
+
+export function expire(
+	status: Extract<AvailabilityStatus, { kind: 'Available' | 'ExpiryWarned' }>
+): { kind: 'NotAvailable'; providerProfileId: ProviderProfileId } {
+	return { kind: 'NotAvailable', providerProfileId: status.providerProfileId };
+}

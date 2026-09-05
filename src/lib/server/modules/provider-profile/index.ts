@@ -52,6 +52,18 @@ export async function getOwnedProfileIdDb(
 	return rows[0] ? (rows[0].id as ProviderProfileId) : null;
 }
 
+export async function getProfileOwnerIdDb(
+	db: Database,
+	providerProfileId: ProviderProfileId
+): Promise<UserId | null> {
+	const rows = await db
+		.select({ ownerId: providerProfiles.ownerId })
+		.from(providerProfiles)
+		.where(eq(providerProfiles.id, providerProfileId))
+		.limit(1);
+	return rows[0] ? (rows[0].ownerId as UserId) : null;
+}
+
 export async function getProfileOwnerDisplayName(
 	db: Database,
 	providerProfileId: ProviderProfileId

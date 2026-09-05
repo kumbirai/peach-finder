@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Database, Transaction } from '../db';
 import { outbox, outboxDeadLetter, processedEvents } from './schema';
 import type { DomainEvent } from './events';
@@ -84,6 +84,43 @@ export async function claimUndispatched(
 
 export async function markDispatched(db: DbClient, eventId: OutboxEventId): Promise<void> {
 	await db.update(outbox).set({ dispatchedAt: new Date() }).where(eq(outbox.eventId, eventId));
+}
+
+export async function listUndispatchedByCorrelationAndEvent(
+	db: DbClient,
+	correlationId: string,
+	eventName: string
+): Promise<UndispatchedOutboxRow[]> {
+	const rows = await db
+		.select({
+			eventId: outbox.eventId,
+			eventName: outbox.eventName,
+			version: outbox.version,
+			occurredAt: outbox.occurredAt,
+			correlationId: outbox.correlationId,
+			payload: outbox.payload,
+			publishedAt: outbox.publishedAt,
+			attemptCount: outbox.attemptCount
+		})
+		.from(outbox)
+		.where(
+			and(
+				eq(outbox.correlationId, correlationId),
+				eq(outbox.eventName, eventName),
+				isNull(outbox.dispatchedAt)
+			)
+		);
+
+	return rows.map((row) => ({
+		eventId: asId<OutboxEventId['__brand']>(row.eventId),
+		eventName: row.eventName,
+		version: row.version,
+		occurredAt: row.occurredAt,
+		correlationId: row.correlationId,
+		payload: row.payload,
+		publishedAt: row.publishedAt,
+		attemptCount: row.attemptCount
+	}));
 }
 
 export async function deadLetter(
