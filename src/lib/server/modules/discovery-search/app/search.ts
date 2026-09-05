@@ -102,6 +102,7 @@ export async function runSearch(
 			p.provider_profile_id,
 			p.display_name,
 			p.photo_primary_url,
+			p.intro_extract,
 			p.availability_state,
 			p.availability_set_at,
 			p.rating_average,
@@ -110,6 +111,7 @@ export async function runSearch(
 			p.badge_active_this_week,
 			p.is_featured,
 			p.price_min_cents,
+			p.language_codes,
 			a.name AS area_name,
 			CASE WHEN ${lat}::double precision IS NULL THEN NULL ELSE
 				6371 * acos(LEAST(1, GREATEST(-1,
@@ -165,6 +167,7 @@ export async function runSearch(
 		providerProfileId: String(row.provider_profile_id),
 		displayName: String(row.display_name),
 		photoPrimaryUrl: row.photo_primary_url ? String(row.photo_primary_url) : null,
+		introExtract: String(row.intro_extract ?? ''),
 		availabilityState: String(row.availability_state),
 		availabilitySetAt: row.availability_set_at ? new Date(String(row.availability_set_at)) : null,
 		ratingAverage: row.rating_average != null ? String(row.rating_average) : null,
@@ -174,7 +177,10 @@ export async function runSearch(
 		isFeatured: Boolean(row.is_featured),
 		priceMinCents: row.price_min_cents != null ? Number(row.price_min_cents) : null,
 		areaName: String(row.area_name),
-		distanceKm: row.distance_km != null ? Number(row.distance_km) : null
+		distanceKm: row.distance_km != null ? Number(row.distance_km) : null,
+		languageCodes: Array.isArray(row.language_codes)
+			? (row.language_codes as string[]).map(String)
+			: []
 	})) satisfies SearchCardRow[];
 	const hasMore = resultRows.length > limit;
 	const page = hasMore ? resultRows.slice(0, limit) : resultRows;

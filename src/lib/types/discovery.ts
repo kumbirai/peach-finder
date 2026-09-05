@@ -2,6 +2,7 @@ export type SearchCard = {
 	providerProfileId: string;
 	displayName: string;
 	photoUrl: string | null;
+	introExtract: string;
 	availability: { state: 'available' | 'not_available'; setAt: string | null };
 	rating: { average: number; count: number } | { state: 'new' };
 	badges: { identityVerified: boolean; activeThisWeek: boolean };
@@ -9,6 +10,8 @@ export type SearchCard = {
 	priceFromCents: number | null;
 	areaName: string;
 	distanceKm: number | null;
+	languages: string[];
+	messageHref: string;
 };
 
 export type AppliedIntent = {

@@ -11,7 +11,7 @@ test.describe('US-DISC-06 availability outranks everything honestly', () => {
 	}) => {
 		await page.goto('/?q=swedish');
 		await expect(page.getByText(/therapists found/i)).toBeVisible();
-		const names = await page.locator('a.card .title').allTextContents();
+		const names = await page.locator('article.card .title').allTextContents();
 
 		const thandi = indexOfName(names, 'Thandi M.');
 		const nomsa = indexOfName(names, 'Nomsa P.');
@@ -21,7 +21,7 @@ test.describe('US-DISC-06 availability outranks everything honestly', () => {
 		}
 		await expect(
 			page
-				.locator('a.card')
+				.locator('article.card')
 				.filter({ hasText: 'Thandi M.' })
 				.getByText(/Available now/i)
 		).toBeVisible();
@@ -31,8 +31,8 @@ test.describe('US-DISC-06 availability outranks everything honestly', () => {
 		page
 	}) => {
 		await page.goto('/?q=deep%20tissue');
-		await expect(page.locator('a.card').first()).toBeVisible();
-		const names = await page.locator('a.card .title').allTextContents();
+		await expect(page.locator('article.card').first()).toBeVisible();
+		const names = await page.locator('article.card .title').allTextContents();
 
 		const kagiso = indexOfName(names, 'Kagiso L.');
 		const zanele = indexOfName(names, 'Zanele D.');
@@ -43,19 +43,19 @@ test.describe('US-DISC-06 availability outranks everything honestly', () => {
 
 	test('TC-DISC-06c: Featured label is always visible on featured cards', async ({ page }) => {
 		await page.goto('/');
-		const amaraCard = page.locator('a.card').filter({ hasText: 'Amara T.' });
+		const amaraCard = page.locator('article.card').filter({ hasText: 'Amara T.' });
 		await expect(amaraCard).toBeVisible();
 		const featuredLabel = amaraCard.getByTestId('featured-label');
 		await expect(featuredLabel).toBeVisible();
 		await expect(featuredLabel).toContainText('Featured');
 
-		const zaneleCard = page.locator('a.card').filter({ hasText: 'Zanele D.' });
+		const zaneleCard = page.locator('article.card').filter({ hasText: 'Zanele D.' });
 		await expect(zaneleCard.getByTestId('featured-label')).toBeVisible();
 	});
 
 	test('TC-DISC-06d: seeded discoverable set excludes hidden providers', async ({ page }) => {
 		await page.goto('/');
-		const names = await page.locator('a.card .title').allTextContents();
+		const names = await page.locator('article.card .title').allTextContents();
 		expect(names.length).toBeGreaterThanOrEqual(13);
 		expect(names).not.toContain('Draft Therapist');
 		expect(names).not.toContain('Unpublish Test');

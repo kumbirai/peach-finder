@@ -6,7 +6,7 @@ test.describe('US-DISC-04 filter and refine without losing my place', () => {
 		page
 	}) => {
 		await page.goto('/');
-		const initialCount = await page.locator('a.card').count();
+		const initialCount = await page.locator('article.card').count();
 		expect(initialCount).toBeGreaterThan(0);
 
 		await page.getByRole('button', { name: 'Speaks isiZulu' }).click();
@@ -19,7 +19,7 @@ test.describe('US-DISC-04 filter and refine without losing my place', () => {
 		await page.getByRole('button', { name: 'Under R400' }).click();
 		await expect(page).toHaveURL(/priceMax=40000/);
 
-		const filteredCount = await page.locator('a.card').count();
+		const filteredCount = await page.locator('article.card').count();
 		expect(filteredCount).toBeLessThanOrEqual(initialCount);
 	});
 
@@ -45,7 +45,7 @@ test.describe('US-DISC-04 filter and refine without losing my place', () => {
 		await expect(newRating).toBeVisible();
 
 		await page.goto('/?minRating=4');
-		await expect(page.locator('a.card').first()).toBeVisible();
+		await expect(page.locator('article.card').first()).toBeVisible();
 		await expect(page.getByLabel(/Rating New/i)).toHaveCount(0);
 	});
 

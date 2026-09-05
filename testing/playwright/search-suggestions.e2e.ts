@@ -63,7 +63,7 @@ test.describe('US-DISC-03 suggestions as I type', () => {
 		await expect(suggestion).toBeVisible();
 		await suggestion.click();
 		await expect(page).toHaveURL(/q=deep(\+|%20)tissue|tag=/i);
-		await expect(page.locator('a.card').first()).toBeVisible();
+		await expect(page.locator('article.card').first()).toBeVisible();
 	});
 
 	test('clears stale suggestions immediately when the query prefix changes', async ({ page }) => {

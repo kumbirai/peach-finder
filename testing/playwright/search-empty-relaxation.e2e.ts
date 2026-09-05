@@ -29,7 +29,7 @@ test.describe('US-DISC-07 empty results that help instead of a dead end', () => 
 		const secondRelaxation = page.getByTestId('relaxation-action').getByRole('link');
 		await expect(secondRelaxation).toContainText(/under r100/i);
 		await secondRelaxation.click();
-		await expect(page.locator('a.card').first()).toBeVisible({ timeout: 15_000 });
+		await expect(page.locator('article.card').first()).toBeVisible({ timeout: 15_000 });
 	});
 
 	test('TC-DISC-07a: orphan near=1 is named in constraining filters when relaxation widens area', async ({

@@ -100,7 +100,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { level: 2, name: /\d+ available now/i })).toBeVisible();
 
-		const cardNames = await page.locator('a.card .title').allTextContents();
+		const cardNames = await page.locator('article.card .title').allTextContents();
 		for (let i = 0; i < SEED_AVAILABLE_ORDER.length - 1; i += 1) {
 			const left = indexOfName(cardNames, SEED_AVAILABLE_ORDER[i]!);
 			const right = indexOfName(cardNames, SEED_AVAILABLE_ORDER[i + 1]!);
@@ -125,7 +125,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 		for (let i = 0; i < availableCount; i += 1) {
 			await expect(
 				page
-					.locator('a.card')
+					.locator('article.card')
 					.nth(i)
 					.getByText(/Available now — updated/i)
 			).toBeVisible();
@@ -135,7 +135,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 	test('TC-DISC-01b: remaining providers always shown below, never empty', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.getByText(/therapists found/i)).toBeVisible();
-		await expect(page.locator('a.card').first()).toBeVisible();
+		await expect(page.locator('article.card').first()).toBeVisible();
 		await expect(page.getByRole('heading', { level: 2, name: /available now/i })).toBeVisible();
 		await expect(
 			page.getByRole('heading', { level: 2, name: /more therapists nearby/i })
@@ -150,7 +150,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 		await page.goto('/');
 		await expect(
 			page
-				.locator('a.card')
+				.locator('article.card')
 				.first()
 				.getByText(/Available now — updated/i)
 		).toBeVisible();
@@ -167,7 +167,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 		await expect(card.getByText(/Available now — updated just now/i)).toBeVisible({
 			timeout: 15_000
 		});
-		await expect(anonPage.locator('a.card').first()).toContainText(displayName);
+		await expect(anonPage.locator('article.card').first()).toContainText(displayName);
 		await anonContext.close();
 	});
 
@@ -187,7 +187,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 		const started = Date.now();
 		await interactive.goto('/');
 		await interactive.getByRole('heading', { level: 1 }).waitFor();
-		await interactive.locator('a.card').first().waitFor();
+		await interactive.locator('article.card').first().waitFor();
 		expect(Date.now() - started).toBeLessThan(3_000);
 	});
 

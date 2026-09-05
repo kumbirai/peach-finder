@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { Transaction } from '../../../db';
 import { getDisplayIdentity } from '../../identity-and-access';
 import { asId, type ProviderProfileId } from '../../../shared/ids';
+import { formatIntroExtract } from '../domain/intro-extract';
 import { searchProjection } from './schema';
 
 type ProjectionSource = {
@@ -9,6 +10,7 @@ type ProjectionSource = {
 	ownerId: string;
 	areaId: string;
 	searchText: string;
+	introExtract: string;
 	displayName: string;
 	serviceTagIds: string[];
 	languageCodes: string[];
@@ -33,6 +35,7 @@ export async function upsertSearchProjection(
 			ownerId: source.ownerId,
 			displayName: source.displayName,
 			searchText: source.searchText,
+			introExtract: source.introExtract,
 			serviceTagIds: source.serviceTagIds,
 			languageCodes: source.languageCodes,
 			areaId: source.areaId,
@@ -57,6 +60,7 @@ export async function upsertSearchProjection(
 				ownerId: source.ownerId,
 				displayName: source.displayName,
 				searchText: source.searchText,
+				introExtract: source.introExtract,
 				serviceTagIds: source.serviceTagIds,
 				languageCodes: source.languageCodes,
 				areaId: source.areaId,
@@ -144,12 +148,14 @@ async function loadProjectionSource(
 		.join(' ');
 	const intro = profile.intro?.trim() ?? '';
 	const searchText = [intro, serviceNames].filter(Boolean).join(' ').trim() || intro;
+	const introExtract = formatIntroExtract(intro);
 
 	return {
 		providerProfileId,
 		ownerId: profile.owner_id,
 		areaId: profile.area_id,
 		searchText,
+		introExtract,
 		displayName: identity.isDeleted ? 'Former user' : identity.displayName,
 		serviceTagIds: (tagRows as unknown as Array<{ id: string }>).map((row) => row.id),
 		languageCodes: (languageRows as unknown as Array<{ code: string }>).map((row) => row.code),

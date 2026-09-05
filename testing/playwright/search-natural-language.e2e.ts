@@ -16,7 +16,7 @@ test.describe('US-DISC-02 search the way I would say it', () => {
 		for (const query of BRD_QUERIES) {
 			await page.goto(`/?q=${encodeURIComponent(query)}`);
 			await expect(page.getByText(/therapists found/i)).toBeVisible();
-			await expect(page.locator('a.card').first()).toBeVisible();
+			await expect(page.locator('article.card').first()).toBeVisible();
 			await expect(page.getByText('No therapists match those filters.')).toHaveCount(0);
 		}
 	});
@@ -31,8 +31,8 @@ test.describe('US-DISC-02 search the way I would say it', () => {
 		await pageA.goto(`/?q=${encodeURIComponent(query)}`);
 		await pageB.goto(`/?q=${encodeURIComponent(query)}`);
 
-		const namesA = await pageA.locator('a.card .title').allTextContents();
-		const namesB = await pageB.locator('a.card .title').allTextContents();
+		const namesA = await pageA.locator('article.card .title').allTextContents();
+		const namesB = await pageB.locator('article.card .title').allTextContents();
 		expect(namesA).toEqual(namesB);
 
 		await contextA.close();

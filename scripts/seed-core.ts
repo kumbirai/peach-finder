@@ -24,6 +24,7 @@ import {
 } from '../src/lib/server/modules/discovery-search/infra/schema';
 import { areas } from '../src/lib/server/modules/platform-configuration/infra/schema';
 import { threads, messages } from '../src/lib/server/modules/direct-messaging/infra/schema';
+import { formatIntroExtract } from '../src/lib/server/modules/discovery-search/domain/intro-extract';
 import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
 
 const PLACEHOLDER_CARD = '/placeholder-photo.svg';
@@ -530,6 +531,7 @@ export async function seedCore(db: Database): Promise<void> {
 			.onConflictDoNothing();
 
 		const searchText = `${p.intro} 60 minute session ${tag.name}`;
+		const introExtract = formatIntroExtract(p.intro);
 		await db
 			.insert(searchProjection)
 			.values({
@@ -537,6 +539,7 @@ export async function seedCore(db: Database): Promise<void> {
 				ownerId: p.userId,
 				displayName: p.displayName,
 				searchText,
+				introExtract,
 				serviceTagIds: [tag.id],
 				languageCodes: [p.languageCode],
 				areaId,
@@ -662,6 +665,9 @@ async function seedDualRoleUser(
 			ownerId: SEED_DUAL_ROLE_USER_ID,
 			displayName: 'Jordan B.',
 			searchText: 'Swedish and deep tissue dual role provider',
+			introExtract: formatIntroExtract(
+				'Swedish and deep tissue — book as a seeker, practice as a provider.'
+			),
 			serviceTagIds: [tag.id],
 			languageCodes: ['en'],
 			areaId,
@@ -788,6 +794,9 @@ async function seedDualRoleUser(
 			ownerId: SEED_DUAL_ROLE_USER_ID,
 			displayName: 'Jordan B.',
 			searchText: 'Swedish and deep tissue dual role provider',
+			introExtract: formatIntroExtract(
+				'Swedish and deep tissue — book as a seeker, practice as a provider.'
+			),
 			serviceTagIds: [tag.id],
 			languageCodes: ['en'],
 			areaId,

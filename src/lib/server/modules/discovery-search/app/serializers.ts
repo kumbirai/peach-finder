@@ -1,9 +1,12 @@
 import type { AuthContext } from '../../../shared/auth-context';
+import { gatedActionHref } from '../../identity-and-access';
+import { resolveLanguageLabels } from '../domain/language-labels';
 
 export type SearchCardRow = {
 	providerProfileId: string;
 	displayName: string;
 	photoPrimaryUrl: string | null;
+	introExtract: string;
 	availabilityState: string;
 	availabilitySetAt: Date | null;
 	ratingAverage: string | null;
@@ -14,12 +17,14 @@ export type SearchCardRow = {
 	priceMinCents: number | null;
 	areaName: string;
 	distanceKm: number | null;
+	languageCodes: string[];
 };
 
 export type SearchCard = {
 	providerProfileId: string;
 	displayName: string;
 	photoUrl: string | null;
+	introExtract: string;
 	availability: { state: 'available' | 'not_available'; setAt: string | null };
 	rating: { average: number; count: number } | { state: 'new' };
 	badges: { identityVerified: boolean; activeThisWeek: boolean };
@@ -27,6 +32,8 @@ export type SearchCard = {
 	priceFromCents: number | null;
 	areaName: string;
 	distanceKm: number | null;
+	languages: string[];
+	messageHref: string;
 };
 
 export type SuggestTermRow = {
@@ -43,7 +50,15 @@ export function toSuggestions(rows: SuggestTermRow[]): Suggestion[] {
 	return rows.map((row) => ({ term: row.term, kind: row.kind }));
 }
 
-export function toSearchCard(row: SearchCardRow, _viewer: AuthContext): SearchCard {
+function messageHrefForCard(providerProfileId: string, viewer: AuthContext): string {
+	if (viewer.hasRole('seeker')) {
+		return `/messages/compose/${providerProfileId}`;
+	}
+	const profilePath = `/provider/${providerProfileId}`;
+	return gatedActionHref('message', profilePath, providerProfileId);
+}
+
+export function toSearchCard(row: SearchCardRow, viewer: AuthContext): SearchCard {
 	const rating =
 		row.ratingCount === 0 || row.ratingAverage === null
 			? { state: 'new' as const }
@@ -53,6 +68,7 @@ export function toSearchCard(row: SearchCardRow, _viewer: AuthContext): SearchCa
 		providerProfileId: row.providerProfileId,
 		displayName: row.displayName,
 		photoUrl: row.photoPrimaryUrl,
+		introExtract: row.introExtract,
 		availability: {
 			state: row.availabilityState === 'available' ? 'available' : 'not_available',
 			setAt: row.availabilitySetAt?.toISOString() ?? null
@@ -65,6 +81,8 @@ export function toSearchCard(row: SearchCardRow, _viewer: AuthContext): SearchCa
 		isFeatured: row.isFeatured,
 		priceFromCents: row.priceMinCents,
 		areaName: row.areaName,
-		distanceKm: row.distanceKm
+		distanceKm: row.distanceKm,
+		languages: resolveLanguageLabels(row.languageCodes),
+		messageHref: messageHrefForCard(row.providerProfileId, viewer)
 	};
 }
