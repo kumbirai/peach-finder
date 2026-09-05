@@ -162,6 +162,7 @@ export {
 	type OnboardingStep,
 	type MissingField
 } from './domain/publish-readiness';
+export { updatedAtSince } from './infra/profile-activity-read';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

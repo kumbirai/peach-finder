@@ -300,7 +300,7 @@ export async function getRecentActivityCount(
 		from provider_availability.availability_history
 		where provider_profile_id = ${providerProfileId}::uuid
 		  and event_type in ('set', 'renewed')
-		  and occurred_at >= ${since}
+		  and occurred_at >= ${since.toISOString()}::timestamptz
 	`);
 	const row = (result as unknown as Array<{ count: string }>)[0];
 	return Number(row?.count ?? 0);

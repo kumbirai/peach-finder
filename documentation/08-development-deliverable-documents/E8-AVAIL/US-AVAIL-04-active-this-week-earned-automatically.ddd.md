@@ -27,9 +27,9 @@ FR-AVAIL-06, FR-TRUST-06.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,4 +45,20 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - All acceptance criteria in section 2 verified against the live-seeded stack (`seed-core` or the relevant seed pack) — no stubbed HTTP, no `page.route` interception, per this project's live-stack-seeded testing convention.
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-AVAIL-04 cross-references this DDD (applied in the stage-9 traceability pass).
-- No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+- Implementation complete per section 7; acceptance verified on the live-seeded stack.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-05
+
+**Approach:** Implemented the `trust-and-safety` daily four-signal OR job per LLD §5 as the sole writer of `badge_state.active_this_week`. The job calls `identity-and-access.hasSignedInSince`, `provider-availability.getRecentActivityCount`, `provider-profile.updatedAtSince`, and `direct-messaging.hasSentSince`, then grants or revokes via `BadgeGranted`/`BadgeRevoked(active_this_week)` outbox events (consumed by `discovery-search.badge-flag`). Wired into the worker on a 24-hour cadence; dev helper `POST /api/dev/active-this-week-tick` mirrors `availability-tick` for live-stack tests.
+
+**Frontend:** No new UI — badge display on `ProviderCard` and `PublicProfileView` was delivered in US-VIEW-04; this story only changes whether the badge is earned automatically.
+
+**Tests:** Domain unit (`active-this-week.test.ts`), integration (`active-this-week-job.integration.test.ts`), grep guard (`active-this-week-writer-guard.test.ts`), Playwright (`testing/playwright/active-this-week.e2e.ts` for TC-AVAIL-04a/b).
+
+**Deviations:** Fixed `getRecentActivityCount` to bind `since` as an ISO timestamptz string — `postgres.js` rejects raw `Date` in `db.execute` params (latent bug surfaced when the facade was first called on the live stack).
+
+**Date:** 2026-09-06
+
+**Verification:** `npm run check` and `npm run lint` clean; `npm run test` (228 unit tests) green; `npm run test:integration` (3 tests in `active-this-week-job.integration.test.ts`) green after backdating Zanele seed profile `updated_at` in TC-AVAIL-04a so seed-time `new Date()` does not false-trigger the profile-edited signal; Playwright `active-this-week.e2e.ts` (TC-AVAIL-04a/b) passed live-stack-seeded with zero critical/serious axe violations on trust badges.

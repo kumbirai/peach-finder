@@ -67,6 +67,7 @@ export {
 	revokeOtherSessionsForUser,
 	revokeAllSessionsForUser
 } from './infra/session-commands';
+export { hasSignedInSince } from './infra/session-activity-read';
 export {
 	buildGoogleAuthUrl,
 	googleRedirectUri,

@@ -26,7 +26,8 @@ import {
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import {
 	handleBadgeFlagEvent,
-	handleIdentityAttributesChanged
+	handleIdentityAttributesChanged,
+	runActiveThisWeekJob
 } from '../lib/server/modules/trust-and-safety';
 import { runAvailabilityLifecycleTick } from '../lib/server/modules/provider-availability';
 import {
@@ -278,6 +279,8 @@ await boss.work(QUEUE, async (jobs) => {
 await bootApp();
 
 let lastAvailabilityTickAt = 0;
+let lastActiveThisWeekTickAt = 0;
+const ACTIVE_THIS_WEEK_TICK_MS = 24 * 60 * 60 * 1000;
 
 setInterval(() => {
 	void (async () => {
@@ -296,6 +299,12 @@ setInterval(() => {
 			await runAvailabilityLifecycleTick(db, now, `availability-tick-${now.toISOString()}`);
 			await flushDueNotificationBatchWindows(db, now);
 			await dispatchTrialEndingReminders(db, now);
+		}
+
+		if (nowMs - lastActiveThisWeekTickAt >= ACTIVE_THIS_WEEK_TICK_MS) {
+			lastActiveThisWeekTickAt = nowMs;
+			const now = new Date();
+			await runActiveThisWeekJob(db, now, `active-this-week-${now.toISOString()}`);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

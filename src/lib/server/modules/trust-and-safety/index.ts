@@ -12,6 +12,17 @@ export {
 	handleBadgeFlagEvent
 } from './infra/identity-change-subscription';
 export { grantIdentityBadgeDev } from './infra/grant-badge-dev';
+export {
+	runActiveThisWeekJob,
+	evaluateActiveThisWeekSignals,
+	type ActiveThisWeekJobResult
+} from './infra/active-this-week-job';
+export {
+	ACTIVE_THIS_WEEK_WINDOW_MS,
+	isActiveThisWeek,
+	activeThisWeekWindowStart,
+	type ActiveThisWeekSignals
+} from './domain/active-this-week';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
