@@ -16,5 +16,9 @@ export async function load({ locals }) {
 		listReviewsWrittenBySeeker(db, locals.auth.userId)
 	]);
 
-	return { threads, reviews, signedIn: true };
+	return {
+		threads: threads.map((t) => ({ ...t, lastActivityAt: t.lastActivityAt.toISOString() })),
+		reviews,
+		signedIn: true
+	};
 }

@@ -2,6 +2,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import ThreadListItem from '$lib/components/ThreadListItem.svelte';
 
 	let {
 		data
@@ -13,6 +14,7 @@
 				counterpartName: string;
 				lastMessagePreview: string;
 				lastActivityAt: string;
+				unreadCount: number;
 			}>;
 			reviews: Array<{
 				id: string;
@@ -52,14 +54,13 @@
 			{:else}
 				<ul class="thread-list">
 					{#each data.threads as thread (thread.threadId)}
-						<li>
-							<a class="thread-link" href="/messages/{thread.threadId}">
-								<Card>
-									<p class="label counterpart">{thread.counterpartName}</p>
-									<p class="body preview">{thread.lastMessagePreview}</p>
-								</Card>
-							</a>
-						</li>
+						<ThreadListItem
+							threadId={thread.threadId}
+							counterpartName={thread.counterpartName}
+							lastMessagePreview={thread.lastMessagePreview}
+							lastActivityAt={thread.lastActivityAt}
+							unreadCount={thread.unreadCount}
+						/>
 					{/each}
 				</ul>
 			{/if}
@@ -110,24 +111,5 @@
 		padding: 0;
 		display: grid;
 		gap: var(--space-md);
-	}
-	.counterpart {
-		margin: 0 0 var(--space-xs);
-		color: var(--color-ink);
-		font-weight: 600;
-	}
-	.preview {
-		margin: 0;
-		color: var(--color-stone);
-	}
-	.thread-link {
-		display: block;
-		color: inherit;
-		text-decoration: none;
-		border-radius: var(--radius-card);
-	}
-	.thread-link:focus-visible {
-		outline: 2px solid var(--color-peach-deep);
-		outline-offset: 2px;
 	}
 </style>

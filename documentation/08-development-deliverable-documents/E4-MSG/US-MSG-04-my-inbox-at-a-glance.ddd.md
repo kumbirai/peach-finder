@@ -28,9 +28,9 @@ FR-MSG-06, FR-MSG-07, FR-NOTIF-01/03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-MSG-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-MSG-04 implemented**
+
+- **Backend (`direct-messaging`):** `unread-queries.ts` adds per-thread and chrome-level unread counts; `ThreadSummary.unreadCount` on `listSeekerThreads` / `listProviderInbox`; `GET /api/messaging/threads` (optional `?audience=provider`) with `toThreadListItem` serializer; facade exports `countTotalUnreadForSeeker`, `countTotalUnreadForProviderOwner`, `areMessagesStillUnreadByRecipient`, `getThreadIdForMessage`.
+- **Backend (`user-notifications`, supporting):** Migration `0015_us_msg_04_inbox_notifications.sql` for `notification_batch_window` and `block_cache`; `handleMessageSent` subscriber (in-app on first message, burst batching, email on flush if still unread); `flushDueNotificationBatchWindows` on worker minute tick; block-silence via `user-notifications.block-silence` / `UserUnblocked` subscribers.
+- **Frontend:** `ThreadListItem.svelte` + `UnreadBadge.svelte` (dot + count per TC-MSG-VIS-03); `Navigation` shows seeker unread on Messages and provider unread on Dashboard; `+layout.server.ts` supplies `unreadCounts`; messages list and provider dashboard inbox use shared thread row component with activity time labels.
+- **Tests:** `inbox-unread.integration.test.ts` (TC-MSG-04a); `message-notifications.integration.test.ts` (TC-NOTIF-03a/b, email suppress when read); `format-thread-time.test.ts`; Playwright `TC-MSG-04a` in `testing/playwright/messaging-live.e2e.ts`.
+- **Assumption:** Push channel deferred (S-priority per FR-NOTIF-01); in-app + email-on-flush satisfy M baseline for this story. E2E stack runs dev server without worker — unread UI is DB-backed; notification subscriber is integration-tested directly.

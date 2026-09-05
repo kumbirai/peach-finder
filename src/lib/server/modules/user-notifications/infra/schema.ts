@@ -1,4 +1,4 @@
-import { pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgSchema, text, timestamp, uuid, integer, primaryKey, index } from 'drizzle-orm/pg-core';
 
 export const userNotificationsSchema = pgSchema('user_notifications');
 
@@ -18,3 +18,35 @@ export const notificationLog = userNotificationsSchema.table('notification_log',
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 	correlationId: text('correlation_id').notNull()
 });
+
+export const notificationBatchWindow = userNotificationsSchema.table(
+	'notification_batch_window',
+	{
+		userId: uuid('user_id').notNull(),
+		category: text('category').notNull(),
+		sourceKey: text('source_key').notNull(),
+		openedAt: timestamp('opened_at', { withTimezone: true, mode: 'date' }).notNull(),
+		flushAfter: timestamp('flush_after', { withTimezone: true, mode: 'date' }).notNull(),
+		messageCount: integer('message_count').notNull().default(1),
+		lastMessageId: uuid('last_message_id'),
+		inAppNotificationId: uuid('in_app_notification_id'),
+		status: text('status').notNull().default('open')
+	},
+	(table) => [
+		primaryKey({ columns: [table.userId, table.category, table.sourceKey] }),
+		index('batch_window_flush_idx').on(table.flushAfter)
+	]
+);
+
+export const notifBlockCache = userNotificationsSchema.table(
+	'block_cache',
+	{
+		blockerId: uuid('blocker_id').notNull(),
+		blockedId: uuid('blocked_id').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull()
+	},
+	(table) => [
+		primaryKey({ columns: [table.blockerId, table.blockedId] }),
+		index('notif_block_blocked_idx').on(table.blockedId)
+	]
+);

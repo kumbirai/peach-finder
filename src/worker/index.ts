@@ -8,8 +8,8 @@ import { handleConfigChanged } from '../lib/server/modules/platform-configuratio
 import {
 	handleEmailVerified,
 	handleAccountDeletionRequested,
-	handleUserBlocked,
-	handleUserUnblocked
+	handleUserBlocked as handleMessagingUserBlocked,
+	handleUserUnblocked as handleMessagingUserUnblocked
 } from '../lib/server/modules/direct-messaging';
 import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
 import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
@@ -25,7 +25,13 @@ import {
 	handleIdentityAttributesChanged
 } from '../lib/server/modules/trust-and-safety';
 import { runAvailabilityLifecycleTick } from '../lib/server/modules/provider-availability';
-import { handleAvailabilityExpiryWarned } from '../lib/server/modules/user-notifications';
+import {
+	handleAvailabilityExpiryWarned,
+	handleMessageSent,
+	flushDueNotificationBatchWindows,
+	handleUserBlocked as handleNotifUserBlocked,
+	handleUserUnblocked as handleNotifUserUnblocked
+} from '../lib/server/modules/user-notifications';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
@@ -53,10 +59,10 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			await handleAccountDeletionRequested(db, event as never);
 		}
 		if (subscriber === 'direct-messaging.block-cache' && event.eventName === 'UserBlocked') {
-			await handleUserBlocked(db, event as never);
+			await handleMessagingUserBlocked(db, event as never);
 		}
 		if (subscriber === 'direct-messaging.unblock-cache' && event.eventName === 'UserUnblocked') {
-			await handleUserUnblocked(db, event as never);
+			await handleMessagingUserUnblocked(db, event as never);
 		}
 		if (subscriber === 'provider-profile.attach-photo' && event.eventName === 'MediaProcessed') {
 			await handleMediaProcessed(db, event as never);
@@ -158,6 +164,15 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		) {
 			await handleAvailabilityExpiryWarned(db, event as never);
 		}
+		if (subscriber === 'user-notifications.new-message' && event.eventName === 'MessageSent') {
+			await handleMessageSent(db, event as never);
+		}
+		if (subscriber === 'user-notifications.block-silence' && event.eventName === 'UserBlocked') {
+			await handleNotifUserBlocked(db, event as never);
+		}
+		if (subscriber === 'user-notifications.unblock-cache' && event.eventName === 'UserUnblocked') {
+			await handleNotifUserUnblocked(db, event as never);
+		}
 		if (
 			subscriber === 'discovery-search.badge-flag' &&
 			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
@@ -216,6 +231,7 @@ setInterval(() => {
 			lastAvailabilityTickAt = nowMs;
 			const now = new Date();
 			await runAvailabilityLifecycleTick(db, now, `availability-tick-${now.toISOString()}`);
+			await flushDueNotificationBatchWindows(db, now);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

@@ -45,13 +45,20 @@ export {
 	handleUserUnblocked
 } from './infra/subscriptions';
 export {
+	countTotalUnreadForSeeker,
+	countTotalUnreadForProviderOwner,
+	areMessagesStillUnreadByRecipient,
+	getThreadIdForMessage
+} from './infra/unread-queries';
+export {
 	listThreadMessages,
 	pollThreadMessages,
 	markThreadReadUpTo,
 	getThreadHeader
 } from './infra/messaging-queries';
 export { resolveThreadAccess } from './infra/thread-access';
-export type { MessageDTO } from './infra/serializers';
+export type { MessageDTO, ThreadListItemDTO } from './infra/serializers';
+export { toThreadListItem } from './infra/serializers';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

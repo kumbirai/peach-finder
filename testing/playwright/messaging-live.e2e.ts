@@ -254,3 +254,48 @@ test.describe('US-MSG-03 quick-start prompts', () => {
 		await expect(page.getByRole('button', { name: /confirm booking/i })).toHaveCount(0);
 	});
 });
+
+test.describe('US-MSG-04 inbox at a glance', () => {
+	test('TC-MSG-04a: thread list ordering, unread flags, and chrome badge', async ({ browser }) => {
+		const providerContext = await browser.newContext();
+		const seekerContext = await browser.newContext();
+		const providerPage = await providerContext.newPage();
+		const seekerPage = await seekerContext.newPage();
+
+		const seekerEmail = `msg04a-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(
+			seekerPage,
+			seekerPage.request,
+			seekerEmail,
+			'password123',
+			'Msg04a Seeker'
+		);
+		await signIn(providerPage, SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD);
+
+		const olderThreadId = await openThreadWithProvider(
+			seekerPage,
+			SEED_DUAL_ROLE_PROFILE_ID,
+			'Older thread first'
+		);
+
+		const sendRes = await providerPage.request.post(
+			`/api/messaging/threads/${olderThreadId}/messages`,
+			{ data: { body: 'Unread provider reply for seeker' } }
+		);
+		expect(sendRes.ok()).toBeTruthy();
+
+		await openThreadWithProvider(seekerPage, SEED_CORE_PRIMARY_PROFILE_ID, 'Newer thread second');
+
+		await seekerPage.goto('/messages');
+		const items = seekerPage.getByTestId('thread-list-item');
+		await expect(items.first()).toContainText('Newer thread second');
+		await expect(items.nth(1)).toContainText('Unread provider reply for seeker');
+		await expect(items.filter({ hasText: 'Jordan B.' }).getByTestId('unread-badge')).toBeVisible();
+		await expect(
+			seekerPage.getByRole('link', { name: /Messages/ }).getByTestId('unread-badge')
+		).toBeVisible();
+
+		await providerContext.close();
+		await seekerContext.close();
+	});
+});

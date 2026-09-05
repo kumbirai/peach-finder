@@ -26,16 +26,16 @@ export async function markProcessed(
 	eventId: OutboxEventId,
 	subscriber: string
 ): Promise<boolean> {
-	try {
-		await tx.insert(processedEvents).values({
+	const rows = await tx
+		.insert(processedEvents)
+		.values({
 			eventId,
 			subscriber,
 			processedAt: new Date()
-		});
-		return true;
-	} catch {
-		return false;
-	}
+		})
+		.onConflictDoNothing()
+		.returning({ eventId: processedEvents.eventId });
+	return rows.length > 0;
 }
 
 export type UndispatchedOutboxRow = {

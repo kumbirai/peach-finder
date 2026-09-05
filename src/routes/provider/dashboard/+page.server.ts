@@ -86,7 +86,10 @@ export async function load({ locals, url }) {
 		profile: dashboard,
 		publishState: ownerProfile.publishState,
 		unpublishConfirm: url.searchParams.get('unpublishConfirm') === '1',
-		inbox,
+		inbox: inbox.map((t) => ({
+			...t,
+			lastActivityAt: t.lastActivityAt.toISOString()
+		})),
 		availability,
 		renewalNotification,
 		analytics: {

@@ -7,13 +7,19 @@ import {
 	dispatchUndispatchedAvailabilityExpiryWarnings,
 	type InAppNotificationDto
 } from './infra/notification-commands';
+import { handleMessageSent, flushDueNotificationBatchWindows } from './infra/message-sent-handler';
+import { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
 
 export {
 	handleAvailabilityExpiryWarned,
+	handleMessageSent,
+	flushDueNotificationBatchWindows,
 	listUnreadInAppNotifications,
 	markAvailabilityRenewalReadForOwner,
 	markInAppNotificationsRead,
 	dispatchUndispatchedAvailabilityExpiryWarnings,
+	handleUserBlocked,
+	handleUserUnblocked,
 	type InAppNotificationDto
 };
 

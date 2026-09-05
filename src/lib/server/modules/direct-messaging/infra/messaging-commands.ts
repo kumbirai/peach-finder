@@ -21,6 +21,7 @@ import { isBlockedBetween } from './block-cache';
 import { messages, pendingMessages, threads } from './schema';
 import { resolveThreadAccess } from './thread-access';
 import { upsertPresenceHeartbeat } from './presence-heartbeat';
+import { countUnreadInThread } from './unread-queries';
 
 const MAX_BODY_LENGTH = 4000;
 
@@ -390,6 +391,7 @@ export type ThreadSummary = {
 	counterpartName: string;
 	lastMessagePreview: string;
 	lastActivityAt: Date;
+	unreadCount: number;
 };
 
 async function latestMessagePreview(
@@ -420,11 +422,14 @@ export async function listSeekerThreads(db: Database, seekerId: UserId): Promise
 	for (const row of threadRows) {
 		const preview = await latestMessagePreview(db, row.id);
 		const name = await getProfileOwnerDisplayName(db, row.providerProfileId as ProviderProfileId);
+		const threadId = row.id as ThreadId;
+		const unreadCount = await countUnreadInThread(db, threadId, seekerId);
 		summaries.push({
-			threadId: row.id as ThreadId,
+			threadId,
 			counterpartName: name,
 			lastMessagePreview: preview?.body ?? '',
-			lastActivityAt: row.lastActivityAt
+			lastActivityAt: row.lastActivityAt,
+			unreadCount
 		});
 	}
 	return summaries;
@@ -448,11 +453,14 @@ export async function listProviderInbox(db: Database, ownerId: UserId): Promise<
 	for (const row of threadRows) {
 		const preview = await latestMessagePreview(db, row.id);
 		const seeker = await getDisplayIdentity(db, row.seekerId as UserId);
+		const threadId = row.id as ThreadId;
+		const unreadCount = await countUnreadInThread(db, threadId, ownerId);
 		summaries.push({
-			threadId: row.id as ThreadId,
+			threadId,
 			counterpartName: seeker.isDeleted ? 'Deleted account' : seeker.displayName,
 			lastMessagePreview: preview?.body ?? '',
-			lastActivityAt: row.lastActivityAt
+			lastActivityAt: row.lastActivityAt,
+			unreadCount
 		});
 	}
 	return summaries;

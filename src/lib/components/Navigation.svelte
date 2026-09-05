@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import RoleSwitch from './RoleSwitch.svelte';
+	import UnreadBadge from './UnreadBadge.svelte';
 
 	let {
 		current = 'search',
@@ -13,17 +14,31 @@
 	const signedIn = $derived(page.data.signedIn === true);
 	const showRoleSwitch = $derived(page.data.capabilities?.isProvider === true);
 	const activeRole = $derived(page.data.activeRole ?? 'anonymous');
+	const seekerUnread = $derived(page.data.unreadCounts?.seekerMessages ?? 0);
+	const providerUnread = $derived(page.data.unreadCounts?.providerInbox ?? 0);
 </script>
 
 <nav class="nav nav-{variant}" aria-label="Primary">
 	<div class="top">
 		<a class="logo title" href="/">peach·finder</a>
 		<a class="top-link" class:active={current === 'search'} href="/">Search</a>
-		<a class="top-link" class:active={current === 'messages'} href="/messages">Messages</a>
+		<a class="top-link nav-messages" class:active={current === 'messages'} href="/messages">
+			<span>Messages</span>
+			{#if seekerUnread > 0}
+				<UnreadBadge count={seekerUnread} label="unread seeker messages" />
+			{/if}
+		</a>
 		{#if showRoleSwitch}
-			<a class="top-link" class:active={current === 'provider'} href="/provider/dashboard"
-				>Dashboard</a
+			<a
+				class="top-link nav-provider"
+				class:active={current === 'provider'}
+				href="/provider/dashboard"
 			>
+				<span>Dashboard</span>
+				{#if providerUnread > 0}
+					<UnreadBadge count={providerUnread} label="unread provider messages" />
+				{/if}
+			</a>
 		{/if}
 		<a class="top-link" class:active={current === 'profile'} href="/profile">Profile</a>
 		{#if showRoleSwitch}
@@ -43,7 +58,7 @@
 			</svg>
 			<span>Search</span>
 		</a>
-		<a class="tab" class:active={current === 'messages'} href="/messages">
+		<a class="tab nav-messages" class:active={current === 'messages'} href="/messages">
 			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<path
 					d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
@@ -52,10 +67,15 @@
 					stroke-linejoin="round"
 				/>
 			</svg>
-			<span>Messages</span>
+			<span class="tab-label">
+				Messages
+				{#if seekerUnread > 0}
+					<UnreadBadge count={seekerUnread} label="unread seeker messages" />
+				{/if}
+			</span>
 		</a>
 		{#if showRoleSwitch}
-			<a class="tab" class:active={current === 'provider'} href="/provider/dashboard">
+			<a class="tab nav-provider" class:active={current === 'provider'} href="/provider/dashboard">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="2" />
 					<path
@@ -65,7 +85,12 @@
 						stroke-linecap="round"
 					/>
 				</svg>
-				<span>Dashboard</span>
+				<span class="tab-label">
+					Dashboard
+					{#if providerUnread > 0}
+						<UnreadBadge count={providerUnread} label="unread provider messages" />
+					{/if}
+				</span>
 			</a>
 		{/if}
 		<a class="tab" class:active={current === 'profile'} href="/profile">
@@ -110,6 +135,22 @@
 	.top-link.active {
 		color: var(--color-peach-deep);
 	}
+	.top-link:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+		border-radius: 999px;
+	}
+	.nav-messages,
+	.nav-provider {
+		gap: var(--space-xs);
+	}
+	.tab-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex-wrap: wrap;
+		justify-content: center;
+	}
 	.tabs {
 		display: flex;
 		background: var(--color-paper);
@@ -134,6 +175,10 @@
 	}
 	.tab.active {
 		color: var(--color-peach-deep);
+	}
+	.tab:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
 	}
 	.nav-top .tabs {
 		display: none;

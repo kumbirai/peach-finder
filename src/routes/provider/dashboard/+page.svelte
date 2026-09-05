@@ -5,6 +5,7 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
 	import AvailabilityRenewalBanner from '$lib/components/provider/AvailabilityRenewalBanner.svelte';
+	import ThreadListItem from '$lib/components/ThreadListItem.svelte';
 
 	let {
 		data,
@@ -18,6 +19,8 @@
 				threadId: string;
 				counterpartName: string;
 				lastMessagePreview: string;
+				lastActivityAt: string;
+				unreadCount: number;
 			}>;
 			analytics: {
 				profileViews: number;
@@ -131,14 +134,13 @@
 			{:else}
 				<ul class="inbox-list">
 					{#each data.inbox as thread (thread.threadId)}
-						<li>
-							<a class="inbox-link" href="/messages/{thread.threadId}">
-								<Card>
-									<p class="label counterpart">{thread.counterpartName}</p>
-									<p class="body preview">{thread.lastMessagePreview}</p>
-								</Card>
-							</a>
-						</li>
+						<ThreadListItem
+							threadId={thread.threadId}
+							counterpartName={thread.counterpartName}
+							lastMessagePreview={thread.lastMessagePreview}
+							lastActivityAt={thread.lastActivityAt}
+							unreadCount={thread.unreadCount}
+						/>
 					{/each}
 				</ul>
 			{/if}
@@ -213,25 +215,6 @@
 		padding: 0;
 		display: grid;
 		gap: var(--space-md);
-	}
-	.counterpart {
-		margin: 0 0 var(--space-xs);
-		color: var(--color-ink);
-		font-weight: 600;
-	}
-	.preview {
-		margin: 0;
-		color: var(--color-stone);
-	}
-	.inbox-link {
-		display: block;
-		color: inherit;
-		text-decoration: none;
-		border-radius: var(--radius-card);
-	}
-	.inbox-link:focus-visible {
-		outline: 2px solid var(--color-peach-deep);
-		outline-offset: 2px;
 	}
 	.stat-row {
 		display: grid;
