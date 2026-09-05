@@ -281,6 +281,7 @@ export async function getThreadHeader(
 		{
 			threadId: ThreadId;
 			counterpartName: string;
+			counterpartUserId: UserId;
 			viewerRole: 'seeker' | 'provider';
 		},
 		UseCaseError
@@ -297,6 +298,7 @@ export async function getThreadHeader(
 	return Ok({
 		threadId: access.value.threadId,
 		counterpartName,
+		counterpartUserId: access.value.counterpartUserId,
 		viewerRole: access.value.viewerRole
 	});
 }

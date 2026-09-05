@@ -1,6 +1,8 @@
 import type { UserId } from '../../shared/ids';
 
 export { getSafetyInfo } from './app/get-safety-info';
+export { fileReport } from './app/file-report';
+export { blockUser } from './app/block-user';
 export { loadBadgeDisplayState, loadOwnerBadgeNotice } from './infra/badge-read';
 export {
 	BADGE_SUPPRESSION_REASON,

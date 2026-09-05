@@ -10,6 +10,7 @@
 			threadId: string;
 			viewerId: string;
 			counterpartName: string;
+			counterpartUserId: string;
 			messages: ThreadMessage[];
 			forcePolling: boolean;
 			backHref: string;
@@ -31,6 +32,7 @@
 		threadId={data.threadId}
 		viewerId={data.viewerId}
 		counterpartName={data.counterpartName}
+		counterpartUserId={data.counterpartUserId}
 		initialMessages={data.messages}
 		backHref={data.backHref}
 		forcePolling={data.forcePolling}

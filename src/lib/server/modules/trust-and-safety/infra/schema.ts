@@ -1,4 +1,4 @@
-import { boolean, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, jsonb, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { pgSchema } from 'drizzle-orm/pg-core';
 
 export const trustAndSafetySchema = pgSchema('trust_and_safety');
@@ -40,6 +40,21 @@ export const blocks = trustAndSafetySchema.table(
 	},
 	(table) => [{ pk: { columns: [table.blockerId, table.blockedId] } }]
 );
+
+export const reports = trustAndSafetySchema.table('report', {
+	id: uuid('id').primaryKey(),
+	reporterId: uuid('reporter_id').notNull(),
+	targetType: text('target_type').notNull(),
+	targetId: uuid('target_id').notNull(),
+	reason: text('reason').notNull(),
+	freeText: text('free_text'),
+	status: text('status').notNull().default('open'),
+	resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'date' }),
+	resolvedBy: uuid('resolved_by'),
+	resolutionNote: text('resolution_note'),
+	metadata: jsonb('metadata').notNull().default({}),
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
+});
 
 export const verificationCases = trustAndSafetySchema.table('verification_case', {
 	id: uuid('id').primaryKey(),

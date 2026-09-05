@@ -5,6 +5,7 @@
 	import MessageBubble from '$lib/components/MessageBubble.svelte';
 	import QuickStartPrompts from '$lib/components/QuickStartPrompts.svelte';
 	import ResponseTimeDisclosure from '$lib/components/ResponseTimeDisclosure.svelte';
+	import ThreadSafetyPanel from '$lib/components/ThreadSafetyPanel.svelte';
 	import { applyDeliveryUpdate } from '$lib/messaging/delivery-label';
 	import { fetchThreadPoll } from '$lib/messaging/poll-client';
 	import { latestMessageId, mergeThreadMessages } from '$lib/messaging/thread-messages';
@@ -15,6 +16,7 @@
 		threadId,
 		viewerId,
 		counterpartName,
+		counterpartUserId,
 		initialMessages,
 		backHref = '/messages',
 		forcePolling = false,
@@ -24,6 +26,7 @@
 		threadId: string;
 		viewerId: string;
 		counterpartName: string;
+		counterpartUserId: string;
 		initialMessages: ThreadMessage[];
 		backHref?: string;
 		forcePolling?: boolean;
@@ -39,6 +42,8 @@
 	let threadBodyEl: HTMLDivElement | undefined = $state();
 
 	let transport: MessagingTransport | null = null;
+	let safetyMenuOpen = $state(false);
+	const safetyPanelId = $derived(`thread-safety-${threadId}`);
 
 	function scrollToBottom(): void {
 		if (!threadBodyEl) return;
@@ -202,19 +207,42 @@
 	}
 </script>
 
-<header class="thread-header">
-	<Button href={backHref} variant="ghost">Back</Button>
-	<div class="thread-header__details">
-		<h1 class="thread-header__name">{counterpartName}</h1>
-		<p class="connection label" aria-live="polite">
-			{#if connectionMode === 'polling'}
-				Reconnecting — messages still arrive, just a little slower.
-			{:else}
-				Live
-			{/if}
-		</p>
-	</div>
-</header>
+<div class="thread-head">
+	<header class="thread-header">
+		<Button href={backHref} variant="ghost">Back</Button>
+		<div class="thread-header__details">
+			<h1 class="thread-header__name">{counterpartName}</h1>
+			<p class="connection label" aria-live="polite">
+				{#if connectionMode === 'polling'}
+					Reconnecting — messages still arrive, just a little slower.
+				{:else}
+					Live
+				{/if}
+			</p>
+		</div>
+		<details class="thread-safety-details" bind:open={safetyMenuOpen}>
+			<summary
+				class="icon-btn"
+				data-testid="thread-safety-toggle"
+				aria-label="Conversation safety options"
+				aria-controls={safetyPanelId}
+			>
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+					<circle cx="5" cy="12" r="1.5" fill="currentColor" />
+					<circle cx="12" cy="12" r="1.5" fill="currentColor" />
+					<circle cx="19" cy="12" r="1.5" fill="currentColor" />
+				</svg>
+			</summary>
+			<ThreadSafetyPanel
+				panelId={safetyPanelId}
+				menuOpen={safetyMenuOpen}
+				{threadId}
+				{counterpartUserId}
+				{counterpartName}
+			/>
+		</details>
+	</header>
+</div>
 
 {#if showResponseTimeDisclosure}
 	<ResponseTimeDisclosure />
@@ -253,12 +281,50 @@
 {/if}
 
 <style>
+	.thread-head {
+		padding-bottom: var(--space-md);
+		border-bottom: 1px solid var(--color-divider);
+	}
 	.thread-header {
 		display: flex;
 		align-items: center;
 		gap: var(--space-sm);
-		padding-bottom: var(--space-md);
-		border-bottom: 1px solid var(--color-divider);
+	}
+	.thread-safety-details {
+		position: relative;
+		flex-shrink: 0;
+	}
+	.thread-safety-details summary {
+		list-style: none;
+	}
+	.thread-safety-details summary::-webkit-details-marker {
+		display: none;
+	}
+	.thread-safety-details :global(.thread-safety) {
+		position: absolute;
+		top: calc(100% + var(--space-xs));
+		right: 0;
+		z-index: 2;
+		min-width: min(100vw - 2rem, 24rem);
+		padding: var(--space-sm) var(--space-md);
+		box-shadow: var(--shadow-lift-hover);
+	}
+	.icon-btn {
+		width: 44px;
+		height: 44px;
+		border: 1px solid var(--color-divider);
+		border-radius: 50%;
+		background: var(--color-paper);
+		color: var(--color-ink);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.icon-btn:focus-visible {
+		outline: 3px solid var(--color-terracotta);
+		outline-offset: 2px;
 	}
 	.thread-header__details {
 		flex: 1;

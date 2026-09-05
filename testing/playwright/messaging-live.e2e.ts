@@ -348,3 +348,72 @@ test.describe('US-MSG-05 on the clock (provider)', () => {
 		await expect(page.getByTestId('response-time-disclosure')).toHaveCount(0);
 	});
 });
+
+test.describe('US-MSG-06 safety is two taps away', () => {
+	test('TC-MSG-06a: report and block reachable within two taps from thread header', async ({
+		page
+	}) => {
+		const email = `msg06-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg06 Seeker');
+		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Safety reachability check');
+
+		await expect(page.getByTestId('thread-safety-toggle')).toBeVisible();
+		await page.getByTestId('thread-safety-toggle').click();
+		const panel = page.getByTestId('thread-safety-panel');
+		await expect(panel).toBeVisible();
+		await expect(panel.getByTestId('thread-safety-report')).toBeVisible();
+		await expect(panel.getByTestId('thread-safety-block')).toBeVisible();
+
+		const accessibilityScan = await new AxeBuilder({ page })
+			.include('[data-testid="thread-safety-panel"]')
+			.analyze();
+		expect(
+			accessibilityScan.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')
+		).toEqual([]);
+
+		const blockButton = panel.getByRole('button', { name: /^Block / });
+		await blockButton.click();
+		await expect(panel.getByRole('button', { name: 'Confirm block' })).toBeVisible();
+		await page.getByTestId('thread-safety-toggle').click();
+		await page.getByTestId('thread-safety-toggle').click();
+		await expect(panel).toBeVisible();
+		await expect(panel.getByRole('button', { name: 'Report' })).toBeVisible();
+		await expect(panel.getByRole('button', { name: /^Block / })).toBeVisible();
+		await expect(panel.getByRole('button', { name: 'Confirm block' })).toHaveCount(0);
+	});
+
+	test('TC-MSG-06c: provider can reach report and block from thread header', async ({
+		browser
+	}) => {
+		const providerContext = await browser.newContext();
+		const seekerContext = await browser.newContext();
+		const providerPage = await providerContext.newPage();
+		const seekerPage = await seekerContext.newPage();
+
+		const seekerEmail = `msg06c-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(
+			seekerPage,
+			seekerPage.request,
+			seekerEmail,
+			'password123',
+			'Msg06c Seeker'
+		);
+		await signIn(providerPage, SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD);
+
+		const threadId = await openThreadWithProvider(
+			seekerPage,
+			SEED_DUAL_ROLE_PROFILE_ID,
+			'Provider safety reachability'
+		);
+
+		await providerPage.goto(`/messages/${threadId}`);
+		await providerPage.getByTestId('thread-safety-toggle').click();
+		const panel = providerPage.getByTestId('thread-safety-panel');
+		await expect(panel).toBeVisible();
+		await expect(panel.getByRole('button', { name: 'Report' })).toBeVisible();
+		await expect(panel.getByRole('button', { name: /^Block / })).toBeVisible();
+
+		await providerContext.close();
+		await seekerContext.close();
+	});
+});

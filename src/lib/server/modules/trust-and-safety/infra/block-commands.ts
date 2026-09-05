@@ -18,14 +18,17 @@ export async function insertBlock(
 	if (input.blockerId === input.blockedId) return;
 
 	await db.transaction(async (tx) => {
-		await tx
+		const inserted = await tx
 			.insert(blocks)
 			.values({
 				blockerId: input.blockerId,
 				blockedId: input.blockedId,
 				createdAt: input.now
 			})
-			.onConflictDoNothing();
+			.onConflictDoNothing()
+			.returning({ blockerId: blocks.blockerId });
+
+		if (inserted.length === 0) return;
 
 		const event: DomainEvent<'UserBlocked', { blockerId: string; blockedId: string }> = {
 			eventId: newId<'OutboxEventId'>(),

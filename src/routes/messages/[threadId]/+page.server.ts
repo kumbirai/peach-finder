@@ -31,6 +31,7 @@ export async function load({ params, locals, url }) {
 		threadId,
 		viewerId: locals.auth.userId,
 		counterpartName: header.value.counterpartName,
+		counterpartUserId: header.value.counterpartUserId,
 		viewerRole: header.value.viewerRole,
 		messages: listed.value.messages,
 		forcePolling: url.searchParams.get('forcePolling') === '1',
