@@ -24,10 +24,17 @@ type ReviewRow = {
 };
 type PhotoRow = { id: string; galleryUrl: string; isPrimary: boolean };
 
+export type LoadProfileViewOptions = {
+	/** When false, owner preview can load draft-shaped data regardless of publish/listing state. */
+	requirePublished?: boolean;
+};
+
 export async function loadProfileView(
 	db: Database,
-	providerProfileId: ProviderProfileId
+	providerProfileId: ProviderProfileId,
+	options: LoadProfileViewOptions = {}
 ): Promise<ProfileViewRow | null> {
+	const requirePublished = options.requirePublished ?? true;
 	const profileRows = await db
 		.select({
 			id: providerProfiles.id,
@@ -57,7 +64,10 @@ export async function loadProfileView(
 		LIMIT 1
 	`);
 	const listing = (listingRows as unknown as ListingRow[])[0];
-	if (profile.publishState !== 'published' || listing?.state !== 'free_listed') {
+	if (
+		requirePublished &&
+		(profile.publishState !== 'published' || listing?.state !== 'free_listed')
+	) {
 		return null;
 	}
 

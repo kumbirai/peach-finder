@@ -112,9 +112,8 @@
 	</section>
 
 	<p class="body actions">
-		<Button href={`/provider/${data.profile.profileId}`} variant="secondary"
-			>Preview public profile</Button
-		>
+		<Button href="/provider/profile/preview" variant="secondary">Preview as seeker</Button>
+		<Button href={`/provider/${data.profile.profileId}`} variant="ghost">Open live profile</Button>
 		<Button href="/provider/dashboard" variant="ghost">Back to dashboard</Button>
 	</p>
 </main>

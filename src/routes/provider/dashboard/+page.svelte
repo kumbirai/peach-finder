@@ -56,6 +56,7 @@
 					<p class="body">Changes you save go live immediately — no review step.</p>
 					<div class="action-row">
 						<Button variant="primary" href="/provider/profile/edit">Edit profile</Button>
+						<Button variant="secondary" href="/provider/profile/preview">Preview as seeker</Button>
 						{#if data.unpublishConfirm}
 							<form method="POST" action="?/unpublish" use:enhance class="unpublish-form">
 								<p class="body confirm-copy" role="status">
@@ -89,6 +90,7 @@
 							<Button variant="primary" type="submit">Republish profile</Button>
 						</form>
 						<Button variant="secondary" href="/provider/profile/edit">Edit profile</Button>
+						<Button variant="secondary" href="/provider/profile/preview">Preview as seeker</Button>
 					</div>
 				{:else}
 					<p class="body">Finish your profile so seekers can find and contact you.</p>
