@@ -1,11 +1,16 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
+	import ProfileShareButton from '$lib/components/ProfileShareButton.svelte';
 
 	let {
+		shareUrl,
+		shareTitle,
 		reviewHref,
 		reportHref,
 		blockHref
 	}: {
+		shareUrl: string;
+		shareTitle: string;
 		reviewHref: string;
 		reportHref: string;
 		blockHref: string;
@@ -13,6 +18,9 @@
 </script>
 
 <div class="profile-actions" role="group" aria-label="Profile actions">
+	<span data-testid="profile-share-button" data-share-url={shareUrl}>
+		<ProfileShareButton url={shareUrl} title={shareTitle} />
+	</span>
 	<Button href={reviewHref} variant="secondary">Review</Button>
 	<Button href={reportHref} variant="ghost">Report</Button>
 	<Button href={blockHref} variant="ghost">Block</Button>

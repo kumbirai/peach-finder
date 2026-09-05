@@ -8,6 +8,7 @@
 		data: {
 			profile: import('$lib/types/profile').PublicProfile;
 			providerProfileId: string;
+			shareUrl: string;
 			actions: { message: string; review: string; report: string; block: string };
 			og: { title: string; description: string; image: string | null };
 			canonical: string;
@@ -33,6 +34,7 @@
 	<PublicProfileView
 		profile={data.profile}
 		primaryHeading
+		shareUrl={data.shareUrl}
 		actions={data.actions}
 		messageDraftKey={`pf_message_draft_${data.providerProfileId}`}
 	/>

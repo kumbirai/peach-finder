@@ -153,6 +153,8 @@ export {
 export { proposeServiceTag } from './infra/tag-proposal-commands';
 export { handleMediaProcessed, handleMediaRemoved } from './infra/subscriptions';
 export { getProfilePreviewForOwner, type PreviewAudience } from './infra/preview-profile';
+export { loadPrimarySharePhotoUrl } from './infra/read-public-profile';
+export { buildShareMetadata } from './domain/share-metadata';
 export { formatMissingFields, MISSING_FIELD_LABELS } from './domain/missing-field-labels';
 export { INTRO_MAX_LENGTH, validateIntro } from './domain/intro-policy';
 export {

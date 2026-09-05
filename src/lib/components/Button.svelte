@@ -11,6 +11,7 @@
 		form,
 		onclick,
 		messageDraftKey,
+		ariaLabel,
 		children
 	}: {
 		variant?: Variant;
@@ -20,6 +21,7 @@
 		form?: string;
 		onclick?: (event: MouseEvent) => void;
 		messageDraftKey?: string | undefined;
+		ariaLabel?: string;
 		children: Snippet;
 	} = $props();
 </script>
@@ -38,7 +40,7 @@
 		{@render children()}
 	</a>
 {:else}
-	<button class="btn btn-{variant}" {type} {disabled} {form} {onclick}>
+	<button class="btn btn-{variant}" {type} {disabled} {form} {onclick} aria-label={ariaLabel}>
 		{@render children()}
 	</button>
 {/if}

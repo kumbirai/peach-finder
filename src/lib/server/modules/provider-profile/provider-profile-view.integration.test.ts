@@ -7,7 +7,11 @@ import {
 	SEED_CORE_PHONE_OFF_NUMBER,
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../../../../scripts/seed-core';
-import { getPublicProfile } from '../provider-profile';
+import {
+	buildShareMetadata,
+	getPublicProfile,
+	loadPrimarySharePhotoUrl
+} from '../provider-profile';
 import { anonymousAuth, createAuthContext } from '../../shared/auth-context';
 import { asId } from '../../shared/ids';
 
@@ -72,6 +76,37 @@ describe('US-VIEW-03 contact actions integration', () => {
 			expect(signedIn.ok).toBe(true);
 			if (!signedIn.ok) throw new Error('profile missing');
 			expect(signedIn.value.phone).toBe(SEED_CORE_PHONE_OFF_NUMBER);
+		});
+	});
+});
+
+describe('US-VIEW-06 share profile integration', () => {
+	it('TC-VIEW-06b: share metadata uses display name, intro extract, and card_640 primary photo', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID);
+			const profile = await getPublicProfile(db, profileId, anonymousAuth('127.0.0.1'));
+			expect(profile.ok).toBe(true);
+			if (!profile.ok) throw new Error('profile missing');
+
+			const sharePhotoUrl = await loadPrimarySharePhotoUrl(db, profileId);
+			expect(sharePhotoUrl).toBeTruthy();
+
+			const metadata = buildShareMetadata(
+				profile.value.displayName,
+				profile.value.intro,
+				sharePhotoUrl,
+				'https://peachfinder.test'
+			);
+
+			expect(metadata.title).toBe('Amara T.');
+			expect(metadata.description.length).toBeGreaterThan(0);
+			expect(metadata.description).toContain('Deep tissue');
+			expect(sharePhotoUrl).toBe('/placeholder-photo.svg');
+			expect(metadata.image).toBe('https://peachfinder.test/placeholder-photo.svg');
 		});
 	});
 });

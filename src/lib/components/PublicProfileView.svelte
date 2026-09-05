@@ -11,12 +11,14 @@
 		profile,
 		previewMode = false,
 		primaryHeading = false,
+		shareUrl,
 		actions,
 		messageDraftKey
 	}: {
 		profile: PublicProfile;
 		previewMode?: boolean;
 		primaryHeading?: boolean;
+		shareUrl?: string;
 		actions?: { message: string; review: string; report: string; block: string };
 		messageDraftKey?: string;
 	} = $props();
@@ -117,8 +119,14 @@
 		</p>
 	</header>
 
-	{#if actions && !previewMode}
-		<ProfileSafetyActions {reviewHref} {reportHref} {blockHref} />
+	{#if actions && !previewMode && shareUrl}
+		<ProfileSafetyActions
+			{shareUrl}
+			shareTitle={profile.displayName}
+			{reviewHref}
+			{reportHref}
+			{blockHref}
+		/>
 	{/if}
 
 	<section class="section" aria-labelledby="about-heading-{profile.id}">

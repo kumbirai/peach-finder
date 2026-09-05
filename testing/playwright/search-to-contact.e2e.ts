@@ -127,11 +127,63 @@ test.describe('E2E-1 search to contact', () => {
 		expect(html).toContain('Amara T.');
 		expect(html).toContain('Deep tissue specialist');
 		expect(html).toMatch(/property="og:title"/);
+		expect(html).toMatch(/content="Amara T\."/);
 		expect(html).toMatch(/property="og:description"/);
 		expect(html).toMatch(/property="og:image"/);
 		await expect(anonPage.getByTestId('profile-name')).toBeVisible();
 
 		await anonContext.close();
+	});
+
+	test('TC-VIEW-06a: copy-link control exposes the canonical profile URL', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const pageErrors: string[] = [];
+		page.on('pageerror', (error) => pageErrors.push(error.message));
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		const shareHost = page.getByTestId('profile-share-button');
+		await expect(shareHost).toHaveAttribute(
+			'data-share-url',
+			new RegExp(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`)
+		);
+		const shareButton = shareHost.getByRole('button', { name: 'Copy profile link' });
+		await expect(shareButton).toBeVisible();
+		await shareButton.click();
+		expect(pageErrors).toEqual([]);
+
+		await context.close();
+	});
+
+	test('TC-VIEW-06a: share sheet path is covered by unit tests; profile exposes share control', async ({
+		browser
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await expect(page.getByRole('group', { name: 'Profile actions' })).toContainText(
+			'Copy profile link'
+		);
+
+		await context.close();
+	});
+
+	test('TC-VIEW-06b: shared link opens with correct preview metadata in a fresh session', async ({
+		browser
+	}) => {
+		const freshContext = await browser.newContext();
+		const freshPage = await freshContext.newPage();
+		const response = await freshPage.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		expect(response?.ok()).toBeTruthy();
+		const html = await response!.text();
+		expect(html).toContain('Amara T.');
+		expect(html).toMatch(/property="og:title"/);
+		expect(html).toMatch(/content="Amara T\."/);
+		expect(html).toMatch(/property="og:image"/);
+		await expect(freshPage.getByRole('heading', { level: 1, name: 'Amara T.' })).toBeVisible();
+
+		await freshContext.close();
 	});
 
 	test('TC-VIEW-02a: inactive provider presence is coarse and never an exact timestamp', async ({

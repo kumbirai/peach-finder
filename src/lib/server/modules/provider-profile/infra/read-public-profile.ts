@@ -166,6 +166,24 @@ export async function loadProfileView(
 	};
 }
 
+/** Primary photo card_640 URL for Open Graph link previews (FR-PROF-11). */
+export async function loadPrimarySharePhotoUrl(
+	db: Database,
+	providerProfileId: ProviderProfileId
+): Promise<string | null> {
+	const rows = await db.execute<{ url: string }>(sql`
+		SELECT pv.url
+		FROM provider_profile.provider_photo pp
+		INNER JOIN media_processing.photo_variant pv ON pv.photo_id = pp.photo_id
+		WHERE pp.provider_profile_id = ${providerProfileId}
+		  AND pp.status = 'ready'
+		  AND pp.is_primary = true
+		  AND pv.variant LIKE 'card_640%'
+		LIMIT 1
+	`);
+	return (rows as unknown as { url: string }[])[0]?.url ?? null;
+}
+
 export async function listPublishedProfileIds(db: Database): Promise<ProviderProfileId[]> {
 	const rows = await db.execute<{ id: string }>(sql`
 		SELECT p.id
