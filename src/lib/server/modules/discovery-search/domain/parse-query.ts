@@ -178,6 +178,12 @@ export function parseQuery(
 	}
 	if (manual.minRating != null) {
 		sq.minRating = Math.max(sq.minRating ?? 0, manual.minRating);
+		const hasQueryRatingIntent = sq.appliedIntents.some(
+			(intent) => intent.key === 'rating' && intent.source === 'query'
+		);
+		// Manual-only rating: require ≥1 review so zero-review providers stay "New" (FR-REV-05).
+		// Query-derived "highly rated" keeps its lexicon min review count (default 3).
+		sq.minRatingCount = hasQueryRatingIntent ? Math.max(sq.minRatingCount, 1) : 1;
 		if (!sq.appliedIntents.some((intent) => intent.key === 'rating')) {
 			sq.appliedIntents.push({
 				key: 'rating',
@@ -186,8 +192,22 @@ export function parseQuery(
 			});
 		}
 	}
-	if (manual.priceMin != null) sq.priceMin = manual.priceMin;
-	if (manual.priceMax != null) sq.priceMax = manual.priceMax;
+	if (manual.priceMin != null) {
+		sq.priceMin = manual.priceMin;
+		sq.appliedIntents.push({
+			key: `priceMin:${manual.priceMin}`,
+			label: `From R${Math.round(manual.priceMin / 100)}`,
+			source: 'manual'
+		});
+	}
+	if (manual.priceMax != null) {
+		sq.priceMax = manual.priceMax;
+		sq.appliedIntents.push({
+			key: `priceMax:${manual.priceMax}`,
+			label: `Under R${Math.round(manual.priceMax / 100)}`,
+			source: 'manual'
+		});
+	}
 	if (manual.nearMe) {
 		sq.nearMe = true;
 		if (!sq.appliedIntents.some((intent) => intent.key === 'near')) {

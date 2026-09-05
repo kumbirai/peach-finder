@@ -29,9 +29,9 @@ FR-SRCH-04, FR-REV-05, SR-PERF-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,24 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor
+
+**Approach:** Backend search already accepted `priceMin`/`priceMax`/`minRating`/`lang[]`/`verified` query params via `runSearch` and `parseQuery`. This story wired the discover homepage UI to those params with prototype-matching quick-filter chips (Verified only, Under R400, 4.8+ rated, Speaks isiZulu) plus Available now. Filter state lives in URL search params; SvelteKit `goto()` updates results client-side without a full browser reload. `parseQuery` now emits removable `appliedIntents` for manual price filters and sets `minRatingCount >= 1` when a manual rating threshold is applied (excludes zero-review providers per FR-REV-05 while keeping the highly-rated lexicon default of 3 when both apply).
+
+**Files touched:**
+- `src/lib/manual-filters.ts` (+ test) — chip definitions and toggle helpers
+- `src/lib/search-url.ts` (+ test) — `priceMin`/`priceMax` URL state
+- `src/lib/components/SearchFilters.svelte`, `src/routes/+page.svelte`, `src/routes/+page.server.ts`
+- `src/lib/server/modules/discovery-search/domain/parse-query.ts` (+ test)
+- `src/lib/server/modules/discovery-search/app/serializers.test.ts` — "New" rating regression
+- `src/lib/server/modules/discovery-search/filter-search.integration.test.ts` — TC-DISC-04a/b/c
+- `e2e/search-filters.e2e.ts` — live-stack Playwright coverage
+
+**Assumption:** "Under R400" chip label matches the prototype even though `seed-core` providers are priced at R650/R700; the filter is valid and returns an empty state when no providers match. Integration tests adjust one projection row's price in-test to prove intersection logic.
+
+**Verification:** `npm run check` and `npm run lint` clean. Unit tests green. `npm run test:integration` green for this story's file (78/79 integration tests passed; one pre-existing AVAIL flake). Playwright `e2e/search-filters.e2e.ts` requires a running Postgres stack (`ECONNREFUSED :5432` in this session).
+
+**Follow-ups:** None for this story; US-DISC-05 (near me) and US-DISC-07 (empty-state relaxation) are separate stories.

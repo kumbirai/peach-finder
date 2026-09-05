@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import ProviderCard from '$lib/components/ProviderCard.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
+	import { DISCOVERY_MANUAL_FILTER_CHIPS, toggleManualFilter } from '$lib/manual-filters';
 	import {
 		removeIntentFromState,
 		structuredQueryToParams,
@@ -29,6 +29,8 @@
 			langs: string[];
 			tags: string[];
 			minRating: number | null;
+			priceMin: number | null;
+			priceMax: number | null;
 			near: boolean;
 		};
 	} = $props();
@@ -46,6 +48,8 @@
 			data.langs.length === 0 &&
 			data.tags.length === 0 &&
 			data.minRating == null &&
+			data.priceMin == null &&
+			data.priceMax == null &&
 			!data.near &&
 			data.appliedIntents.length === 0
 	);
@@ -58,15 +62,18 @@
 			langs: data.langs,
 			tags: data.tags,
 			minRating: data.minRating,
+			priceMin: data.priceMin,
+			priceMax: data.priceMax,
 			near: data.near
 		};
 	}
 
 	async function submitSearch(q: string) {
 		searching = true;
-		const params = new SvelteURLSearchParams();
+		const params = structuredQueryToParams(currentUrlState());
 		const trimmed = q.trim();
 		if (trimmed) params.set('q', trimmed);
+		else params.delete('q');
 		await goto(params.toString() ? `/?${params.toString()}` : '/');
 		searching = false;
 	}
@@ -76,25 +83,27 @@
 		return params.toString() ? `/?${params.toString()}` : '/';
 	}
 
-	function toggleFilter(key: 'verified' | 'available') {
+	function toggleAvailableFilter() {
 		const state = currentUrlState();
-		if (key === 'verified') state.verified = !state.verified;
-		else state.available = !state.available;
+		state.available = !state.available;
 		void goto(hrefForState(state));
 	}
 
-	const verifiedHref = $derived(hrefForState(removeIntentFromState(currentUrlState(), 'verified')));
+	function toggleManualFilterChip(index: number) {
+		const chip = DISCOVERY_MANUAL_FILTER_CHIPS[index];
+		if (!chip) return;
+		void goto(hrefForState(toggleManualFilter(chip, currentUrlState())));
+	}
+
 	const availableHref = $derived(
 		hrefForState(removeIntentFromState(currentUrlState(), 'available'))
 	);
 	const intentHrefs = $derived(
 		Object.fromEntries(
-			data.appliedIntents
-				.filter((intent) => intent.key !== 'verified' && intent.key !== 'available')
-				.map((intent) => [
-					intent.key,
-					hrefForState(removeIntentFromState(currentUrlState(), intent.key))
-				])
+			data.appliedIntents.map((intent) => [
+				intent.key,
+				hrefForState(removeIntentFromState(currentUrlState(), intent.key))
+			])
 		)
 	);
 
@@ -108,6 +117,8 @@
 				params.has('lang') ||
 				params.has('tag') ||
 				params.has('minRating') ||
+				params.has('priceMin') ||
+				params.has('priceMax') ||
 				params.get('near') === '1';
 			if (!hasFilters) void invalidateAll();
 		}, DISCOVERY_REFRESH_MS);
@@ -142,12 +153,14 @@
 		<SearchFilters
 			verified={data.verified}
 			available={data.available}
+			langs={data.langs}
+			minRating={data.minRating}
+			priceMax={data.priceMax}
 			appliedIntents={data.appliedIntents}
-			{verifiedHref}
 			{availableHref}
 			{intentHrefs}
-			onToggleVerified={() => toggleFilter('verified')}
-			onToggleAvailable={() => toggleFilter('available')}
+			onToggleAvailable={toggleAvailableFilter}
+			onToggleManualFilter={toggleManualFilterChip}
 		/>
 	</div>
 

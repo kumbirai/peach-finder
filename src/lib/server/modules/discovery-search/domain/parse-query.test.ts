@@ -78,4 +78,35 @@ describe('parseQuery', () => {
 		const b = parseQuery('Deep tissue massage near me', lexicon, {}, config);
 		expect(a).toEqual(b);
 	});
+
+	it('TC-DISC-04: manual price and rating filters expose removable chip metadata', () => {
+		const sq = parseQuery(
+			'',
+			lexicon,
+			{ priceMax: 40_000, minRating: 4.8, languageCodes: ['zu'], verified: true },
+			config
+		);
+		expect(sq.priceMax).toBe(40_000);
+		expect(sq.minRating).toBe(4.8);
+		expect(sq.minRatingCount).toBe(1);
+		expect(sq.appliedIntents).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ key: 'priceMax:40000', label: 'Under R400', source: 'manual' }),
+				expect.objectContaining({ key: 'rating', source: 'manual' }),
+				expect.objectContaining({ key: 'lang:zu', source: 'manual' }),
+				expect.objectContaining({ key: 'verified', source: 'manual' })
+			])
+		);
+	});
+
+	it('TC-DISC-04: manual rating filter requires at least one review', () => {
+		const sq = parseQuery('', lexicon, { minRating: 4 }, config);
+		expect(sq.minRatingCount).toBe(1);
+	});
+
+	it('TC-DISC-04: manual rating keeps lexicon min review count when query already set rating', () => {
+		const sq = parseQuery('highly rated massage therapist', lexicon, { minRating: 4.8 }, config);
+		expect(sq.minRating).toBe(4.8);
+		expect(sq.minRatingCount).toBe(3);
+	});
 });

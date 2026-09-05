@@ -15,8 +15,10 @@ function readSearchParams(url: URL) {
 	const langs = url.searchParams.getAll('lang');
 	const tags = url.searchParams.getAll('tag');
 	const minRating = parseOptionalFiniteNumber(url.searchParams.get('minRating'));
+	const priceMin = parseOptionalFiniteNumber(url.searchParams.get('priceMin'));
+	const priceMax = parseOptionalFiniteNumber(url.searchParams.get('priceMax'));
 	const near = url.searchParams.get('near') === '1';
-	return { q, verified, available, langs, tags, minRating, near };
+	return { q, verified, available, langs, tags, minRating, priceMin, priceMax, near };
 }
 
 function hasStructuredFilters(params: ReturnType<typeof readSearchParams>): boolean {
@@ -26,6 +28,8 @@ function hasStructuredFilters(params: ReturnType<typeof readSearchParams>): bool
 		params.langs.length > 0 ||
 		params.tags.length > 0 ||
 		params.minRating != null ||
+		params.priceMin != null ||
+		params.priceMax != null ||
 		params.near
 	);
 }
@@ -67,7 +71,8 @@ export async function load({ url, locals, setHeaders }) {
 	const canonical = canonicalizeNaturalLanguageQuery(url, lexicon);
 	if (canonical) redirect(302, canonical);
 
-	const { q, verified, available, langs, tags, minRating, near } = readSearchParams(url);
+	const { q, verified, available, langs, tags, minRating, priceMin, priceMax, near } =
+		readSearchParams(url);
 
 	const result = await runSearch(
 		db,
@@ -78,6 +83,8 @@ export async function load({ url, locals, setHeaders }) {
 			lang: langs,
 			tag: tags,
 			...(minRating != null ? { minRating } : {}),
+			...(priceMin != null ? { priceMin } : {}),
+			...(priceMax != null ? { priceMax } : {}),
 			...(near ? { near: true } : {}),
 			lexicon
 		},
@@ -93,6 +100,8 @@ export async function load({ url, locals, setHeaders }) {
 		langs,
 		tags,
 		minRating,
+		priceMin,
+		priceMax,
 		near
 	};
 }

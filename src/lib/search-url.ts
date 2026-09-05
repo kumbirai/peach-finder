@@ -7,6 +7,8 @@ export type SearchUrlState = {
 	langs: string[];
 	tags: string[];
 	minRating: number | null;
+	priceMin: number | null;
+	priceMax: number | null;
 	near: boolean;
 };
 
@@ -24,12 +26,18 @@ export function structuredQueryToParams(state: SearchUrlState): URLSearchParams 
 	for (const lang of state.langs) params.append('lang', lang);
 	for (const tag of state.tags) params.append('tag', tag);
 	if (state.minRating != null) params.set('minRating', String(state.minRating));
+	if (state.priceMin != null) params.set('priceMin', String(state.priceMin));
+	if (state.priceMax != null) params.set('priceMax', String(state.priceMax));
 	if (state.near) params.set('near', '1');
 	return params;
 }
 
 export function removeIntentFromState(state: SearchUrlState, intentKey: string): SearchUrlState {
-	const next = { ...state, langs: [...state.langs], tags: [...state.tags] };
+	const next = {
+		...state,
+		langs: [...state.langs],
+		tags: [...state.tags]
+	};
 	switch (intentKey) {
 		case 'verified':
 			next.verified = false;
@@ -44,7 +52,13 @@ export function removeIntentFromState(state: SearchUrlState, intentKey: string):
 			next.minRating = null;
 			break;
 		default:
-			if (intentKey.startsWith('lang:')) {
+			if (intentKey.startsWith('priceMax:')) {
+				const cents = Number(intentKey.slice(9));
+				if (next.priceMax === cents) next.priceMax = null;
+			} else if (intentKey.startsWith('priceMin:')) {
+				const cents = Number(intentKey.slice(9));
+				if (next.priceMin === cents) next.priceMin = null;
+			} else if (intentKey.startsWith('lang:')) {
 				const code = intentKey.slice(5);
 				next.langs = next.langs.filter((lang) => lang !== code);
 			} else if (intentKey.startsWith('tag:')) {
@@ -63,6 +77,8 @@ export function hasStructuredFilters(state: SearchUrlState): boolean {
 		state.langs.length > 0 ||
 		state.tags.length > 0 ||
 		state.minRating != null ||
+		state.priceMin != null ||
+		state.priceMax != null ||
 		state.near
 	);
 }
