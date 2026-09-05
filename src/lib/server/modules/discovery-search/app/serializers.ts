@@ -29,6 +29,20 @@ export type SearchCard = {
 	distanceKm: number | null;
 };
 
+export type SuggestTermRow = {
+	term: string;
+	kind: string;
+};
+
+export type Suggestion = {
+	term: string;
+	kind: string;
+};
+
+export function toSuggestions(rows: SuggestTermRow[]): Suggestion[] {
+	return rows.map((row) => ({ term: row.term, kind: row.kind }));
+}
+
 export function toSearchCard(row: SearchCardRow, _viewer: AuthContext): SearchCard {
 	const rating =
 		row.ratingCount === 0 || row.ratingAverage === null

@@ -15,18 +15,6 @@ import { anonymousAuth, AuthorizationBug } from '$lib/server/shared/auth-context
 import { internalHttp } from '$lib/server/shared/api';
 import { log } from '$lib/server/shared/logger';
 
-const CSP = [
-	"default-src 'self'",
-	"script-src 'self'",
-	"style-src 'self' 'unsafe-inline'",
-	"img-src 'self' data: blob:",
-	"font-src 'self'",
-	"connect-src 'self' ws: wss:",
-	"frame-ancestors 'none'",
-	"base-uri 'self'",
-	"form-action 'self'"
-].join('; ');
-
 function clientIp(event: Parameters<Handle>[0]['event']): string {
 	return event.request.headers.get('cf-connecting-ip') ?? event.getClientAddress();
 }
@@ -115,10 +103,9 @@ function securityHeaders(
 	correlationId: string
 ): HeadersInit {
 	return {
-		'content-security-policy': cspFor(event),
 		'x-content-type-options': 'nosniff',
 		'referrer-policy': 'strict-origin-when-cross-origin',
-		'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+		'permissions-policy': permissionsPolicyFor(event),
 		'x-correlation-id': correlationId
 	};
 }
@@ -128,15 +115,15 @@ function applySecurityHeaders(
 	event: Parameters<Handle>[0]['event'],
 	_correlationId: string
 ): void {
-	response.headers.set('content-security-policy', cspFor(event));
+	// script-src hashes are set by SvelteKit (svelte.config.js csp.mode = 'hash').
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-	response.headers.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+	response.headers.set('permissions-policy', permissionsPolicyFor(event));
 }
 
-function cspFor(event: Parameters<Handle>[0]['event']): string {
+function permissionsPolicyFor(event: Parameters<Handle>[0]['event']): string {
 	if (event.url.pathname.startsWith('/search')) {
-		return CSP.replace('geolocation=()', 'geolocation=(self)');
+		return 'camera=(), microphone=(), geolocation=(self)';
 	}
-	return CSP;
+	return 'camera=(), microphone=(), geolocation=()';
 }

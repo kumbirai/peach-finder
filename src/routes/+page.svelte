@@ -3,9 +3,9 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import Button from '$lib/components/Button.svelte';
-	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import ProviderCard from '$lib/components/ProviderCard.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import {
@@ -62,13 +62,12 @@
 		};
 	}
 
-	async function submitSearch(event: SubmitEvent) {
+	async function submitSearch(q: string) {
 		searching = true;
-		const form = event.currentTarget as HTMLFormElement;
-		const q = String(new FormData(form).get('q') ?? '').trim();
 		const params = new SvelteURLSearchParams();
-		if (q) params.set('q', q);
-		await goto(`/?${params.toString()}`);
+		const trimmed = q.trim();
+		if (trimmed) params.set('q', trimmed);
+		await goto(params.toString() ? `/?${params.toString()}` : '/');
 		searching = false;
 	}
 
@@ -136,22 +135,9 @@
 	</section>
 
 	<div class="search-sticky">
-		<form
-			class="search-form"
-			onsubmit={(e) => {
-				e.preventDefault();
-				void submitSearch(e);
-			}}
-		>
-			<Input
-				id="search"
-				name="q"
-				label="Search therapists"
-				placeholder="Deep tissue, speaks Zulu, available now…"
-				value={data.q}
-			/>
-			<Button type="submit" variant="primary">Search</Button>
-		</form>
+		{#key data.q}
+			<SearchBar value={data.q} onSearch={submitSearch} />
+		{/key}
 
 		<SearchFilters
 			verified={data.verified}
@@ -225,10 +211,6 @@
 		padding: var(--space-sm) 0 var(--space-md);
 		background: var(--color-cream);
 		box-shadow: 0 0 0 var(--space-sm) var(--color-cream);
-	}
-	.search-form {
-		display: grid;
-		gap: var(--space-md);
 	}
 	.grid {
 		display: grid;

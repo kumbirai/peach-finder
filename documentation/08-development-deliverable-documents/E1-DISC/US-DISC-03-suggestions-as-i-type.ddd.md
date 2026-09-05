@@ -27,9 +27,9 @@ FR-SRCH-07, SR-PERF-02.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-DISC-03)
+
+**Approach:** Extended `runSuggest` to LLD §8 trigram + prefix ordering with `toSuggestions()` serializer. Added `SearchBar.svelte` (pill search bar, debounced `/api/discovery/suggest` fetch, skeleton loading panel, combobox a11y, kind labels) wired into homepage `+page.svelte`. Fixed CSP hydration blocker: moved `script-src` hashes to `svelte.config.js` `csp.mode = 'hash'` and stopped hooks from overwriting SvelteKit's CSP header (client interactivity required for typeahead).
+
+**Tests:** `serializers.test.ts`, `suggest-kind-label.test.ts`, `suggest.integration.test.ts` (TC-DISC-03a/b + fuzzy/blank), `e2e/search-suggestions.e2e.ts` (5/5 + axe).
+
+**Verified:** `npm run check`, `npm run lint`, `npm run test`, `npm run test:integration`, `npm run boundaries`, `npm run build`, `npx playwright test e2e/search-suggestions.e2e.ts`.

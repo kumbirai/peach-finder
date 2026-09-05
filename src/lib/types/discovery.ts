@@ -16,3 +16,8 @@ export type AppliedIntent = {
 	label: string;
 	source: string;
 };
+
+export type Suggestion = {
+	term: string;
+	kind: string;
+};

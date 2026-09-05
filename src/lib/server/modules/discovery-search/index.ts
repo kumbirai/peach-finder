@@ -9,7 +9,7 @@ export {
 	type ParseConfig
 } from './domain/parse-query';
 export { runSearch, runSuggest, type SearchInput, type SearchResult };
-export type { SearchCard } from './app/serializers';
+export type { SearchCard, Suggestion } from './app/serializers';
 
 export { removeSearchProjection } from './infra/projection-commands';
 export { upsertSearchProjection } from './infra/projection-upsert';

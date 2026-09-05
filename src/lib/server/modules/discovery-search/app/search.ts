@@ -4,7 +4,13 @@ import type { AuthContext } from '../../../shared/auth-context';
 import { getConfig } from '../../platform-configuration';
 import { dedupeIntents, parseQuery } from '../domain/parse-query';
 import type { StructuredQuery } from '../domain/structured-query';
-import { toSearchCard, type SearchCard, type SearchCardRow } from './serializers';
+import {
+	toSearchCard,
+	toSuggestions,
+	type SearchCard,
+	type SearchCardRow,
+	type Suggestion
+} from './serializers';
 
 export type SearchInput = {
 	q?: string;
@@ -166,18 +172,20 @@ export async function runSearch(
 	};
 }
 
-export async function runSuggest(
-	db: Database,
-	prefix: string,
-	limit = 8
-): Promise<Array<{ term: string; kind: string }>> {
-	if (!prefix.trim()) return [];
+export async function runSuggest(db: Database, prefix: string, limit = 8): Promise<Suggestion[]> {
+	const q = prefix.trim().toLowerCase();
+	if (!q) return [];
+
 	const rows = await db.execute(sql`
 		SELECT term, kind
 		FROM discovery_search.suggest_term
-		WHERE is_active = true AND term ILIKE ${`${prefix.toLowerCase()}%`}
-		ORDER BY length(term), term
+		WHERE is_active = true
+			AND (term ILIKE ${`${q}%`} OR term % ${q})
+		ORDER BY (term ILIKE ${`${q}%`}) DESC,
+			similarity(term, ${q}) DESC,
+			term
 		LIMIT ${limit}
 	`);
-	return rows as unknown as Array<{ term: string; kind: string }>;
+
+	return toSuggestions(rows as unknown as Array<{ term: string; kind: string }>);
 }
