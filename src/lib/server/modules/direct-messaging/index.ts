@@ -12,6 +12,7 @@ import {
 } from './infra/messaging-commands';
 import { getDevMessageState } from './infra/dev-message-state';
 import { getPresence, getResponseTime, hasSentSince } from './infra/presence-read';
+import { upsertPresenceHeartbeat } from './infra/presence-heartbeat';
 
 export {
 	sendOrHoldMessage,
@@ -25,6 +26,7 @@ export {
 	getPresence,
 	getResponseTime,
 	hasSentSince,
+	upsertPresenceHeartbeat,
 	type SendOrHoldResult,
 	type ThreadSummary
 };

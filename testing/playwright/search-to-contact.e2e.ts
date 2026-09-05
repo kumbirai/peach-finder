@@ -134,6 +134,51 @@ test.describe('E2E-1 search to contact', () => {
 		await anonContext.close();
 	});
 
+	test('TC-VIEW-02a: inactive provider presence is coarse and never an exact timestamp', async ({
+		browser
+	}) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		const apiRes = await anonPage.request.get(
+			`/api/provider/profile/${SEED_CORE_PHONE_OFF_PROFILE_ID}`
+		);
+		expect(apiRes.ok()).toBeTruthy();
+		const apiBody = (await apiRes.json()) as {
+			data: { onlineStatus?: string; lastSeen?: string; lastActive?: string };
+		};
+		expect(['today', 'this_week', 'a_while_ago']).toContain(apiBody.data.onlineStatus);
+		expect(apiBody.data.onlineStatus).not.toBe('online');
+		expect(apiBody.data.lastSeen).toBeUndefined();
+		expect(apiBody.data.lastActive).toBeUndefined();
+		expect(JSON.stringify(apiBody)).not.toMatch(/"onlineStatus"\s*:\s*"\d{4}-\d{2}-\d{2}/);
+
+		await anonPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		const onlineStatus = anonPage.getByTestId('profile-online-status');
+		await expect(onlineStatus).toBeVisible();
+		await expect(onlineStatus).toContainText(/Active today|Active this week|Active a while ago/);
+		await expect(onlineStatus).not.toContainText(/Online now/);
+		await expect(onlineStatus).not.toContainText(/\d{1,2}:\d{2}/);
+
+		await anonContext.close();
+	});
+
+	test('TC-VIEW-02b: sparse reply history renders no response-time claim', async ({ browser }) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		const apiRes = await anonPage.request.get(
+			`/api/provider/profile/${SEED_CORE_PHONE_OFF_PROFILE_ID}`
+		);
+		const apiBody = (await apiRes.json()) as { data: { responseTime?: string | null } };
+		expect(apiBody.data.responseTime ?? null).toBeNull();
+
+		await anonPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		await expect(anonPage.getByTestId('profile-response-time')).toHaveCount(0);
+
+		await anonContext.close();
+	});
+
 	test('golden path: homepage to profile to sign-up preserves message context', async ({
 		page
 	}) => {

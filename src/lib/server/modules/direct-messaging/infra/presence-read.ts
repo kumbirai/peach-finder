@@ -8,21 +8,38 @@ import {
 	median,
 	type ResponseTimeBucket
 } from '../domain/response-time-bucket';
-import { messages } from './schema';
+import { messages, presence } from './schema';
+
+function latestActivityAt(
+	heartbeatAt: Date | null | undefined,
+	messageAt: Date | null | undefined
+): Date | null {
+	if (heartbeatAt && messageAt) {
+		return heartbeatAt.getTime() >= messageAt.getTime() ? heartbeatAt : messageAt;
+	}
+	return heartbeatAt ?? messageAt ?? null;
+}
 
 export async function getPresence(
 	db: Database,
 	userId: UserId,
 	now: Date = new Date()
 ): Promise<PresenceBucket> {
-	const rows = await db
-		.select({ sentAt: messages.sentAt })
-		.from(messages)
-		.where(eq(messages.senderId, userId))
-		.orderBy(desc(messages.sentAt))
-		.limit(1);
+	const [heartbeatRows, messageRows] = await Promise.all([
+		db
+			.select({ lastHeartbeatAt: presence.lastHeartbeatAt })
+			.from(presence)
+			.where(eq(presence.userId, userId))
+			.limit(1),
+		db
+			.select({ sentAt: messages.sentAt })
+			.from(messages)
+			.where(eq(messages.senderId, userId))
+			.orderBy(desc(messages.sentAt))
+			.limit(1)
+	]);
 
-	const lastSeen = rows[0]?.sentAt ?? null;
+	const lastSeen = latestActivityAt(heartbeatRows[0]?.lastHeartbeatAt, messageRows[0]?.sentAt);
 	const timeZone = getConfig('platform-configuration.operating_timezone');
 	return bucketPresence(lastSeen, now, timeZone);
 }

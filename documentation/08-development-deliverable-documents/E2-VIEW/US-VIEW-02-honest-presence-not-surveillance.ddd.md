@@ -28,9 +28,9 @@ FR-PROF-06, FR-MSG-08, SR-APP-06.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VIEW-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-VIEW-02)
+
+- **Backend:** Added migration `0012_us_view_02_presence.sql` (`direct_messaging.presence` unlogged table + `message_sender_sent_idx`). Updated `getPresence` to coarsen from `GREATEST(last_heartbeat_at, latest message sent_at)` per direct-messaging LLD §5.3. Added `upsertPresenceHeartbeat` facade for heartbeat writes. Response-time remains median-first-reply with minimum 3 samples (`null` = no claim).
+- **Frontend:** No new surface — US-VIEW-01 `PublicProfileView` already renders coarse labels via `formatOnlineStatus` / `formatResponseTime`; this story hardens server-side coarsening and omits response-time markup when `null`.
+- **Seed:** `seedView02PresenceFixtures` gives Thandi M. a message from two days ago (coarse presence, not online) with no first-reply samples (no response-time claim). Amara retains three samples for positive-path coverage.
+- **Tests:** `presence-contract.test.ts`, extended bucket/display/serializer tests, `presence-read.integration.test.ts`, `presence-honesty.integration.test.ts` (TC-VIEW-02a/b), Playwright TC-VIEW-02a/b in `search-to-contact.e2e.ts`.
+- **Assumption:** Daily `response_time_stat` materialized rollup and WebSocket `presence.heartbeat` delivery remain US-MSG scope; profile reads use live computation and message/heartbeat data until those land.

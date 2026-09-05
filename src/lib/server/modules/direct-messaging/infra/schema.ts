@@ -50,3 +50,8 @@ export const pendingMessages = directMessagingSchema.table(
 	},
 	(table) => [index('pending_message_seeker_idx').on(table.seekerId)]
 );
+
+export const presence = directMessagingSchema.table('presence', {
+	userId: uuid('user_id').primaryKey(),
+	lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true, mode: 'date' }).notNull()
+});

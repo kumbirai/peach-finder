@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { toPublicProfile } from '../infra/serializers';
 import { anonymousAuth, createAuthContext } from '../../../shared/auth-context';
 import { asId } from '../../../shared/ids';
+import {
+	isCoarsePresenceBucket,
+	isCoarseResponseTimeBucket
+} from '../../direct-messaging/domain/presence-contract';
 
 const baseView = {
 	id: asId<'ProviderProfileId'>('01900000-0000-7000-8000-000000000101'),
@@ -59,5 +63,25 @@ describe('toPublicProfile', () => {
 		expect('street' in dto).toBe(false);
 		expect('streetAddress' in dto).toBe(false);
 		expect(JSON.stringify(dto)).not.toMatch(/"address"/);
+	});
+
+	it('TC-VIEW-02a: serializes coarse presence buckets only', () => {
+		for (const onlineStatus of ['online', 'today', 'this_week', 'a_while_ago'] as const) {
+			const dto = toPublicProfile({ ...baseView, onlineStatus }, anonymousAuth('127.0.0.1'));
+			expect(isCoarsePresenceBucket(dto.onlineStatus)).toBe(true);
+			expect(JSON.stringify(dto)).not.toMatch(/lastSeen|last_seen|lastActive|last_active/);
+		}
+	});
+
+	it('TC-VIEW-02b: omits fabricated response-time claims when data is absent', () => {
+		const dto = toPublicProfile({ ...baseView, responseTime: null }, anonymousAuth('127.0.0.1'));
+		expect(dto.responseTime).toBeNull();
+		expect(isCoarseResponseTimeBucket(dto.responseTime)).toBe(false);
+
+		const withClaim = toPublicProfile(
+			{ ...baseView, responseTime: 'within_30_min' },
+			anonymousAuth('127.0.0.1')
+		);
+		expect(isCoarseResponseTimeBucket(withClaim.responseTime)).toBe(true);
 	});
 });

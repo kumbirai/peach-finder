@@ -29,7 +29,10 @@ function weekdayOffset(date: Date, timeZone: string): number {
 }
 
 function shiftDateKey(dateKey: string, days: number): string {
-	const [year, month, day] = dateKey.split('-').map(Number);
+	const [yearStr, monthStr, dayStr] = dateKey.split('-');
+	const year = Number(yearStr);
+	const month = Number(monthStr);
+	const day = Number(dayStr);
 	return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
@@ -41,9 +44,10 @@ function mondayDateKeyFor(date: Date, timeZone: string): string {
 export function bucketPresence(lastSeen: Date | null, now: Date, timeZone: string): PresenceBucket {
 	if (!lastSeen) return 'a_while_ago';
 	const ageMs = now.getTime() - lastSeen.getTime();
-	if (ageMs <= ONLINE_WINDOW_MS) return 'online';
+	if (ageMs >= 0 && ageMs <= ONLINE_WINDOW_MS) return 'online';
 
-	const lastKey = dateKeyInTimeZone(lastSeen, timeZone);
+	const bucketFrom = ageMs < 0 ? now : lastSeen;
+	const lastKey = dateKeyInTimeZone(bucketFrom, timeZone);
 	const nowKey = dateKeyInTimeZone(now, timeZone);
 	if (lastKey === nowKey) return 'today';
 

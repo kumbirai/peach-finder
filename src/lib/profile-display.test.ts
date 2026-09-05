@@ -17,6 +17,7 @@ describe('profile-display', () => {
 		expect(formatOnlineStatus('online')).toBe('Online now');
 		expect(formatOnlineStatus('today')).toBe('Active today');
 		expect(formatOnlineStatus('this_week')).toBe('Active this week');
+		expect(formatOnlineStatus('a_while_ago')).toBe('Active a while ago');
 		expect(formatOnlineStatus(null)).toBeNull();
 	});
 

@@ -32,4 +32,22 @@ describe('bucketPresence', () => {
 		const lastSeen = new Date('2026-09-03T08:00:00Z');
 		expect(bucketPresence(lastSeen, now, TZ)).toBe('this_week');
 	});
+
+	it('returns this_week for provider inactive for two days within the same calendar week', () => {
+		const now = new Date('2026-09-05T12:00:00Z');
+		const lastSeen = new Date('2026-09-03T12:00:00Z');
+		expect(bucketPresence(lastSeen, now, TZ)).toBe('this_week');
+	});
+
+	it('returns today once the online window has elapsed on the same calendar day', () => {
+		const now = new Date('2026-09-05T12:00:00Z');
+		const lastSeen = new Date(now.getTime() - 91_000);
+		expect(bucketPresence(lastSeen, now, TZ)).toBe('today');
+	});
+
+	it('does not treat future last-seen timestamps as online', () => {
+		const now = new Date('2026-09-05T12:00:00Z');
+		const lastSeen = new Date('2026-12-01T12:00:00Z');
+		expect(bucketPresence(lastSeen, now, TZ)).not.toBe('online');
+	});
 });

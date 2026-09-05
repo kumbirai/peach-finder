@@ -30,6 +30,9 @@ import { hashPassword } from '../src/lib/server/modules/identity-and-access/infr
 const PLACEHOLDER_CARD = '/placeholder-photo.svg';
 const PLACEHOLDER_GALLERY = '/placeholder-photo.svg';
 
+/** Thandi's last activity for US-VIEW-02 coarse-presence fixtures (paired with integration-test anchor). */
+export const SEED_VIEW02_THANDI_ACTIVITY_AT = new Date('2026-09-03T12:00:00.000Z');
+
 const LANGUAGE_SEED = [
 	{ code: 'en', name: 'English', sortOrder: 1 },
 	{ code: 'af', name: 'Afrikaans', sortOrder: 2 },
@@ -563,6 +566,7 @@ export async function seedCore(db: Database): Promise<void> {
 
 	// Sample reviews for Amara T.
 	const amara = PROVIDERS[0]!;
+	const thandi = PROVIDERS[1]!;
 	for (let i = 0; i < amara.reviewCount; i++) {
 		await db
 			.insert(reviews)
@@ -578,6 +582,7 @@ export async function seedCore(db: Database): Promise<void> {
 	}
 
 	await seedAmaraProfileExtras(db, amara);
+	await seedView02PresenceFixtures(db, thandi);
 
 	const suggestRows = [
 		{ term: 'deep tissue', kind: 'service' },
@@ -726,6 +731,32 @@ async function seedAmaraProfileExtras(db: Database, amara: ProviderSeed): Promis
 			senderId: amara.userId,
 			body: 'Recent activity for presence display.',
 			sentAt: recentPresenceAt
+		})
+		.onConflictDoNothing();
+}
+
+async function seedView02PresenceFixtures(db: Database, thandi: ProviderSeed): Promise<void> {
+	const threadId = '01900000-0000-7000-8000-000000000c01';
+
+	await db
+		.insert(threads)
+		.values({
+			id: threadId,
+			seekerId: REVIEWER_ID,
+			providerProfileId: thandi.profileId,
+			createdAt: new Date(SEED_VIEW02_THANDI_ACTIVITY_AT.getTime() - 60_000),
+			lastActivityAt: SEED_VIEW02_THANDI_ACTIVITY_AT
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(messages)
+		.values({
+			id: '01900000-0000-7000-8000-000000000c02',
+			threadId,
+			senderId: thandi.userId,
+			body: 'Thanks — see you then.',
+			sentAt: SEED_VIEW02_THANDI_ACTIVITY_AT
 		})
 		.onConflictDoNothing();
 }
