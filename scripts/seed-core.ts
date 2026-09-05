@@ -1,6 +1,7 @@
 import type { Database } from '../src/lib/server/db';
+import type { UserId } from '../src/lib/server/shared/ids';
 import { eq, sql } from 'drizzle-orm';
-import { users } from '../src/lib/server/modules/identity-and-access/infra/schema';
+import { users, adminTotp } from '../src/lib/server/modules/identity-and-access/infra/schema';
 import {
 	languages,
 	providerLanguages,
@@ -26,6 +27,10 @@ import { areas } from '../src/lib/server/modules/platform-configuration/infra/sc
 import { threads, messages } from '../src/lib/server/modules/direct-messaging/infra/schema';
 import { formatIntroExtract } from '../src/lib/server/modules/discovery-search/domain/intro-extract';
 import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
+import {
+	beginAdminTotpEnrollment,
+	commitAdminTotpEnrollment
+} from '../src/lib/server/modules/identity-and-access/infra/admin-totp-commands';
 
 const PLACEHOLDER_CARD = '/placeholder-photo.svg';
 const PLACEHOLDER_GALLERY = '/placeholder-photo.svg';
@@ -375,6 +380,10 @@ export const SEED_DUAL_ROLE_SEEKER_THREAD_PREVIEW =
 export const SEED_DUAL_ROLE_PROVIDER_INBOX_PREVIEW =
 	'Are you free this afternoon for a Swedish massage?';
 
+export const SEED_ADMIN_USER_ID = '01900000-0000-7000-8000-000000000097';
+export const SEED_ADMIN_EMAIL = 'admin@example.com';
+export const SEED_ADMIN_PASSWORD = 'adminpass123';
+
 export async function seedCore(db: Database): Promise<void> {
 	for (const lang of LANGUAGE_SEED) {
 		await db.insert(languages).values(lang).onConflictDoNothing();
@@ -385,6 +394,41 @@ export async function seedCore(db: Database): Promise<void> {
 
 	const areaRows = await db.select().from(areas);
 	const areaBySlug = new Map(areaRows.map((a) => [a.slug, a.id]));
+
+	const adminPasswordHash = await hashPassword(SEED_ADMIN_PASSWORD);
+	await db
+		.insert(users)
+		.values({
+			id: SEED_ADMIN_USER_ID,
+			displayName: 'Platform Admin',
+			email: SEED_ADMIN_EMAIL,
+			emailVerifiedAt: new Date(),
+			passwordHash: adminPasswordHash,
+			isAdmin: true,
+			status: 'active'
+		})
+		.onConflictDoUpdate({
+			target: users.id,
+			set: {
+				displayName: 'Platform Admin',
+				email: SEED_ADMIN_EMAIL,
+				passwordHash: adminPasswordHash,
+				isAdmin: true,
+				status: 'active',
+				deletedAt: null,
+				anonymizedAt: null
+			}
+		});
+
+	await db.delete(adminTotp).where(eq(adminTotp.userId, SEED_ADMIN_USER_ID));
+
+	const started = beginAdminTotpEnrollment(SEED_ADMIN_EMAIL);
+	await commitAdminTotpEnrollment(db, {
+		userId: SEED_ADMIN_USER_ID as UserId,
+		secret: started.secret,
+		backupCodes: started.result.backupCodes,
+		now: new Date()
+	});
 
 	await db
 		.insert(users)

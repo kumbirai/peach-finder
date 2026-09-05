@@ -84,3 +84,27 @@ export async function findUserIdByEmail(db: Database, email: string): Promise<Us
 	const row = rows[0];
 	return row ? asId<'UserId'>(row.id) : null;
 }
+
+const devAdminEnrollmentStore = new Map<
+	string,
+	{ secretBase64: string; backupCodes: string[]; at: number }
+>();
+
+export function storeDevAdminEnrollment(
+	userId: string,
+	input: { secret: Buffer; backupCodes: string[] }
+): void {
+	if (process.env.ALLOW_DEV_HELPERS !== '1') return;
+	devAdminEnrollmentStore.set(userId, {
+		secretBase64: input.secret.toString('base64'),
+		backupCodes: input.backupCodes,
+		at: Date.now()
+	});
+}
+
+export function readDevAdminEnrollmentSecret(userId: string): Buffer | null {
+	if (process.env.ALLOW_DEV_HELPERS !== '1') return null;
+	const row = devAdminEnrollmentStore.get(userId);
+	if (!row) return null;
+	return Buffer.from(row.secretBase64, 'base64');
+}

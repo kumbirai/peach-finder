@@ -11,6 +11,7 @@ import { asId, type SessionId, type UserId } from '../../shared/ids';
 import { ownsProfile, ownsProfileDb } from '../provider-profile';
 import type { CapabilitiesDto } from './app/capabilities-types';
 import { hashSessionToken, newSessionToken, SEEKER_IDLE_MS } from './infra/session-commands';
+import { ADMIN_SESSION_IDLE_MS } from './domain/session-policy';
 
 export { exportFor } from './export-stub';
 export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
@@ -40,6 +41,24 @@ export {
 	type LoginPasswordResult
 } from './infra/auth-commands';
 export {
+	verifyAdminPassword,
+	completeAdminLogin,
+	type VerifyAdminPasswordResult
+} from './infra/admin-auth-commands';
+export {
+	hasAdminTotpEnrollment,
+	loadAdminTotpSecret,
+	beginAdminTotpEnrollment
+} from './infra/admin-totp-commands';
+export {
+	issueAdminLoginChallenge,
+	readAdminLoginChallenge,
+	clearAdminLoginChallenge,
+	ADMIN_CHALLENGE_COOKIE,
+	type AdminLoginChallenge
+} from './app/admin-login-challenge';
+export { generateTotpCode } from './domain/totp';
+export {
 	registerProvider,
 	requestOtp,
 	verifyOtp,
@@ -60,8 +79,10 @@ import { deleteAccount, anonymizePendingUsers } from './infra/account-deletion';
 export { deleteAccount, anonymizePendingUsers };
 export { updateDisplayName } from './infra/account-commands';
 import { getUserCapabilities } from './infra/session-commands';
+export { ADMIN_SESSION_IDLE_MS } from './domain/session-policy';
 export {
 	createSession,
+	createAdminSession,
 	getUserCapabilities,
 	revokeSession,
 	revokeOtherSessionsForUser,
@@ -84,7 +105,7 @@ export {
 import { randomBytes } from 'node:crypto';
 
 export const ANON_COOKIE = 'pf_anon';
-export const ADMIN_IDLE_MS = 12 * 60 * 60_000;
+export const ADMIN_IDLE_MS = ADMIN_SESSION_IDLE_MS;
 export const LAST_SEEN_THROTTLE_MS = 60 * 60_000;
 export { SEEKER_IDLE_MS, hashSessionToken, newSessionToken };
 

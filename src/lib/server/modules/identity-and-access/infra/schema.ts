@@ -1,5 +1,6 @@
 import {
 	boolean,
+	customType,
 	index,
 	inet,
 	integer,
@@ -9,6 +10,19 @@ import {
 	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
+
+const bytea = customType<{ data: Buffer; driverData: unknown }>({
+	dataType() {
+		return 'bytea';
+	},
+	fromDriver(value: unknown) {
+		if (Buffer.isBuffer(value)) return value;
+		if (typeof value === 'string' && value.startsWith('\\x')) {
+			return Buffer.from(value.slice(2), 'hex');
+		}
+		throw new Error('invalid bytea value');
+	}
+});
 
 export const identitySchema = pgSchema('identity_and_access');
 
@@ -112,6 +126,15 @@ export const phoneRegistryHistory = identitySchema.table('phone_registry_history
 	lastRegisteredAt: timestamp('last_registered_at', { withTimezone: true, mode: 'date' })
 		.notNull()
 		.defaultNow()
+});
+
+export const adminTotp = identitySchema.table('admin_totp', {
+	userId: uuid('user_id')
+		.primaryKey()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	secretEncrypted: bytea('secret_encrypted').notNull(),
+	enrolledAt: timestamp('enrolled_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+	backupCodesHash: text('backup_codes_hash').array().notNull()
 });
 
 export const sessions = identitySchema.table(

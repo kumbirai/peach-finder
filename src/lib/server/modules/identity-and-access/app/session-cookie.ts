@@ -3,13 +3,24 @@ import { SESSION_IDLE_MS } from '../domain/session-policy';
 
 export const SESSION_COOKIE = 'pf_session';
 
-export function setSessionCookie(cookies: Cookies, token: string, secure: boolean): void {
+export type SessionCookieOptions = {
+	/** Rely on DB idle expiry only — cookie survives until the browser closes. */
+	dbIdleOnly?: boolean;
+};
+
+export function setSessionCookie(
+	cookies: Cookies,
+	token: string,
+	secure: boolean,
+	maxAgeMs: number = SESSION_IDLE_MS,
+	options?: SessionCookieOptions
+): void {
 	cookies.set(SESSION_COOKIE, token, {
 		path: '/',
 		httpOnly: true,
 		secure,
 		sameSite: 'lax',
-		maxAge: SESSION_IDLE_MS / 1000
+		...(options?.dbIdleOnly ? {} : { maxAge: maxAgeMs / 1000 })
 	});
 }
 

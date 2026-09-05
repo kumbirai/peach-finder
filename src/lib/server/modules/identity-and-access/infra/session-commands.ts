@@ -2,10 +2,11 @@ import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import { newId, type SessionId, type UserId } from '../../../shared/ids';
 import { sessions, users } from './schema';
-import { SESSION_IDLE_MS } from '../domain/session-policy';
+import { SESSION_IDLE_MS, ADMIN_SESSION_IDLE_MS } from '../domain/session-policy';
 import { createHash, randomBytes } from 'node:crypto';
 
 export const SEEKER_IDLE_MS = SESSION_IDLE_MS;
+export const ADMIN_IDLE_MS = ADMIN_SESSION_IDLE_MS;
 
 export function hashSessionToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
@@ -33,6 +34,30 @@ export async function createSession(
 		tokenHash,
 		lastSeenAt: input.now,
 		expiresAt: new Date(input.now.getTime() + SEEKER_IDLE_MS),
+		ipAddress: input.ipAddress,
+		userAgent: input.userAgent
+	});
+	return { token, sessionId };
+}
+
+export async function createAdminSession(
+	db: Database,
+	input: {
+		userId: UserId;
+		ipAddress: string;
+		userAgent: string | null;
+		now: Date;
+	}
+): Promise<{ token: string; sessionId: SessionId }> {
+	const token = newSessionToken();
+	const tokenHash = hashSessionToken(token);
+	const sessionId = newId<'SessionId'>();
+	await db.insert(sessions).values({
+		id: sessionId,
+		userId: input.userId,
+		tokenHash,
+		lastSeenAt: input.now,
+		expiresAt: new Date(input.now.getTime() + ADMIN_IDLE_MS),
 		ipAddress: input.ipAddress,
 		userAgent: input.userAgent
 	});
