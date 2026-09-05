@@ -88,7 +88,7 @@
 				<Badge kind="verified" />
 			{/if}
 			{#if card.badges.activeThisWeek}
-				<Badge kind="verified" label="Active this week" />
+				<Badge kind="active-week" />
 			{/if}
 		</div>
 		{#if card.languages.length}

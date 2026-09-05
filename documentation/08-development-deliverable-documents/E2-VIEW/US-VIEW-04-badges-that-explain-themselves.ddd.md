@@ -28,9 +28,9 @@ FR-TRUST-01, FR-TRUST-09.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VIEW-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-VIEW-04)
+
+- **Backend:** Added `getSafetyInfo()` in `trust-and-safety` (reads `platform-configuration.safety_info_html` from the config cache) and `GET /api/trust/safety-info` (anonymous, `search_query` rate limit per LLD §10.1). No new events — badge display state was already served via `provider-profile` + `loadBadgeDisplayState`.
+- **Frontend:** `Badge.svelte` trust kinds (`verified`, `active-week`) are now links to `/safety` with hover/focus/tap-reveal one-line explanations from `src/lib/trust-badges.ts` (static UI copy per LLD §10). Added SSR safety page at `/safety` combining static badge-meaning section with admin-authored HTML. Fixed `ProviderCard` to use `kind="active-week"` instead of mis-typed `verified` label.
+- **Assumption:** Footer link to the safety page is scoped to US-SAFE-03; VIEW-04 only requires the badge area link (FR-TRUST-09 badge-area clause).
+- **Tests:** `trust-badges.test.ts`, `safety-info.integration.test.ts`, `profile-badges.e2e.ts` (TC-VIEW-04a/b, API, axe); extended `components.e2e.ts` for both badge kinds linking to `/safety`.
+
+### Verification 2026-09-05
+
+- `npm run check` — 0 errors (5 pre-existing Svelte warnings).
+- `npm run lint` — clean.
+- `npm run test` — 180/180 passed.
+- `npm run test:integration -- safety-info` — 1/1 passed.
+- `npm run test:e2e -- profile-badges.e2e.ts components.e2e.ts` — 7/7 passed (axe clean on safety page).
+- Adversarial: `curl -s http://localhost:5173/api/trust/safety-info` returned `{"data":{"html":"<p>Meet in a public..."}}` with no auth header.

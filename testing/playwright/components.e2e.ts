@@ -10,6 +10,22 @@ test.describe('component gallery', () => {
 		const badge = page.locator('[data-kind="verified"]');
 		await expect(badge).toBeVisible();
 		await expect(badge.locator('.text')).toHaveText('Identity verified');
+		await expect(badge).toHaveAttribute('href', '/safety');
+		const activeWeek = page.locator('[data-kind="active-week"]');
+		await expect(activeWeek).toBeVisible();
+		await expect(activeWeek.locator('.text')).toHaveText('Active this week');
+		await expect(activeWeek).toHaveAttribute('href', '/safety');
+		const tooltipShadow = await badge.evaluate((el) => {
+			const tip = el.querySelector('.explanation');
+			if (!tip) return 'none';
+			const previousDisplay = tip.style.display;
+			tip.style.display = 'block';
+			const shadow = getComputedStyle(tip).boxShadow;
+			tip.style.display = previousDisplay;
+			return shadow;
+		});
+		expect(tooltipShadow).not.toBe('none');
+		expect(tooltipShadow).toMatch(/179,\s*70,\s*37/);
 		await expect(page.locator('[data-admin-ink-strip]')).toHaveCount(0);
 	});
 

@@ -40,6 +40,7 @@
 		<div class="row">
 			<AvailabilityPill />
 			<Badge kind="verified" />
+			<Badge kind="active-week" />
 			<Badge kind="available" />
 		</div>
 	</section>
