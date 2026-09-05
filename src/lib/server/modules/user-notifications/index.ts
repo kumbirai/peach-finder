@@ -9,6 +9,20 @@ import {
 } from './infra/notification-commands';
 import { handleMessageSent, flushDueNotificationBatchWindows } from './infra/message-sent-handler';
 import { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
+import {
+	handleUserRegistered,
+	handleVerificationDecided,
+	handleReviewSubmitted,
+	handleReportFiled,
+	handleReportResolved,
+	handleModerationActionTaken,
+	handlePaymentSucceeded,
+	handlePaymentFailed,
+	handleGraceEntered,
+	handleListingLapsed,
+	dispatchTrialEndingReminders
+} from './infra/event-handlers';
+import { dispatchUndispatchedNotificationSubscribers } from './infra/dev-dispatch';
 
 export {
 	handleAvailabilityExpiryWarned,
@@ -20,6 +34,18 @@ export {
 	dispatchUndispatchedAvailabilityExpiryWarnings,
 	handleUserBlocked,
 	handleUserUnblocked,
+	handleUserRegistered,
+	handleVerificationDecided,
+	handleReviewSubmitted,
+	handleReportFiled,
+	handleReportResolved,
+	handleModerationActionTaken,
+	handlePaymentSucceeded,
+	handlePaymentFailed,
+	handleGraceEntered,
+	handleListingLapsed,
+	dispatchTrialEndingReminders,
+	dispatchUndispatchedNotificationSubscribers,
 	type InAppNotificationDto
 };
 

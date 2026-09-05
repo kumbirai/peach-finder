@@ -30,7 +30,18 @@ import {
 	handleMessageSent,
 	flushDueNotificationBatchWindows,
 	handleUserBlocked as handleNotifUserBlocked,
-	handleUserUnblocked as handleNotifUserUnblocked
+	handleUserUnblocked as handleNotifUserUnblocked,
+	handleUserRegistered,
+	handleVerificationDecided,
+	handleReviewSubmitted,
+	handleReportFiled,
+	handleReportResolved,
+	handleModerationActionTaken,
+	handlePaymentSucceeded,
+	handlePaymentFailed,
+	handleGraceEntered,
+	handleListingLapsed,
+	dispatchTrialEndingReminders
 } from '../lib/server/modules/user-notifications';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
@@ -173,6 +184,48 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		if (subscriber === 'user-notifications.unblock-cache' && event.eventName === 'UserUnblocked') {
 			await handleNotifUserUnblocked(db, event as never);
 		}
+		if (subscriber === 'user-notifications.welcome' && event.eventName === 'UserRegistered') {
+			await handleUserRegistered(db, event as never);
+		}
+		if (
+			subscriber === 'user-notifications.verification-outcome' &&
+			event.eventName === 'VerificationDecided'
+		) {
+			await handleVerificationDecided(db, event as never);
+		}
+		if (
+			subscriber === 'user-notifications.review-submitted' &&
+			event.eventName === 'ReviewSubmitted'
+		) {
+			await handleReviewSubmitted(db, event as never);
+		}
+		if (subscriber === 'user-notifications.report-receipt' && event.eventName === 'ReportFiled') {
+			await handleReportFiled(db, event as never);
+		}
+		if (
+			subscriber === 'user-notifications.report-resolved' &&
+			event.eventName === 'ReportResolved'
+		) {
+			await handleReportResolved(db, event as never);
+		}
+		if (
+			subscriber === 'user-notifications.moderation-notice' &&
+			event.eventName === 'ModerationActionTaken'
+		) {
+			await handleModerationActionTaken(db, event as never);
+		}
+		if (subscriber === 'user-notifications.billing' && event.eventName === 'PaymentSucceeded') {
+			await handlePaymentSucceeded(db, event as never);
+		}
+		if (subscriber === 'user-notifications.billing' && event.eventName === 'PaymentFailed') {
+			await handlePaymentFailed(db, event as never);
+		}
+		if (subscriber === 'user-notifications.dunning' && event.eventName === 'GraceEntered') {
+			await handleGraceEntered(db, event as never);
+		}
+		if (subscriber === 'user-notifications.lapsed-notice' && event.eventName === 'ListingLapsed') {
+			await handleListingLapsed(db, event as never);
+		}
 		if (
 			subscriber === 'discovery-search.badge-flag' &&
 			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
@@ -232,6 +285,7 @@ setInterval(() => {
 			const now = new Date();
 			await runAvailabilityLifecycleTick(db, now, `availability-tick-${now.toISOString()}`);
 			await flushDueNotificationBatchWindows(db, now);
+			await dispatchTrialEndingReminders(db, now);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {
