@@ -1,16 +1,24 @@
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import {
 	buildWebServerCommand,
 	loadDotEnv,
 	resolveE2eBaseUrl,
 	resolveE2ePort
-} from './src/lib/playwright-env';
+} from '../../src/lib/playwright-env';
 
+const repoRoot = path.resolve(__dirname, '../..');
 const port = resolveE2ePort();
 const baseURL = resolveE2eBaseUrl(port);
 
+function definedEnv(source: Record<string, string | undefined>): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(source).filter((entry): entry is [string, string] => entry[1] !== undefined)
+	);
+}
+
 export default defineConfig({
-	testDir: 'testing/playwright',
+	testDir: '.',
 	testMatch: '**/*.e2e.ts',
 	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
@@ -24,7 +32,8 @@ export default defineConfig({
 		url: baseURL,
 		reuseExistingServer: !process.env.CI,
 		timeout: 120_000,
-		env: { ...loadDotEnv(), ...process.env }
+		cwd: repoRoot,
+		env: definedEnv({ ...loadDotEnv(path.join(repoRoot, '.env')), ...process.env })
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }]
 });

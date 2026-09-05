@@ -60,8 +60,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            testing/playwright/package-lock.json
       - run: npm ci
+      - run: npm ci
+        working-directory: testing/playwright
       - run: npx playwright install --with-deps chromium
+        working-directory: testing/playwright
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm run test:e2e

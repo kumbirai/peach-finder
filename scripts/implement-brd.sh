@@ -764,14 +764,20 @@ TASK
   \`page.route\` stubs, fixture JSON standing in for real HTTP, any
   \`E2E_LIVE=0\`-style skip-by-stub path. If the live stack is down,
   \`test.skip\` -- never mock.
-- Playwright specs live under \`testing/playwright/\` (\`*.e2e.ts\`),
-  matched by the repo-root \`playwright.config.ts\`'s
-  \`testDir: 'testing/playwright'\`. This superseded the Wave 0-era
-  \`e2e/\` location -- do not recreate an \`e2e/\` directory or add a new
-  spec anywhere else.
+- Playwright is its own self-contained npm package at \`testing/playwright/\`
+  (own \`package.json\`, \`tsconfig.json\`, \`node_modules\`, lockfile) --
+  \`*.e2e.ts\` specs and \`playwright.config.ts\` (\`testDir: '.'\`) all live
+  there, not at the repo root. Run e2e via the root delegate script
+  (\`npm run test:e2e\`, which runs \`npm test --prefix testing/playwright\`)
+  so the correct sub-package config and dependencies are used; if
+  \`testing/playwright/node_modules\` is missing, run
+  \`npm ci --prefix testing/playwright\` first. Do NOT add
+  \`@playwright/test\`/\`@axe-core/playwright\` back to the root
+  \`package.json\`, and do not recreate an \`e2e/\` directory at the repo
+  root -- both were superseded on 2026-09-05.
 - Follow the test-toolchain and directory conventions the Wave 0
   foundation established (Vitest, the Postgres integration-test
-  mechanism, the Playwright spec-file layout under \`testing/playwright/\`)
+  mechanism, the Playwright sub-package layout under \`testing/playwright/\`)
   -- check its own Implementation Notes for what it set up rather than
   re-deciding it.
 - Do NOT commit. Leave all changes in the working tree -- committing is

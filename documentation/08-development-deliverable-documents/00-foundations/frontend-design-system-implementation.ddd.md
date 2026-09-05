@@ -121,4 +121,4 @@ Read runtime config only through `platform-configuration.getConfig(key)`. Unknow
 
 - Unit: `src/**/*.test.ts`
 - Integration: `src/**/*.integration.test.ts`
-- E2E: `testing/playwright/*.e2e.ts` — live stack, no `page.route`
+- E2E: `testing/playwright/*.e2e.ts` — live stack, no `page.route`. `testing/playwright/` is its own self-contained npm package (own `package.json`, `tsconfig.json`, `node_modules`, lockfile, and `playwright.config.ts` with `testDir: '.'`), not a folder inside the root package — run it via `npm run test:e2e` at the repo root, which delegates to `npm test --prefix testing/playwright` (2026-09-05, superseding the original root-level `e2e/` + root `playwright.config.ts`).
