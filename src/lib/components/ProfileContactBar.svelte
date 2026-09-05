@@ -1,42 +1,51 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
+	import { messageButtonLabel } from '$lib/contact-actions';
 
 	let {
 		messageHref,
 		messageDraftKey,
 		callHref,
-		reviewHref,
-		reportHref,
-		blockHref
+		displayName
 	}: {
 		messageHref: string;
 		messageDraftKey?: string;
 		callHref?: string | undefined;
-		reviewHref: string;
-		reportHref: string;
-		blockHref: string;
+		displayName: string;
 	} = $props();
+
+	const messageLabel = $derived(messageButtonLabel(displayName));
 </script>
 
-<div class="contact-bar" role="group" aria-label="Contact actions">
-	<Button href={messageHref} variant="primary" {messageDraftKey}>Message</Button>
+<div class="sticky-cta" role="group" aria-label="Contact actions" data-testid="profile-sticky-cta">
 	{#if callHref}
 		<Button href={callHref} variant="secondary">Call</Button>
 	{/if}
-	<Button href={reviewHref} variant="secondary">Review</Button>
-	<Button href={reportHref} variant="ghost">Report</Button>
-	<Button href={blockHref} variant="ghost">Block</Button>
+	<Button href={messageHref} variant="primary" {messageDraftKey}>{messageLabel}</Button>
 </div>
 
 <style>
-	.contact-bar {
+	.sticky-cta {
 		position: sticky;
 		bottom: 0;
 		display: flex;
-		flex-wrap: wrap;
 		gap: var(--space-sm);
-		padding: var(--space-md);
+		padding: var(--space-md) var(--space-lg);
 		background: var(--color-paper);
 		box-shadow: var(--shadow-sheet);
+		z-index: 12;
+	}
+	.sticky-cta :global(.btn) {
+		flex: 1;
+	}
+	@media (max-width: 767px) {
+		.sticky-cta {
+			bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+		}
+	}
+	@media (min-width: 768px) {
+		.sticky-cta {
+			bottom: 0;
+		}
 	}
 </style>

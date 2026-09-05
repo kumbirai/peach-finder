@@ -26,10 +26,11 @@ test.describe('US-ACC-01 anonymous browse', () => {
 	test('TC-ACC-01b: gated actions visible and route to sign-in', async ({ page }) => {
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		const contactBar = page.getByRole('group', { name: 'Contact actions' });
-		const message = contactBar.getByRole('link', { name: 'Message' });
-		const review = contactBar.getByRole('link', { name: 'Review' });
-		const report = contactBar.getByRole('link', { name: 'Report' });
-		const block = contactBar.getByRole('link', { name: 'Block' });
+		const profileActions = page.getByRole('group', { name: 'Profile actions' });
+		const message = contactBar.getByRole('link', { name: /^Message / });
+		const review = profileActions.getByRole('link', { name: 'Review' });
+		const report = profileActions.getByRole('link', { name: 'Report' });
+		const block = profileActions.getByRole('link', { name: 'Block' });
 		await expect(message).toBeVisible();
 		await expect(review).toBeVisible();
 		await expect(report).toBeVisible();

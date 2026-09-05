@@ -89,7 +89,7 @@ test.describe('E2E-1 search to contact', () => {
 		await expect(
 			anonPage
 				.getByRole('group', { name: 'Contact actions' })
-				.getByRole('link', { name: 'Message' })
+				.getByRole('link', { name: /^Message / })
 		).toBeVisible();
 
 		await anonContext.close();
@@ -179,6 +179,99 @@ test.describe('E2E-1 search to contact', () => {
 		await anonContext.close();
 	});
 
+	test('TC-VIEW-03a: message stays sticky and primary while scrolling on mobile', async ({
+		browser
+	}) => {
+		const context = await browser.newContext({ viewport: { width: 360, height: 640 } });
+		const page = await context.newPage();
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		const stickyCta = page.getByTestId('profile-sticky-cta');
+		const message = stickyCta.getByRole('link', { name: /^Message / });
+		await expect(message).toBeVisible();
+		await expect(message).toHaveClass(/btn-primary/);
+
+		const beforeScroll = await message.boundingBox();
+		expect(beforeScroll).toBeTruthy();
+
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+		const afterScroll = await message.boundingBox();
+		expect(afterScroll).toBeTruthy();
+		expect(afterScroll!.y + afterScroll!.height).toBeLessThanOrEqual(640);
+		expect(afterScroll!.y).toBeGreaterThan(400);
+
+		await context.close();
+	});
+
+	test('TC-VIEW-03b: call visibility follows phone setting and auth state', async ({ browser }) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		await anonPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		await expect(anonPage.getByRole('link', { name: 'Call' })).toHaveCount(0);
+		await expect(anonPage.locator('a[href^="tel:"]')).toHaveCount(0);
+		const anonHtml = await anonPage.content();
+		expect(anonHtml).not.toContain(SEED_CORE_PHONE_OFF_NUMBER);
+
+		const seekerContext = await browser.newContext();
+		const seekerPage = await seekerContext.newPage();
+		const email = `view03-seeker-${Date.now()}@example.com`;
+		await seekerPage.goto('/sign-in?returnTo=/profile');
+		await seekerPage.getByLabel('Your name').fill('View03 Seeker');
+		await seekerPage.getByLabel('Email').fill(email);
+		await seekerPage.getByLabel('Password').fill('password123');
+		await seekerPage.locator('input[name="acceptedTerms"]').check();
+		await seekerPage.getByRole('button', { name: 'Create account' }).click();
+		await expect(seekerPage).toHaveURL(/\/profile/);
+
+		await seekerPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		await expect(seekerPage.getByRole('link', { name: 'Call' })).toBeVisible();
+		await expect(seekerPage.locator('a[href^="tel:+27"]')).toHaveCount(2);
+
+		await anonContext.close();
+		await seekerContext.close();
+	});
+
+	test('TC-VIEW-03c: signed-in seeker message preserves session draft on direct compose link', async ({
+		browser
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const email = `view03-draft-${Date.now()}@example.com`;
+		const draft = 'Still interested — are you free Saturday?';
+
+		await page.goto('/sign-in?returnTo=/profile');
+		await page.getByLabel('Your name').fill('View03 Draft Seeker');
+		await page.getByLabel('Email').fill(email);
+		await page.getByLabel('Password').fill('password123');
+		await page.locator('input[name="acceptedTerms"]').check();
+		await page.getByRole('button', { name: 'Create account' }).click();
+		await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		const message = page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: /^Message / });
+		await expect(message).toHaveAttribute(
+			'href',
+			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)
+		);
+
+		await page.evaluate(({ id, text }) => sessionStorage.setItem(`pf_message_draft_${id}`, text), {
+			id: SEED_CORE_PRIMARY_PROFILE_ID,
+			text: draft
+		});
+
+		await message.click();
+		await expect(page).toHaveURL(
+			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}\\?draft=`),
+			{ timeout: 15_000 }
+		);
+		await expect(page.getByLabel('Your message')).toHaveValue(draft, { timeout: 10_000 });
+
+		await context.close();
+	});
+
 	test('golden path: homepage to profile to sign-up preserves message context', async ({
 		page
 	}) => {
@@ -202,7 +295,7 @@ test.describe('E2E-1 search to contact', () => {
 
 		await page
 			.getByRole('group', { name: 'Contact actions' })
-			.getByRole('link', { name: 'Message' })
+			.getByRole('link', { name: /^Message / })
 			.click();
 		await expect(page).toHaveURL(/\/sign-in\?/);
 		await expect(page).toHaveURL(/draft=/);

@@ -19,7 +19,7 @@ test.describe('US-ACC-02 sign up mid-action', () => {
 		await page.reload();
 
 		const message = page.getByRole('group', { name: 'Contact actions' }).getByRole('link', {
-			name: 'Message'
+			name: /^Message /
 		});
 		await message.click();
 		await expect(page).toHaveURL(/\/sign-in\?/);
@@ -87,7 +87,7 @@ test.describe('US-ACC-02 sign up mid-action', () => {
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		await page
 			.getByRole('group', { name: 'Contact actions' })
-			.getByRole('link', { name: 'Message' })
+			.getByRole('link', { name: /^Message / })
 			.click();
 		await expect(page).toHaveURL(/\/sign-in/);
 		await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();

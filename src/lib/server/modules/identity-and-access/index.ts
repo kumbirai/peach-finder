@@ -14,6 +14,7 @@ import { hashSessionToken, newSessionToken, SEEKER_IDLE_MS } from './infra/sessi
 
 export { exportFor } from './export-stub';
 export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
+export { resolveProfileActionHrefs, type ProfileActionHrefs } from './app/profile-action-hrefs';
 export type { CapabilitiesDto } from './app/capabilities-types';
 export { setSessionCookie, clearSessionCookie, SESSION_COOKIE } from './app/session-cookie';
 export { parseGatedAction, type GatedAction, type SignInIntent } from './domain/sign-in-intent';

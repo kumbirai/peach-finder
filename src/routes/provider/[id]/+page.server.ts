@@ -1,7 +1,7 @@
 import type { Role } from '$lib/server/shared/auth-context';
 import { error } from '@sveltejs/kit';
 import { getDb } from '$lib/server/db';
-import { gatedActionHref } from '$lib/server/modules/identity-and-access';
+import { resolveProfileActionHrefs } from '$lib/server/modules/identity-and-access';
 import { getPublicProfile, parseProviderProfileId } from '$lib/server/modules/provider-profile';
 import { publicAppOrigin } from '$lib/server/env';
 
@@ -20,12 +20,7 @@ export async function load({ params, locals, url }) {
 	return {
 		profile: result.value,
 		providerProfileId: params.id,
-		actions: {
-			message: gatedActionHref('message', profilePath, params.id, origin),
-			review: gatedActionHref('review', profilePath, params.id, origin),
-			report: gatedActionHref('report', profilePath, params.id, origin),
-			block: gatedActionHref('block', profilePath, params.id, origin)
-		},
+		actions: resolveProfileActionHrefs(params.id, profilePath, locals.auth, origin),
 		og: {
 			title: result.value.displayName,
 			description: result.value.intro.slice(0, 150),

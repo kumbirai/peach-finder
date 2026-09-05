@@ -2,6 +2,8 @@
 	import AvailabilityPill from '$lib/components/AvailabilityPill.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import ProfileContactBar from '$lib/components/ProfileContactBar.svelte';
+	import ProfileSafetyActions from '$lib/components/ProfileSafetyActions.svelte';
+	import { resolveCallHref } from '$lib/contact-actions';
 	import {
 		formatOnlineStatus,
 		formatRatingLabel,
@@ -30,15 +32,7 @@
 	const photos = $derived(profile.photos);
 	const selectedPhoto = $derived(photos[selectedPhotoIndex] ?? photos[0]);
 
-	const callHref = $derived(
-		previewMode
-			? profile.phone
-				? '#'
-				: undefined
-			: profile.phone
-				? `tel:${profile.phone}`
-				: undefined
-	);
+	const callHref = $derived(resolveCallHref(profile.phone, previewMode));
 	const messageHref = $derived(
 		previewMode ? '#' : (actions?.message ?? `/messages/compose/${profile.id}`)
 	);
@@ -129,6 +123,10 @@
 		</p>
 	</header>
 
+	{#if actions && !previewMode}
+		<ProfileSafetyActions {reviewHref} {reportHref} {blockHref} />
+	{/if}
+
 	<section class="section" aria-labelledby="about-heading-{profile.id}">
 		<h3 id="about-heading-{profile.id}" class="title">About</h3>
 		<p data-testid="profile-intro">{profile.intro}</p>
@@ -214,9 +212,7 @@
 	<ProfileContactBar
 		{messageHref}
 		{callHref}
-		{reviewHref}
-		{reportHref}
-		{blockHref}
+		displayName={profile.displayName}
 		{...messageDraftKey ? { messageDraftKey } : {}}
 	/>
 </article>

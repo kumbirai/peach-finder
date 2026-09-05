@@ -10,7 +10,9 @@ document.addEventListener(
 		const draft = sessionStorage.getItem(key);
 		if (!draft) return;
 		event.preventDefault();
-		window.location.assign(`${anchor.href}&draft=${encodeURIComponent(draft)}`);
+		const url = new URL(anchor.href);
+		url.searchParams.set('draft', draft);
+		window.location.assign(url.href);
 	},
 	true
 );
