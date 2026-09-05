@@ -188,10 +188,7 @@ describe('US-MSG-06 trust-and-safety thread actions', () => {
 			});
 			expect(second.ok).toBe(true);
 
-			const blockEvents = await db
-				.select()
-				.from(outbox)
-				.where(eq(outbox.eventName, 'UserBlocked'));
+			const blockEvents = await db.select().from(outbox).where(eq(outbox.eventName, 'UserBlocked'));
 			expect(blockEvents).toHaveLength(1);
 		});
 	});

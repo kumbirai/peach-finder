@@ -12,6 +12,8 @@ describe('resolveProfileActionHrefs', () => {
 		expect(hrefs.message).toContain('/sign-in?');
 		expect(hrefs.message).toContain('action=message');
 		expect(hrefs.review).toContain('action=review');
+		expect(hrefs.report).toContain('action=report');
+		expect(hrefs.report).toContain(`providerProfileId=${PROFILE_ID}`);
 	});
 
 	it('routes signed-in seekers directly to compose for message', () => {
@@ -26,6 +28,6 @@ describe('resolveProfileActionHrefs', () => {
 			})
 		);
 		expect(hrefs.message).toBe(`/messages/compose/${PROFILE_ID}`);
-		expect(hrefs.report).toContain('/sign-in?');
+		expect(hrefs.report).toBe(`/provider/${PROFILE_ID}/report`);
 	});
 });

@@ -31,6 +31,8 @@
 	let statusMessage = $state('');
 	let statusRole = $state<'status' | 'alert'>('status');
 	let menuWasOpen = $state(false);
+	let selectedReason = $state<ThreadSafetyReason | null>(null);
+	let freeText = $state('');
 
 	$effect(() => {
 		if (menuWasOpen && !menuOpen) {
@@ -41,6 +43,8 @@
 			busy = reset.busy;
 			statusMessage = reset.statusMessage;
 			statusRole = reset.statusRole;
+			selectedReason = null;
+			freeText = '';
 		}
 		menuWasOpen = menuOpen;
 	});
@@ -56,7 +60,8 @@
 				body: JSON.stringify({
 					targetType: 'thread',
 					targetId: threadId,
-					reason
+					reason,
+					freeText: reason === 'other' && freeText.trim() ? freeText.trim() : undefined
 				})
 			});
 			const json = (await response.json()) as { error?: { message: string } };
@@ -67,6 +72,8 @@
 			}
 			panelCopy = THREAD_REPORT_SUCCESS_COPY;
 			choosingReason = false;
+			selectedReason = null;
+			freeText = '';
 		} catch {
 			statusRole = 'alert';
 			statusMessage = 'Could not send report.';
@@ -114,11 +121,38 @@
 	{#if choosingReason}
 		<div class="thread-safety__reasons" role="group" aria-label="Report reason">
 			{#each THREAD_SAFETY_REASON_OPTIONS as option (option.value)}
-				<Button variant="secondary" disabled={busy} onclick={() => void submitReport(option.value)}>
+				<Button
+					variant={selectedReason === option.value ? 'primary' : 'secondary'}
+					disabled={busy}
+					onclick={() => {
+						selectedReason = option.value;
+						if (option.value !== 'other') {
+							void submitReport(option.value);
+						}
+					}}
+				>
 					{option.label}
 				</Button>
 			{/each}
 		</div>
+		{#if selectedReason === 'other'}
+			<label class="thread-safety__details" for="{panelId}-free-text">
+				<span class="label">Tell us more (optional)</span>
+				<textarea
+					id="{panelId}-free-text"
+					class="thread-safety__textarea"
+					maxlength="2000"
+					rows="3"
+					bind:value={freeText}
+					disabled={busy}
+					data-testid="thread-report-free-text"></textarea>
+			</label>
+			<span data-testid="thread-report-submit">
+				<Button variant="secondary" disabled={busy} onclick={() => void submitReport('other')}>
+					Submit report
+				</Button>
+			</span>
+		{/if}
 	{:else if !blockConfirming && panelCopy === THREAD_SAFETY_INTRO}
 		<span data-testid="thread-safety-report">
 			<Button
@@ -172,6 +206,32 @@
 		flex-wrap: wrap;
 		gap: var(--space-sm);
 		width: 100%;
+	}
+	.thread-safety__details {
+		display: grid;
+		gap: var(--space-xs);
+		width: 100%;
+	}
+	.thread-safety__details .label {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-ink);
+	}
+	.thread-safety__textarea {
+		background: var(--color-paper);
+		border: 1px solid var(--color-stone);
+		border-radius: var(--radius-md);
+		padding: 12px var(--space-md);
+		font-family: var(--font-body-family);
+		font-size: 0.875rem;
+		color: var(--color-ink);
+		min-height: 88px;
+		resize: vertical;
+	}
+	.thread-safety__textarea:focus {
+		border: 2px solid var(--color-peach-deep);
+		outline: none;
+		box-shadow: 0 0 0 3px var(--color-focus-ring);
 	}
 	.thread-safety-status {
 		margin: var(--space-sm) 0 0;

@@ -13,6 +13,9 @@ export function buildPostAuthRedirect(input: {
 		}
 		return base;
 	}
+	if (input.action === 'report' && input.providerProfileId) {
+		return `/provider/${input.providerProfileId}/report`;
+	}
 	if (input.returnTo.startsWith('/')) {
 		return input.returnTo;
 	}

@@ -29,9 +29,9 @@ FR-TRUST-07, FR-MSG-05, FR-NOTIF-01.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,4 +47,36 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - All acceptance criteria in section 2 verified against the live-seeded stack (`seed-core` or the relevant seed pack) — no stubbed HTTP, no `page.route` interception, per this project's live-stack-seeded testing convention.
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-SAFE-01 cross-references this DDD (applied in the stage-9 traceability pass).
-- No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-05
+
+### Approach
+
+- **Shared report taxonomy** — `src/lib/safety/report-flow.ts` centralises FR-TRUST-07 reason options, profile/thread success copy, and label helpers; consumed by profile report UI, `ThreadSafetyPanel`, and tests.
+- **Profile report surface** — New route `src/routes/provider/[id]/report/` (seeker role) with `ReportReasonForm.svelte`: one tap from profile actions (`Report` link) lands on the reason picker; selecting a non-`other` reason auto-submits (two taps total). `other` reveals optional free text plus explicit submit.
+- **Thread report surface** — `ThreadSafetyPanel.svelte` reuses the shared taxonomy; non-`other` reasons auto-submit on selection (MSG-06 thread header menu unchanged). Reachability: safety menu toggle → Report button (two taps).
+- **Navigation/auth** — `profile-action-hrefs.ts` routes signed-in seekers directly to `/provider/{id}/report`; `post-auth-redirect.ts` honours `action=report` after sign-in.
+- **Backend** — Extended `fileReport` to validate `targetType: 'profile'` via `getPublicProfile`; existing `POST /api/trust/reports` and `ReportFiled` → in-app `report_receipt` notification path from US-MSG-06 reused unchanged. No automated consequence on reported party.
+- **Tests** — Unit: `report-flow.test.ts`. Integration: `profile-report.integration.test.ts` (zero-consequence assertions). E2E: `testing/playwright/e2e-report-resolution.e2e.ts` (TC-SAFE-01a/b/c + axe on profile report panel).
+
+### Deviations
+
+- **Review/photo report UI** — API accepts `review` and `photo` target types per LLD; no dedicated review/photo surfaces exist in V1 UI yet. Out of scope for this story's reachable surfaces (profile + thread only).
+- **E2E thread setup** — Thread reachability test opens a thread via `POST /api/messaging/threads` (live stack) after email verification, avoiding flaky compose-form `?/send` navigation; aligns with `delete-my-account.e2e.ts` pattern.
+- **Admin resolution steps** in `e2e-report-resolution.spec-design.md` remain US-ADMIN-03 scope; this story covers filing + receipt + zero automated consequence only.
+
+### Verification (observed)
+
+| Command | Result |
+|---------|--------|
+| `npm run check` | PASS (0 errors) |
+| `npm run lint` | PASS |
+| `npm run test` | PASS — 66 files, 225 tests |
+| `npm run test:e2e -- e2e-report-resolution.e2e.ts` | PASS — 5/5 |
+
+### Follow-ups
+
+- Add review/photo report entry points when those surfaces ship.
+- `seed-reports` pack (if introduced for US-ADMIN-03) is not required for US-SAFE-01 filing tests (`seed-core` suffices).

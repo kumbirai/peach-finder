@@ -1,10 +1,12 @@
 import type { Database } from '../../../db';
 import { publish } from '../../../shared/outbox';
-import { newId, type ReportId, type UserId } from '../../../shared/ids';
+import { newId, asId, type ReportId, type UserId } from '../../../shared/ids';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
+import { anonymousAuth } from '../../../shared/auth-context';
 import { isThreadParticipant } from '../../direct-messaging';
+import { getPublicProfile } from '../../provider-profile';
 import {
 	isReportReason,
 	isReportTargetType,
@@ -54,6 +56,17 @@ export async function fileReport(
 		const allowed = await isThreadParticipant(db, targetId, input.reporterId);
 		if (!allowed) {
 			return Err({ kind: 'not_found', resource: 'thread' });
+		}
+	}
+
+	if (targetType === 'profile') {
+		const profile = await getPublicProfile(
+			db,
+			asId<'ProviderProfileId'>(targetId),
+			anonymousAuth('127.0.0.1')
+		);
+		if (!profile.ok) {
+			return Err({ kind: 'not_found', resource: 'provider_profile' });
 		}
 	}
 

@@ -16,8 +16,14 @@ function hrefForAction(
 	viewer: AuthContext,
 	origin: string
 ): string {
+	if (!viewer.userId) {
+		return gatedActionHref(action, profilePath, providerProfileId, origin);
+	}
 	if (action === 'message' && viewer.hasRole('seeker')) {
 		return `/messages/compose/${providerProfileId}`;
+	}
+	if (action === 'report') {
+		return `/provider/${providerProfileId}/report`;
 	}
 	return gatedActionHref(action, profilePath, providerProfileId, origin);
 }

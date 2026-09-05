@@ -23,6 +23,16 @@ describe('buildPostAuthRedirect', () => {
 		).toBe('/messages/compose/01900000-0000-7000-8000-000000000101?draft=Hello%20there');
 	});
 
+	it('routes report action to the profile report page', () => {
+		expect(
+			buildPostAuthRedirect({
+				returnTo: '/provider/abc',
+				action: 'report',
+				providerProfileId: '01900000-0000-7000-8000-000000000101'
+			})
+		).toBe('/provider/01900000-0000-7000-8000-000000000101/report');
+	});
+
 	it('falls back to returnTo for other actions', () => {
 		expect(
 			buildPostAuthRedirect({
