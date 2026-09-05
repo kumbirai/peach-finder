@@ -1,6 +1,13 @@
 import type { UserId } from '../../shared/ids';
 
-/** Wave 0 stub — populated by later waves. */
+export { loadBadgeDisplayState, loadOwnerBadgeNotice } from './infra/badge-read';
+export {
+	BADGE_SUPPRESSION_REASON,
+	handleIdentityAttributesChanged,
+	handleBadgeFlagEvent
+} from './infra/identity-change-subscription';
+export { grantIdentityBadgeDev } from './infra/grant-badge-dev';
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

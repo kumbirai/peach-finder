@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId, UserId } from '../../../shared/ids';
+import { loadOwnerBadgeNotice } from '../../trust-and-safety';
 import {
 	computePublishReadiness,
 	firstIncompleteOnboardingStep,
@@ -37,6 +38,7 @@ export type OwnerProfileDto = {
 	intro: string | null;
 	areaId: string | null;
 	areaName: string | null;
+	identityBadgeNotice: { suppressed: boolean; message: string | null };
 	listing: {
 		state: string;
 		trialStartedAt: string | null;
@@ -168,6 +170,8 @@ export async function loadOwnerProfile(
 		}>
 	)[0];
 
+	const identityBadgeNotice = await loadOwnerBadgeNotice(db, profileId);
+
 	return {
 		profileId,
 		publishState: profile.publishState,
@@ -175,6 +179,7 @@ export async function loadOwnerProfile(
 		intro,
 		areaId: profile.areaId,
 		areaName: (areaRow as { name: string }[])[0]?.name ?? null,
+		identityBadgeNotice,
 		listing: listing
 			? {
 					state: listing.state,

@@ -7,6 +7,7 @@ import type { DomainEvent } from '../../../shared/events';
 import { publish } from '../../../shared/outbox';
 import { getPhotoOwner, getPhotoUploadStatus, removeMediaPhoto } from '../../media-processing';
 import { providerPhotos, providerProfiles } from './schema';
+import { refreshSearchProjectionIfPublished } from './refresh-projection';
 
 const MAX_GALLERY_PHOTOS = 12;
 
@@ -132,6 +133,7 @@ export async function attachProfilePhoto(
 
 		if (galleryStatus === 'ready') {
 			await emitPhotoAdded(tx, owned.value.profileId, photoId, correlationId, now);
+			await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 		}
 
 		return Ok({ providerPhotoId });
@@ -182,6 +184,7 @@ export async function reorderProfilePhotos(
 				);
 		}
 		await emitProfileUpdated(tx, owned.value.profileId, correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);
@@ -220,6 +223,7 @@ export async function setPrimaryProfilePhoto(
 			.set({ isPrimary: true })
 			.where(eq(providerPhotos.id, target[0]!.id));
 		await emitProfileUpdated(tx, owned.value.profileId, correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);
@@ -278,6 +282,7 @@ export async function deleteProfilePhoto(
 			payload: { providerProfileId: owned.value.profileId, photoId }
 		};
 		await publish(tx, event);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return removeMediaPhoto(db, photoId, correlationId);
@@ -308,6 +313,7 @@ export async function finalizePhotoFromMediaProcessed(
 				correlationId,
 				now
 			);
+			await refreshSearchProjectionIfPublished(tx, row.providerProfileId as ProviderProfileId, now);
 		});
 	}
 }

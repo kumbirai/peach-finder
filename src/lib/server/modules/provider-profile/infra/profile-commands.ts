@@ -25,6 +25,7 @@ import {
 } from './schema';
 import { attachProfilePhoto } from './photo-commands';
 import { getGalleryReadyCount } from './gallery-count';
+import { refreshSearchProjectionIfPublished } from './refresh-projection';
 
 const MAX_GALLERY_PHOTOS = 12;
 
@@ -83,6 +84,7 @@ export async function updateIntro(
 			.set({ intro: trimmed, updatedAt: now })
 			.where(eq(providerProfiles.id, owned.value.profileId));
 		await emitProfileUpdated(tx, owned.value.profileId, ['intro'], correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);
@@ -113,6 +115,7 @@ export async function updateArea(
 			.set({ areaId, updatedAt: now })
 			.where(eq(providerProfiles.id, owned.value.profileId));
 		await emitProfileUpdated(tx, owned.value.profileId, ['area'], correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);
@@ -149,6 +152,7 @@ export async function addService(
 			sortOrder
 		});
 		await emitProfileUpdated(tx, owned.value.profileId, ['services'], correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok({ serviceId });
@@ -195,6 +199,7 @@ export async function setLanguages(
 			});
 		}
 		await emitProfileUpdated(tx, owned.value.profileId, ['languages'], correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);
@@ -231,6 +236,7 @@ export async function setServiceTags(
 			});
 		}
 		await emitProfileUpdated(tx, owned.value.profileId, ['tags'], correlationId, now);
+		await refreshSearchProjectionIfPublished(tx, owned.value.profileId, now);
 	});
 
 	return Ok(undefined);

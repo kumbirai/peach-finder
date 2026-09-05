@@ -12,7 +12,10 @@ import {
 } from '../src/lib/server/modules/provider-profile/infra/schema';
 import { availability } from '../src/lib/server/modules/provider-availability/infra/schema';
 import { ratingAggregate, reviews } from '../src/lib/server/modules/provider-reviews/infra/schema';
-import { providerBadges } from '../src/lib/server/modules/trust-and-safety/infra/schema';
+import {
+	providerBadges,
+	badgeState
+} from '../src/lib/server/modules/trust-and-safety/infra/schema';
 import { listings } from '../src/lib/server/modules/listing-billing/infra/schema';
 import { photos } from '../src/lib/server/modules/media-processing/infra/schema';
 import {
@@ -474,6 +477,36 @@ export async function seedCore(db: Database): Promise<void> {
 				.values({
 					providerProfileId: p.profileId,
 					badge: 'identity_verified'
+				})
+				.onConflictDoNothing();
+			await db
+				.insert(badgeState)
+				.values({
+					providerProfileId: p.profileId,
+					identityVerified: true,
+					identityVerifiedSince: publishedAt,
+					suppressed: false,
+					activeThisWeek: p.activeThisWeek,
+					activeThisWeekSince: p.activeThisWeek ? publishedAt : null,
+					updatedAt: new Date()
+				})
+				.onConflictDoUpdate({
+					target: badgeState.providerProfileId,
+					set: {
+						identityVerified: true,
+						identityVerifiedSince: publishedAt,
+						updatedAt: new Date()
+					}
+				});
+		} else if (p.activeThisWeek) {
+			await db
+				.insert(badgeState)
+				.values({
+					providerProfileId: p.profileId,
+					identityVerified: false,
+					activeThisWeek: true,
+					activeThisWeekSince: publishedAt,
+					updatedAt: new Date()
 				})
 				.onConflictDoNothing();
 		}

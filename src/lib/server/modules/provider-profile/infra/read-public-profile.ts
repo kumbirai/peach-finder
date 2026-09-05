@@ -1,6 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { asId, type ProviderProfileId } from '../../../shared/ids';
+import { loadBadgeDisplayState } from '../../trust-and-safety';
 import {
 	languages,
 	providerLanguages,
@@ -12,7 +13,6 @@ import {
 import type { ProfileViewRow } from './serializers';
 
 type ListingRow = { state: string };
-type BadgeRow = { badge: string };
 type RatingRow = { average: string | null; count: number };
 type AvailRow = { state: string; setAt: Date | null };
 type ReviewRow = {
@@ -97,10 +97,7 @@ export async function loadProfileView(
 		ORDER BY pp.sort_order
 	`);
 
-	const badgeRows = await db.execute<BadgeRow>(sql`
-		SELECT badge FROM trust_and_safety.provider_badge
-		WHERE provider_profile_id = ${providerProfileId}
-	`);
+	const badgeDisplay = await loadBadgeDisplayState(db, providerProfileId);
 
 	const ratingRows = await db.execute<RatingRow>(sql`
 		SELECT average, count FROM provider_reviews.rating_aggregate
@@ -122,7 +119,6 @@ export async function loadProfileView(
 		LIMIT 10
 	`);
 
-	const badgeSet = new Set((badgeRows as unknown as BadgeRow[]).map((b) => b.badge));
 	const rating = (ratingRows as unknown as RatingRow[])[0];
 	const avail = (availRows as unknown as AvailRow[])[0];
 
@@ -150,8 +146,8 @@ export async function loadProfileView(
 			isPrimary: p.isPrimary
 		})),
 		badges: {
-			identityVerified: badgeSet.has('identity_verified'),
-			activeThisWeek: badgeSet.has('active_this_week')
+			identityVerified: badgeDisplay.identityVerified,
+			activeThisWeek: badgeDisplay.activeThisWeek
 		},
 		ratingAverage: rating?.average ?? null,
 		ratingCount: rating?.count ?? 0,

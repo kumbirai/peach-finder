@@ -16,11 +16,16 @@
 				emailVerified: boolean;
 				hasPassword: boolean;
 			} | null;
+			providerProfile: {
+				identityBadgeNotice: { suppressed: boolean; message: string | null };
+			} | null;
 			deleteConfirm: boolean;
 		};
 		form?: {
 			message?: string;
 			passwordChanged?: boolean;
+			displayNameUpdated?: boolean;
+			displayName?: string;
 			issues?: Array<{ path: string; message: string }>;
 		};
 	} = $props();
@@ -85,7 +90,23 @@
 		<section class="section" aria-labelledby="account-heading">
 			<h2 id="account-heading" class="title">Account</h2>
 			<Card>
-				<p class="body name">{data.account.displayName}</p>
+				{#if data.providerProfile?.identityBadgeNotice.suppressed && data.providerProfile.identityBadgeNotice.message}
+					<p class="notice label" role="status">
+						{data.providerProfile.identityBadgeNotice.message}
+					</p>
+				{/if}
+				{#if form?.displayNameUpdated}
+					<p class="success label" role="status">Display name updated.</p>
+				{/if}
+				<form class="form" method="POST" action="?/updateDisplayName" use:enhance>
+					<Input
+						id="displayName"
+						name="displayName"
+						label="Display name"
+						value={form?.displayName ?? data.account?.displayName ?? ''}
+					/>
+					<Button type="submit" variant="primary">Save name</Button>
+				</form>
 				{#if data.account.email}
 					<p class="label email">
 						{data.account.email}
@@ -204,10 +225,6 @@
 		display: grid;
 		gap: var(--space-md);
 	}
-	.name {
-		margin: 0 0 var(--space-sm);
-		font-weight: 600;
-	}
 	.email {
 		margin: 0 0 var(--space-md);
 		color: var(--color-stone);
@@ -236,6 +253,10 @@
 	.success {
 		color: var(--color-pine);
 		margin: 0 0 var(--space-sm);
+	}
+	.notice {
+		margin: 0 0 var(--space-md);
+		color: var(--color-peach-deep);
 	}
 	.error {
 		color: var(--color-peach-deep);

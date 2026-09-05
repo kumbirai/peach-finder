@@ -57,6 +57,7 @@ export {
 } from './infra/dev-verification';
 import { deleteAccount, anonymizePendingUsers } from './infra/account-deletion';
 export { deleteAccount, anonymizePendingUsers };
+export { updateDisplayName } from './infra/account-commands';
 import { getUserCapabilities } from './infra/session-commands';
 export {
 	createSession,

@@ -28,9 +28,9 @@ FR-PROF-05, FR-TRUST-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PONB-05)
+
+- **Live edits:** Published providers edit at `/provider/profile/edit` (intro + photos via existing uploader). Profile commands refresh the discovery projection synchronously when `publish_state = published`; `ProfileUpdated` also fans out to `discovery-search.projection-refresh` via the worker.
+- **Identity name changes:** `POST /api/identity/account/display-name` and profile settings form call `updateDisplayName`, publishing `IdentityAttributesChanged`. Delivery layer applies `trust-and-safety.badge-suppress` and `discovery-search.name-refresh` synchronously for immediate UX; worker handles redeliveries idempotently.
+- **Badge suppression (FR-TRUST-04):** Migration `0007_us_ponb_05_edit_live.sql` adds `badge_state` + `verification_case`. Suppression sets `suppressed=true` (does not clear `identity_verified`), emits `BadgeRevoked(identity_verified)`, opens a pending re-review case, and surfaces plain-language copy on `/profile` and `/provider/profile/edit`. Public badge display reads `identity_verified AND NOT suppressed`.
+- **Tests:** `edit-live-always.integration.test.ts` (TC-PONB-05a/b), `badge-read.test.ts`, E2E `e2e/provider-edit-live.e2e.ts` (live-stack-seeded, axe on edit page). Dev helper `POST /api/dev/grant-identity-badge` (ALLOW_DEV_HELPERS only) seeds verified state for TC-PONB-05b.
+- **Assumption:** Phone change suppression follows the same `IdentityAttributesChanged` path when US-ACC phone update lands; only display-name UI is wired in this wave.

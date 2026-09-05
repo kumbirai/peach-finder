@@ -6,8 +6,11 @@ import {
 	changePassword,
 	clearSessionCookie,
 	getSelfAccountSummary,
-	revokeSession
+	revokeSession,
+	updateDisplayName
 } from '$lib/server/modules/identity-and-access';
+import { loadOwnerProfile, ownsProfileDb } from '$lib/server/modules/provider-profile';
+import { applyIdentityAttributesChangedSync } from '$lib/server/shared/identity-change-sync';
 
 export const _requiredRole: Role = 'anonymous';
 
@@ -18,8 +21,12 @@ export async function load({ locals, url }) {
 
 	const db = getDb();
 	const account = await getSelfAccountSummary(db, locals.auth.userId);
+	const providerProfile = (await ownsProfileDb(db, locals.auth.userId))
+		? await loadOwnerProfile(db, locals.auth.userId)
+		: null;
 	return {
 		account,
+		providerProfile,
 		deleteConfirm: url.searchParams.get('deleteConfirm') === '1'
 	};
 }
@@ -71,6 +78,34 @@ export const actions: Actions = {
 		}
 
 		return { passwordChanged: true as const };
+	},
+
+	updateDisplayName: async ({ request, locals }) => {
+		if (!locals.auth.userId) {
+			return fail(401, { message: 'Please sign in to continue.' });
+		}
+
+		const db = getDb();
+		const data = await request.formData();
+		const displayName = String(data.get('displayName') ?? '');
+		const now = new Date();
+		const result = await updateDisplayName(
+			db,
+			locals.auth.userId,
+			displayName,
+			locals.correlationId,
+			now
+		);
+		if (!result.ok) {
+			if (result.error.kind === 'validation_failed') {
+				return fail(422, { issues: result.error.issues, displayName });
+			}
+			return fail(400, { message: 'Could not update your name.' });
+		}
+		if (result.value.identityEvent) {
+			await applyIdentityAttributesChangedSync(db, result.value.identityEvent, now);
+		}
+		return { displayNameUpdated: true as const, displayName: result.value.displayName };
 	},
 
 	logout: async ({ locals, cookies }) => {

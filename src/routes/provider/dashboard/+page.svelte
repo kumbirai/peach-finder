@@ -7,7 +7,8 @@
 		data
 	}: {
 		data: {
-			profile: { displayName: string } | null;
+			profile: { displayName: string; profileId: string } | null;
+			publishState: string | null;
 			inbox: Array<{
 				threadId: string;
 				counterpartName: string;
@@ -37,10 +38,17 @@
 
 	{#if data.profile && data.analytics}
 		<section class="section" aria-labelledby="setup-heading">
-			<h2 id="setup-heading" class="title">Profile setup</h2>
+			<h2 id="setup-heading" class="title">
+				{data.publishState === 'published' ? 'Your live profile' : 'Profile setup'}
+			</h2>
 			<Card>
-				<p class="body">Finish your profile so seekers can find and contact you.</p>
-				<Button variant="primary" href="/provider/onboarding">Continue setup</Button>
+				{#if data.publishState === 'published'}
+					<p class="body">Changes you save go live immediately — no review step.</p>
+					<Button variant="primary" href="/provider/profile/edit">Edit profile</Button>
+				{:else}
+					<p class="body">Finish your profile so seekers can find and contact you.</p>
+					<Button variant="primary" href="/provider/onboarding">Continue setup</Button>
+				{/if}
 			</Card>
 		</section>
 

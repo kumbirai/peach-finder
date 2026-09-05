@@ -12,7 +12,15 @@ import {
 import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
 import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
 import { upsertSearchProjection } from '../lib/server/modules/discovery-search';
+import {
+	refreshSearchDisplayName,
+	refreshSearchProjection
+} from '../lib/server/modules/discovery-search/infra/projection-handlers';
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
+import {
+	handleBadgeFlagEvent,
+	handleIdentityAttributesChanged
+} from '../lib/server/modules/trust-and-safety';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
@@ -68,6 +76,44 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 					new Date(event.occurredAt)
 				);
 			});
+		}
+		if (
+			subscriber === 'discovery-search.projection-refresh' &&
+			(event.eventName === 'ProfileUpdated' ||
+				event.eventName === 'PhotoAdded' ||
+				event.eventName === 'PhotoRemoved' ||
+				event.eventName === 'MediaProcessed' ||
+				event.eventName === 'MediaRemoved')
+		) {
+			const payload = event.payload as { providerProfileId: string };
+			await db.transaction(async (tx) => {
+				await refreshSearchProjection(
+					tx,
+					payload.providerProfileId as never,
+					new Date(event.occurredAt)
+				);
+			});
+		}
+		if (
+			subscriber === 'discovery-search.name-refresh' &&
+			event.eventName === 'IdentityAttributesChanged'
+		) {
+			const payload = event.payload as { userId: string };
+			await db.transaction(async (tx) => {
+				await refreshSearchDisplayName(tx, payload.userId, new Date(event.occurredAt));
+			});
+		}
+		if (
+			subscriber === 'trust-and-safety.badge-suppress' &&
+			event.eventName === 'IdentityAttributesChanged'
+		) {
+			await handleIdentityAttributesChanged(db, event as never);
+		}
+		if (
+			subscriber === 'discovery-search.badge-flag' &&
+			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
+		) {
+			await handleBadgeFlagEvent(db, event as never);
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';

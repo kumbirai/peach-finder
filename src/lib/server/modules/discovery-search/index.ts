@@ -7,6 +7,11 @@ export type { SearchCard } from './app/serializers';
 
 export { removeSearchProjection } from './infra/projection-commands';
 export { upsertSearchProjection } from './infra/projection-upsert';
+export {
+	refreshSearchProjection,
+	refreshSearchDisplayName,
+	updateSearchBadgeFlag
+} from './infra/projection-handlers';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
