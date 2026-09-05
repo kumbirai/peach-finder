@@ -5,6 +5,8 @@ export const listingBillingSchema = pgSchema('listing_billing');
 
 export const listings = listingBillingSchema.table('listing', {
 	providerProfileId: uuid('provider_profile_id').primaryKey(),
-	state: text('state').notNull().default('free_listed'),
+	state: text('state').notNull().default('building'),
+	trialStartedAt: timestamp('trial_started_at', { withTimezone: true, mode: 'date' }),
+	trialEndsAt: timestamp('trial_ends_at', { withTimezone: true, mode: 'date' }),
 	updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 });

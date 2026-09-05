@@ -28,9 +28,9 @@ FR-ACC-04, FR-PROF-02, FR-MONET-02, SR-APP-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PONB-04)
+
+**Approach:** Added migration `0006_us_ponb_04_publish.sql` (`trial_started_at`, `trial_ends_at` on `listing_billing.listing`; default state `building`). `createDraftProfile` now seeds a `building` listing row. `publishProfileForOwner` validates publish-readiness, transitions `draft→published` (sets `first_published_at`), synchronously starts the free trial (`listing-billing.startTrialOnPublish` → `free_listed` + `TrialStarted`), upserts `discovery_search.search_projection`, and emits `ProviderPublished`. Delivery: `POST /api/provider/profile/publish`, onboarding publish form action + Publish button on the review step, `OwnerProfileDto.listing` trial fields. Worker handlers added as idempotent backup for outbox subscribers. Tests: `publish-profile.integration.test.ts` (TC-PONB-04a/b), `e2e/provider-onboarding-publish.e2e.ts` (TC-PONB-04a/b/c + axe).
+
+**Deviations:** Trial/listing lifecycle uses the simplified Wave-1 `listing_billing.listing` table (not full `subscription` schema from billing LLD) — sufficient for free-period anchor at first publish; W5 billing expands it. Projection upsert and trial start run synchronously in the publish transaction (same pattern as US-ACC-05 unpublish) so E2E passes without a running worker.
+
+**Verified:** `npm run check`, `lint`, `test` (87), `test:integration` publish suite (3/3), `boundaries`, `build`, `npx playwright test e2e/provider-onboarding-publish.e2e.ts` (2/2).
+
+**Follow-ups:** US-PONB-06 unpublish/republish; US-BILL-01 dashboard copy for trial end; expand listing schema to full subscription model in W5.

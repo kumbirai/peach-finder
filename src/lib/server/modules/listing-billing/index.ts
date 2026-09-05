@@ -2,6 +2,10 @@ import type { Database, Transaction } from '../../db';
 import type { UserId } from '../../shared/ids';
 import { getOwnedProfileIdDb } from '../provider-profile';
 import { cancelListingForProfile } from './infra/cancel-on-delete';
+import { ensureBuildingListing } from './infra/ensure-building-listing';
+import { startTrialOnPublish } from './infra/start-trial-on-publish';
+
+export { startTrialOnPublish, ensureBuildingListing };
 
 export async function cancelListingForOwner(
 	tx: Transaction,

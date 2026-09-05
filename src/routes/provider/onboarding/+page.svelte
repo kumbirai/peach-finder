@@ -372,7 +372,9 @@
 				<div class="onboarding-actions">
 					<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
 					{#if data.profile.readiness.ready}
-						<Button variant="primary" href="/provider/dashboard">Finish setup</Button>
+						<form method="POST" action="?/publish" class="publish-form">
+							<Button variant="primary" type="submit">Publish</Button>
+						</form>
 					{:else}
 						<Button variant="primary" disabled>Complete essentials first</Button>
 					{/if}
@@ -554,6 +556,10 @@
 	}
 	.step-form {
 		display: block;
+	}
+	.publish-form {
+		display: inline;
+		margin: 0;
 	}
 	.proposal-row {
 		margin-top: var(--space-md);

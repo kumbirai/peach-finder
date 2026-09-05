@@ -119,6 +119,7 @@ export async function listPublishedProfileIds(db: Database): Promise<ProviderPro
 }
 
 export { unpublishProfileForOwner } from './infra/unpublish-profile';
+export { publishProfileForOwner } from './infra/publish-profile';
 export { createDraftProfile } from './infra/create-draft-profile';
 export { loadOwnerProfile, type OwnerProfileDto } from './infra/read-owner-profile';
 export {

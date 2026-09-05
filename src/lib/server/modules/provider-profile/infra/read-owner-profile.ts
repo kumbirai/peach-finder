@@ -9,6 +9,12 @@ import {
 } from '../domain/publish-readiness';
 import { providerLanguages, providerProfiles, providerServiceTags, services } from './schema';
 
+function toIso(value: Date | string | null | undefined): string | null {
+	if (value == null) return null;
+	if (value instanceof Date) return value.toISOString();
+	return new Date(value).toISOString();
+}
+
 export type OwnerProfilePhoto = {
 	id: string;
 	photoId: string;
@@ -31,6 +37,11 @@ export type OwnerProfileDto = {
 	intro: string | null;
 	areaId: string | null;
 	areaName: string | null;
+	listing: {
+		state: string;
+		trialStartedAt: string | null;
+		trialEndsAt: string | null;
+	} | null;
 	readiness: { ready: boolean; missing: MissingField[] };
 	onboarding: {
 		steps: Array<{ step: OnboardingStep; complete: boolean }>;
@@ -63,7 +74,7 @@ export async function loadOwnerProfile(
 
 	const profileId = profile.id as ProviderProfileId;
 
-	const [photoRows, serviceRows, languageRows, tagRows, areaRow] = await Promise.all([
+	const [photoRows, serviceRows, languageRows, tagRows, areaRow, listingRow] = await Promise.all([
 		db.execute<{ id: string; photo_id: string; is_primary: boolean; card_url: string }>(sql`
 			select pp.id, pp.photo_id, pp.is_primary,
 				coalesce(
@@ -100,7 +111,17 @@ export async function loadOwnerProfile(
 			? db.execute<{ name: string }>(sql`
 					select name from platform_configuration.area where id = ${profile.areaId}::uuid limit 1
 				`)
-			: Promise.resolve({ rows: [] as { name: string }[] })
+			: Promise.resolve({ rows: [] as { name: string }[] }),
+		db.execute<{
+			state: string;
+			trial_started_at: Date | null;
+			trial_ends_at: Date | null;
+		}>(sql`
+			select state, trial_started_at, trial_ends_at
+			from listing_billing.listing
+			where provider_profile_id = ${profileId}::uuid
+			limit 1
+		`)
 	]);
 
 	const readyPhotoCount = photoRows.length;
@@ -139,6 +160,14 @@ export async function loadOwnerProfile(
 		{ step: 'publish', complete: readiness.ready }
 	];
 
+	const listing = (
+		listingRow as unknown as Array<{
+			state: string;
+			trial_started_at: Date | null;
+			trial_ends_at: Date | null;
+		}>
+	)[0];
+
 	return {
 		profileId,
 		publishState: profile.publishState,
@@ -146,6 +175,13 @@ export async function loadOwnerProfile(
 		intro,
 		areaId: profile.areaId,
 		areaName: (areaRow as { name: string }[])[0]?.name ?? null,
+		listing: listing
+			? {
+					state: listing.state,
+					trialStartedAt: toIso(listing.trial_started_at),
+					trialEndsAt: toIso(listing.trial_ends_at)
+				}
+			: null,
 		readiness: readiness.ready ? { ready: true, missing: [] } : readiness,
 		onboarding: { steps, currentStep },
 		photos: (

@@ -9,6 +9,7 @@ import {
 	listActiveLanguages,
 	listActiveServiceTags,
 	proposeServiceTag,
+	publishProfileForOwner,
 	setLanguages,
 	setServiceTags,
 	updateArea,
@@ -168,7 +169,6 @@ export const actions: Actions = {
 		}
 		redirect(303, '/provider/onboarding?step=publish');
 	},
-
 	proposeTag: async ({ request, locals }) => {
 		const db = getDb();
 		const data = await request.formData();
@@ -189,5 +189,22 @@ export const actions: Actions = {
 			303,
 			`/provider/onboarding?step=services&proposal=ok&proposedTag=${encodeURIComponent(trimmed)}`
 		);
+	},
+
+	publish: async ({ locals }) => {
+		const db = getDb();
+		const result = await publishProfileForOwner(
+			db,
+			locals.auth.userId!,
+			crypto.randomUUID(),
+			new Date()
+		);
+		if (!result.ok) {
+			if (result.error.kind === 'validation_failed') {
+				return fail(422, { issues: result.error.issues });
+			}
+			return fail(400, { message: 'Could not publish your profile.' });
+		}
+		redirect(303, '/provider/dashboard');
 	}
 };

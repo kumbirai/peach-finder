@@ -10,6 +10,8 @@ import {
 	handleAccountDeletionRequested
 } from '../lib/server/modules/direct-messaging';
 import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
+import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
+import { upsertSearchProjection } from '../lib/server/modules/discovery-search';
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
@@ -42,6 +44,30 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		}
 		if (subscriber === 'provider-profile.detach-photo' && event.eventName === 'MediaRemoved') {
 			await handleMediaRemoved(db, event as never);
+		}
+		if (subscriber === 'listing-billing.start-trial' && event.eventName === 'ProviderPublished') {
+			const payload = event.payload as { providerProfileId: string };
+			await db.transaction(async (tx) => {
+				await startTrialOnPublish(
+					tx,
+					payload.providerProfileId as never,
+					event.correlationId,
+					new Date(event.occurredAt)
+				);
+			});
+		}
+		if (
+			subscriber === 'discovery-search.projection-upsert' &&
+			event.eventName === 'ProviderPublished'
+		) {
+			const payload = event.payload as { providerProfileId: string };
+			await db.transaction(async (tx) => {
+				await upsertSearchProjection(
+					tx,
+					payload.providerProfileId as never,
+					new Date(event.occurredAt)
+				);
+			});
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';
