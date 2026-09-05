@@ -16,6 +16,7 @@
 	} = $props();
 
 	const messageDraftKey = $derived(`pf_message_draft_${data.providerProfileId}`);
+	const callHref = $derived(data.profile.phone ? `tel:${data.profile.phone}` : undefined);
 
 	const ratingLabel = $derived(
 		'state' in data.profile.rating
@@ -104,6 +105,22 @@
 		</section>
 	{/if}
 
+	{#if data.profile.phone}
+		<section class="section" aria-labelledby="contact-heading">
+			<h2 id="contact-heading" class="title">Contact</h2>
+			<p class="contact-copy">
+				{data.profile.displayName.split(' ')[0]} has chosen to share a phone number with people browsing
+				Peach Finder.
+			</p>
+			<p class="phone-line">
+				Phone:
+				<a class="phone-link" href="tel:{data.profile.phone}">
+					<strong>{data.profile.phone}</strong>
+				</a>
+			</p>
+		</section>
+	{/if}
+
 	{#if data.profile.reviews.length}
 		<section class="section">
 			<h2 class="title">Reviews</h2>
@@ -125,6 +142,7 @@
 <ProfileContactBar
 	messageHref={data.actions.message}
 	{messageDraftKey}
+	{callHref}
 	reviewHref={data.actions.review}
 	reportHref={data.actions.report}
 	blockHref={data.actions.block}
@@ -196,5 +214,26 @@
 		gap: var(--space-sm);
 		color: var(--color-stone);
 		margin: 0 0 var(--space-xs);
+	}
+	.contact-copy {
+		margin: 0 0 var(--space-sm);
+		color: var(--color-stone);
+	}
+	.phone-line {
+		margin: 0;
+		color: var(--color-stone);
+	}
+	.phone-link {
+		color: inherit;
+		text-decoration: none;
+	}
+	.phone-link strong {
+		color: var(--color-ink);
+		font-variant-numeric: tabular-nums;
+	}
+	.phone-link:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+		border-radius: 4px;
 	}
 </style>

@@ -4,6 +4,7 @@ import { getDb } from '$lib/server/db';
 import {
 	loadOwnerProfile,
 	updateIntro,
+	updatePhoneVisibility,
 	INTRO_MAX_LENGTH
 } from '$lib/server/modules/provider-profile';
 
@@ -41,5 +42,21 @@ export const actions: Actions = {
 			return fail(400, { message: 'Could not save your introduction.' });
 		}
 		return { saved: true as const, intro: intro.trim() };
+	},
+	savePhoneVisibility: async ({ request, locals }) => {
+		const db = getDb();
+		const data = await request.formData();
+		const visible = String(data.get('visible') ?? '') === 'true';
+		const result = await updatePhoneVisibility(
+			db,
+			locals.auth.userId!,
+			visible,
+			crypto.randomUUID(),
+			new Date()
+		);
+		if (!result.ok) {
+			return fail(400, { message: 'Could not save your phone visibility setting.' });
+		}
+		return { saved: true as const, phoneVisible: visible };
 	}
 };

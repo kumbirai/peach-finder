@@ -4,12 +4,14 @@
 	let {
 		messageHref,
 		messageDraftKey,
+		callHref,
 		reviewHref,
 		reportHref,
 		blockHref
 	}: {
 		messageHref: string;
 		messageDraftKey?: string;
+		callHref?: string | undefined;
 		reviewHref: string;
 		reportHref: string;
 		blockHref: string;
@@ -18,6 +20,9 @@
 
 <div class="contact-bar" role="group" aria-label="Contact actions">
 	<Button href={messageHref} variant="primary" {messageDraftKey}>Message</Button>
+	{#if callHref}
+		<Button href={callHref} variant="secondary">Call</Button>
+	{/if}
 	<Button href={reviewHref} variant="secondary">Review</Button>
 	<Button href={reportHref} variant="ghost">Report</Button>
 	<Button href={blockHref} variant="ghost">Block</Button>

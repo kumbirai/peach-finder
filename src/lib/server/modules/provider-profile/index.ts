@@ -132,6 +132,7 @@ export {
 	addService,
 	setLanguages,
 	setServiceTags,
+	updatePhoneVisibility,
 	attachOnboardingPhoto,
 	listActiveLanguages,
 	listActiveServiceTags

@@ -3,6 +3,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import PhoneVisibilitySetting from '$lib/components/provider/PhoneVisibilitySetting.svelte';
 	import PhotoUploader from '$lib/components/onboarding/PhotoUploader.svelte';
 
 	let {
@@ -12,6 +13,7 @@
 		data: {
 			profile: {
 				profileId: string;
+				phoneVisible: boolean;
 				intro: string | null;
 				identityBadgeNotice: { suppressed: boolean; message: string | null };
 				photos: Array<{ id: string; photoId: string; isPrimary: boolean; cardUrl: string }>;
@@ -26,8 +28,10 @@
 		};
 	} = $props();
 
+	const introSaved = $derived(form?.saved === true && form?.intro !== undefined);
+
 	const saveMessage = $derived(
-		form?.saved ? 'Saved — your profile is live now.' : (form?.message ?? null)
+		introSaved ? 'Saved — your profile is live now.' : (form?.message ?? null)
 	);
 	let introValue = $state(data.profile.intro ?? '');
 
@@ -89,6 +93,13 @@
 				</label>
 				<Button type="submit" variant="primary">Save introduction</Button>
 			</form>
+		</Card>
+	</section>
+
+	<section class="section" aria-labelledby="phone-heading">
+		<h2 id="phone-heading" class="title">Phone visibility</h2>
+		<Card>
+			<PhoneVisibilitySetting phoneVisible={data.profile.phoneVisible} />
 		</Card>
 	</section>
 

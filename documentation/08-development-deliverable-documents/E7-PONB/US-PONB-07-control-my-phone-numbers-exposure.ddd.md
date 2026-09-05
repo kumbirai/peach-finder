@@ -27,9 +27,9 @@ FR-PROF-08, FR-PRIV-01.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,14 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-07 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PONB-07)
+
+- **Phone visibility command:** `updatePhoneVisibility` in `profile-commands.ts` updates `phone_visible`, emits `ProfileUpdated{changedFields:['phone_visible']}`. No discovery projection refresh (phone is not on search cards).
+- **API:** `PUT /api/provider/profile/phone-visibility` with `{ visible: boolean }` returns `toOwnerProfile`.
+- **Provider UI:** `/provider/profile/edit` — `PhoneVisibilitySetting.svelte` with FRS label, plain-language explanation, prototype-matched `Toggle.svelte` (role=switch, ≥44px touch target, terracotta focus ring, reduced-motion).
+- **Seeker UI:** `/provider/[id]` renders Contact section + sticky Call link only when `toPublicProfile` includes `phone` (server-side; never CSS-hidden).
+- **Tests:** `phone-visibility.integration.test.ts` (TC-PONB-07a/b/c + idempotent toggle), extended `serializers.test.ts`, E2E `e2e/provider-phone-visibility.e2e.ts` (live-stack-seeded, axe on edit page).
+- **Assumption:** Default OFF is enforced by DB column default and draft creation; no migration required (column exists from US-ACC-01).

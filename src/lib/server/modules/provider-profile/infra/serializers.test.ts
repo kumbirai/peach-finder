@@ -43,4 +43,9 @@ describe('toPublicProfile', () => {
 		const dto = toPublicProfile(baseView, seeker);
 		expect(dto.phone).toBe('+27821234001');
 	});
+
+	it('includes phone for anonymous viewers when phone_visible is on', () => {
+		const dto = toPublicProfile({ ...baseView, phoneVisible: true }, anonymousAuth('127.0.0.1'));
+		expect(dto.phone).toBe('+27821234001');
+	});
 });

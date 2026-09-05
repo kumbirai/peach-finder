@@ -294,6 +294,27 @@ export async function attachOnboardingPhoto(
 	return Ok({ photoId: uploaded.value.photoId });
 }
 
+export async function updatePhoneVisibility(
+	db: Database,
+	userId: UserId,
+	visible: boolean,
+	correlationId: string,
+	now: Date
+): Promise<Result<void, UseCaseError>> {
+	const owned = await requireOwnedProfile(db, userId);
+	if (!owned.ok) return owned;
+
+	await db.transaction(async (tx) => {
+		await tx
+			.update(providerProfiles)
+			.set({ phoneVisible: visible, updatedAt: now })
+			.where(eq(providerProfiles.id, owned.value.profileId));
+		await emitProfileUpdated(tx, owned.value.profileId, ['phone_visible'], correlationId, now);
+	});
+
+	return Ok(undefined);
+}
+
 export async function listActiveLanguages(db: Database) {
 	return db
 		.select({ code: languages.code, name: languages.name })
