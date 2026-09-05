@@ -1,5 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Database, Transaction } from '../../db';
 import { areas, config, lexiconEntries } from './infra/schema';
 import {
@@ -62,9 +62,30 @@ const LEXICON_SEED: Array<{ term: string; entryType: LexiconEntryType; mapsTo: u
 	{ term: 'english', entryType: 'language', mapsTo: { language: 'en' } },
 	{ term: 'afrikaans', entryType: 'language', mapsTo: { language: 'af' } },
 	{ term: 'zulu', entryType: 'language', mapsTo: { language: 'zu' } },
+	{ term: 'speaks zulu', entryType: 'language', mapsTo: { language: 'zu' } },
 	{ term: 'xhosa', entryType: 'language', mapsTo: { language: 'xh' } },
 	{ term: 'sesotho', entryType: 'language', mapsTo: { language: 'st' } },
+	{
+		term: 'deep tissue',
+		entryType: 'service_term',
+		mapsTo: { serviceTagId: '01900000-0000-7000-8000-000000000201' }
+	},
+	{
+		term: 'swedish',
+		entryType: 'service_term',
+		mapsTo: { serviceTagId: '01900000-0000-7000-8000-000000000202' }
+	},
+	{
+		term: 'sports massage',
+		entryType: 'service_term',
+		mapsTo: { serviceTagId: '01900000-0000-7000-8000-000000000203' }
+	},
 	{ term: 'available now', entryType: 'intent_availability', mapsTo: { filter: 'available_now' } },
+	{
+		term: 'available tonight',
+		entryType: 'intent_availability',
+		mapsTo: { filter: 'available_now' }
+	},
 	{ term: 'highly rated', entryType: 'intent_rating', mapsTo: { filter: 'highly_rated' } },
 	{ term: 'verified', entryType: 'intent_verification', mapsTo: { filter: 'verified' } },
 	{ term: 'near me', entryType: 'intent_proximity', mapsTo: { filter: 'near_me' } }
@@ -105,18 +126,33 @@ export async function seedPlatform(db: Database): Promise<void> {
 	}
 
 	for (const entry of LEXICON_SEED) {
-		await db
-			.insert(lexiconEntries)
-			.values({
-				id: newId<'LexiconEntryId'>(),
-				term: entry.term,
-				entryType: entry.entryType,
-				mapsTo: entry.mapsTo,
-				isActive: true,
-				createdAt: new Date(),
-				updatedAt: new Date()
-			})
-			.onConflictDoNothing();
+		const existing = await db
+			.select({ id: lexiconEntries.id })
+			.from(lexiconEntries)
+			.where(
+				and(
+					sql`lower(${lexiconEntries.term}) = lower(${entry.term})`,
+					eq(lexiconEntries.entryType, entry.entryType),
+					eq(lexiconEntries.isActive, true)
+				)
+			)
+			.limit(1);
+		if (existing[0]) {
+			await db
+				.update(lexiconEntries)
+				.set({ mapsTo: entry.mapsTo, updatedAt: new Date() })
+				.where(eq(lexiconEntries.id, existing[0].id));
+			continue;
+		}
+		await db.insert(lexiconEntries).values({
+			id: newId<'LexiconEntryId'>(),
+			term: entry.term,
+			entryType: entry.entryType,
+			mapsTo: entry.mapsTo,
+			isActive: true,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		});
 	}
 }
 

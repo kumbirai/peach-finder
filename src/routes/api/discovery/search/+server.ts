@@ -1,4 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
+import { parseOptionalFiniteNumber } from '$lib/search-url';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { bucketSpec, consumeRateLimit } from '$lib/server/shared/rate-limit';
@@ -23,6 +24,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 	}
 
 	const lexicon = await getActiveLexiconForSearch(db);
+	const minRating = parseOptionalFiniteNumber(url.searchParams.get('minRating'));
 
 	const result = await runSearch(
 		db,
@@ -30,9 +32,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 			...(url.searchParams.get('q') ? { q: url.searchParams.get('q')! } : {}),
 			verified: url.searchParams.get('verified') === '1',
 			available: url.searchParams.get('available') === '1',
-			...(url.searchParams.get('minRating')
-				? { minRating: Number(url.searchParams.get('minRating')) }
-				: {}),
+			...(minRating != null ? { minRating } : {}),
 			lang: url.searchParams.getAll('lang'),
 			tag: url.searchParams.getAll('tag'),
 			...(url.searchParams.get('priceMin')
@@ -43,6 +43,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 				: {}),
 			...(url.searchParams.get('lat') ? { lat: Number(url.searchParams.get('lat')) } : {}),
 			...(url.searchParams.get('lng') ? { lng: Number(url.searchParams.get('lng')) } : {}),
+			...(url.searchParams.get('near') === '1' ? { near: true } : {}),
 			...(url.searchParams.get('limit') ? { limit: Number(url.searchParams.get('limit')) } : {}),
 			...(url.searchParams.get('cursor') ? { cursor: url.searchParams.get('cursor')! } : {}),
 			lexicon

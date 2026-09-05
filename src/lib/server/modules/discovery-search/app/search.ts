@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { AuthContext } from '../../../shared/auth-context';
+import { getConfig } from '../../platform-configuration';
 import { dedupeIntents, parseQuery } from '../domain/parse-query';
 import type { StructuredQuery } from '../domain/structured-query';
 import { toSearchCard, type SearchCard, type SearchCardRow } from './serializers';
@@ -16,6 +17,7 @@ export type SearchInput = {
 	priceMax?: number;
 	lat?: number;
 	lng?: number;
+	near?: boolean;
 	limit?: number;
 	cursor?: string;
 	lexicon: Array<{ term: string; entryType: string; mapsTo: unknown }>;
@@ -28,16 +30,26 @@ export type SearchResult = {
 };
 
 function buildStructuredQuery(input: SearchInput): StructuredQuery {
-	const sq = parseQuery(input.q ?? '', input.lexicon as never, {
-		...(input.available !== undefined ? { availableNow: input.available } : {}),
-		...(input.verified !== undefined ? { verified: input.verified } : {}),
-		...(input.lang ? { languageCodes: input.lang } : {}),
-		...(input.tag ? { serviceTagIds: input.tag } : {}),
-		...(input.minRating !== undefined ? { minRating: input.minRating } : {}),
-		...(input.priceMin !== undefined ? { priceMin: input.priceMin } : {}),
-		...(input.priceMax !== undefined ? { priceMax: input.priceMax } : {}),
-		...(input.lat && input.lng ? { nearMe: true } : {})
-	});
+	const sq = parseQuery(
+		input.q ?? '',
+		input.lexicon as never,
+		{
+			...(input.available !== undefined ? { availableNow: input.available } : {}),
+			...(input.verified !== undefined ? { verified: input.verified } : {}),
+			...(input.lang ? { languageCodes: input.lang } : {}),
+			...(input.tag ? { serviceTagIds: input.tag } : {}),
+			...(input.minRating !== undefined && Number.isFinite(input.minRating)
+				? { minRating: input.minRating }
+				: {}),
+			...(input.priceMin !== undefined ? { priceMin: input.priceMin } : {}),
+			...(input.priceMax !== undefined ? { priceMax: input.priceMax } : {}),
+			...(input.near || (input.lat && input.lng) ? { nearMe: true } : {})
+		},
+		{
+			highlyRatedMinAverage: getConfig('provider-reviews.highly_rated_min_average'),
+			highlyRatedMinReviews: getConfig('provider-reviews.highly_rated_min_reviews')
+		}
+	);
 	sq.appliedIntents = dedupeIntents(sq.appliedIntents);
 	return sq;
 }

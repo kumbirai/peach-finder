@@ -3,18 +3,35 @@
 
 	let {
 		selected = false,
+		intentKey,
+		href,
 		children,
 		onclick
 	}: {
 		selected?: boolean;
+		intentKey?: string;
+		href?: string | undefined;
 		children: Snippet;
 		onclick?: (event: MouseEvent) => void;
 	} = $props();
 </script>
 
-<button class="chip" class:chip-selected={selected} type="button" {onclick} aria-pressed={selected}>
-	{@render children()}
-</button>
+{#if href}
+	<a class="chip chip-selected" {href} data-intent-key={intentKey}>
+		{@render children()}
+	</a>
+{:else}
+	<button
+		class="chip"
+		class:chip-selected={selected}
+		type="button"
+		data-intent-key={intentKey}
+		{onclick}
+		aria-pressed={selected}
+	>
+		{@render children()}
+	</button>
+{/if}
 
 <style>
 	.chip {
@@ -30,6 +47,10 @@
 		cursor: pointer;
 		min-height: 44px;
 		transition: background var(--motion-duration-fast) var(--motion-ease-out-expo);
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 	.chip:focus-visible {
 		outline: 2px solid var(--color-peach-deep);

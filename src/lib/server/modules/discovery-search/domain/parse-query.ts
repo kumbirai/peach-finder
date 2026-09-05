@@ -18,7 +18,18 @@ export type ManualFilters = {
 	nearMe?: boolean;
 };
 
+export type ParseConfig = {
+	highlyRatedMinAverage: number;
+	highlyRatedMinReviews: number;
+};
+
+const DEFAULT_PARSE_CONFIG: ParseConfig = {
+	highlyRatedMinAverage: 4.5,
+	highlyRatedMinReviews: 3
+};
+
 const STOPWORDS = new Set(['who', 'the', 'a', 'an', 'and', 'or', 'with', 'for', 'in', 'on', 'at']);
+const VERTICAL_NOISE = new Set(['massage', 'therapist', 'therapy']);
 
 function normalize(raw: string): string[] {
 	return raw
@@ -41,7 +52,7 @@ function findLongestMatch(
 	return null;
 }
 
-function applyMapsTo(sq: StructuredQuery, entry: LexiconEntry): void {
+function applyMapsTo(sq: StructuredQuery, entry: LexiconEntry, config: ParseConfig): void {
 	const maps = entry.mapsTo as Record<string, unknown>;
 	switch (entry.entryType) {
 		case 'service_term':
@@ -68,11 +79,19 @@ function applyMapsTo(sq: StructuredQuery, entry: LexiconEntry): void {
 			sq.availableNow = true;
 			sq.appliedIntents.push({ key: 'available', label: 'Available now', source: 'query' });
 			break;
-		case 'intent_rating':
-			sq.minRating = 4.5;
-			sq.minRatingCount = 3;
-			sq.appliedIntents.push({ key: 'rating', label: 'Highly rated', source: 'query' });
+		case 'intent_rating': {
+			const value = typeof maps.value === 'number' ? maps.value : config.highlyRatedMinAverage;
+			const minCount =
+				typeof maps.minCount === 'number' ? maps.minCount : config.highlyRatedMinReviews;
+			sq.minRating = value;
+			sq.minRatingCount = minCount;
+			sq.appliedIntents.push({
+				key: 'rating',
+				label: `Highly rated (${value}+)`,
+				source: 'query'
+			});
 			break;
+		}
 		case 'intent_verification':
 			sq.verified = true;
 			sq.appliedIntents.push({ key: 'verified', label: 'Verified', source: 'query' });
@@ -89,20 +108,21 @@ function applyMapsTo(sq: StructuredQuery, entry: LexiconEntry): void {
 export function parseQuery(
 	rawQuery: string,
 	lexicon: LexiconEntry[],
-	manual: ManualFilters
+	manual: ManualFilters,
+	config: ParseConfig = DEFAULT_PARSE_CONFIG
 ): StructuredQuery {
 	const sq = emptyStructuredQuery();
 	const tokens = normalize(rawQuery);
 	const leftovers: string[] = [];
 	let i = 0;
 	while (i < tokens.length) {
-		if (STOPWORDS.has(tokens[i]!)) {
+		if (STOPWORDS.has(tokens[i]!) || VERTICAL_NOISE.has(tokens[i]!)) {
 			i++;
 			continue;
 		}
 		const match = findLongestMatch(tokens, i, lexicon);
 		if (match) {
-			applyMapsTo(sq, match);
+			applyMapsTo(sq, match, config);
 			const phraseLen = match.term.split(/\s+/).length;
 			i += phraseLen;
 			continue;
@@ -122,20 +142,58 @@ export function parseQuery(
 	}
 	if (manual.languageCodes?.length) {
 		for (const code of manual.languageCodes) {
-			if (!sq.languageCodes.includes(code)) sq.languageCodes.push(code);
+			if (!sq.languageCodes.includes(code)) {
+				sq.languageCodes.push(code);
+				const label =
+					lexicon.find(
+						(entry) =>
+							entry.entryType === 'language' &&
+							(entry.mapsTo as { language?: string }).language === code
+					)?.term ?? code;
+				sq.appliedIntents.push({
+					key: `lang:${code}`,
+					label: label.charAt(0).toUpperCase() + label.slice(1),
+					source: 'manual'
+				});
+			}
 		}
 	}
 	if (manual.serviceTagIds?.length) {
 		for (const id of manual.serviceTagIds) {
-			if (!sq.serviceTagIds.includes(id)) sq.serviceTagIds.push(id);
+			if (!sq.serviceTagIds.includes(id)) {
+				sq.serviceTagIds.push(id);
+				const label =
+					lexicon.find(
+						(entry) =>
+							entry.entryType === 'service_term' &&
+							(entry.mapsTo as { serviceTagId?: string }).serviceTagId === id
+					)?.term ?? 'Service';
+				sq.appliedIntents.push({
+					key: `tag:${id}`,
+					label: label.charAt(0).toUpperCase() + label.slice(1),
+					source: 'manual'
+				});
+			}
 		}
 	}
 	if (manual.minRating != null) {
 		sq.minRating = Math.max(sq.minRating ?? 0, manual.minRating);
+		if (!sq.appliedIntents.some((intent) => intent.key === 'rating')) {
+			sq.appliedIntents.push({
+				key: 'rating',
+				label: `Rating ${manual.minRating}+`,
+				source: 'manual'
+			});
+		}
 	}
 	if (manual.priceMin != null) sq.priceMin = manual.priceMin;
 	if (manual.priceMax != null) sq.priceMax = manual.priceMax;
-	if (manual.nearMe) sq.nearMe = true;
+	if (manual.nearMe) {
+		sq.nearMe = true;
+		if (!sq.appliedIntents.some((intent) => intent.key === 'near')) {
+			sq.appliedIntents.push({ key: 'near', label: 'Near me', source: 'manual' });
+		}
+	}
 
 	return sq;
 }
