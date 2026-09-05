@@ -117,6 +117,10 @@
 						<option value={area.id}>{area.name}</option>
 					{/each}
 				</select>
+				<p class="body field-hint">
+					Only your general suburb or area is ever shown publicly. Your exact address is never
+					collected or stored — share precise directions yourself in messages when you choose.
+				</p>
 			</div>
 			<Input
 				id="password"

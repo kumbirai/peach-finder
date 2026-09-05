@@ -27,9 +27,9 @@ FR-PROF-04, FR-PRIV-02, SR-MEDIA-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PRIV-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PRIV-02)
+
+- **Scope:** US-PRIV-02 formalizes privacy-by-construction for provider location (area-only, no street address anywhere) and EXIF/GPS stripping on photo upload (SR-MEDIA-03). Core behaviour was introduced in US-PONB-03 (area step, media pipeline) and US-DISC-05 (transient seeker coords); this story adds regression coverage and surfaces the area-only privacy copy on provider registration.
+- **Backend:** No schema or API changes — `provider_profile.area_id` remains the finest location granularity (LLD §3.4); `toPublicProfile` exposes `{ name, slug }` area only. `media-processing` pipeline already strips metadata unconditionally (no `.withMetadata()` in infra).
+- **Frontend:** Added area-only privacy hint on `/provider/register` matching onboarding copy. Onboarding area step already had the StepTip (US-PONB-03).
+- **Tests:** `address-privacy.integration.test.ts` (TC-PRIV-02a schema + API audit), `exif-privacy.integration.test.ts` (TC-PRIV-02b full upload pipeline with geotagged fixture), enhanced `process-photo.test.ts` with `createGeotaggedJpegFixture`, `serializers.test.ts` area-only assertion, `testing/playwright/provider-address-privacy.e2e.ts` (TC-PRIV-02a/b live-stack + axe on register/onboarding area step).
+- **Assumption:** TC-PRIV-02b cross-references TC-PONB-03c — both assert the same EXIF strip invariant; US-PRIV-02 adds geotagged-source regression and E2E verification at the HTTP boundary.
+
+### Verification 2026-09-05
+
+- `npm run check` — 0 errors (5 pre-existing Svelte warnings).
+- `npm run lint` — clean.
+- `npm run test` — 149/149 unit tests passed.
+- `npm run test:integration -- address-privacy exif-privacy` — 3/3 passed (TC-PRIV-02a schema/API, TC-PRIV-02b upload pipeline).
+- `npm run test:e2e -- provider-address-privacy.e2e.ts` — 3/3 passed (TC-PRIV-02a UI/API, TC-PRIV-02b live EXIF strip, axe on register + onboarding area step).

@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { encodeVariants, assertDecodable } from '../infra/process-photo';
+import { assertNoImageMetadata, createGeotaggedJpegFixture } from '../test-support/geotagged-jpeg';
 
 describe('process-photo EXIF strip', () => {
-	it('strips metadata from every generated variant (TC-PONB-03c)', async () => {
-		const source = await sharp({
-			create: { width: 120, height: 80, channels: 3, background: '#cc8866' }
-		})
-			.jpeg()
-			.toBuffer();
+	it('strips metadata from every generated variant (TC-PONB-03c / TC-PRIV-02b)', async () => {
+		const source = await createGeotaggedJpegFixture();
+		const sourceMeta = await sharp(source).metadata();
+		expect(sourceMeta.exif?.length).toBeGreaterThan(0);
 
 		expect(await assertDecodable(source)).toBe(true);
 
@@ -16,10 +15,7 @@ describe('process-photo EXIF strip', () => {
 		expect(variants.length).toBeGreaterThan(0);
 
 		for (const variant of variants) {
-			const meta = await sharp(variant.bytes).metadata();
-			expect(meta.exif).toBeUndefined();
-			expect(meta.iptc).toBeUndefined();
-			expect(meta.xmp).toBeUndefined();
+			await assertNoImageMetadata(variant.bytes);
 		}
 	});
 });

@@ -51,4 +51,13 @@ describe('toPublicProfile', () => {
 		const dto = toPublicProfile({ ...baseView, phoneVisible: true }, anonymousAuth('127.0.0.1'));
 		expect(dto.phone).toBe('+27821234001');
 	});
+
+	it('TC-PRIV-02a: exposes area only and never a street address field', () => {
+		const dto = toPublicProfile(baseView, anonymousAuth('127.0.0.1'));
+		expect(dto.area).toEqual({ name: 'Rosebank', slug: 'rosebank' });
+		expect('address' in dto).toBe(false);
+		expect('street' in dto).toBe(false);
+		expect('streetAddress' in dto).toBe(false);
+		expect(JSON.stringify(dto)).not.toMatch(/"address"/);
+	});
 });
