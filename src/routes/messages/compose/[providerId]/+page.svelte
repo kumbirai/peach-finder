@@ -2,6 +2,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import QuickStartPrompts from '$lib/components/QuickStartPrompts.svelte';
 
 	const DRAFT_KEY = (id: string) => `pf_message_draft_${id}`;
 
@@ -85,6 +86,13 @@
 			{/each}
 		</ul>
 	{/if}
+
+	<QuickStartPrompts
+		composerText={body}
+		onSelect={(nextText) => {
+			body = nextText;
+		}}
+	/>
 
 	<form class="composer" method="POST" action="?/send" onsubmit={handleSubmit}>
 		<Input id="message-body" label="Your message" name="body" bind:value={body} />

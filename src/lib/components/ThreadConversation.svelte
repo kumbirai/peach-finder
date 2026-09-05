@@ -3,6 +3,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import MessageBubble from '$lib/components/MessageBubble.svelte';
+	import QuickStartPrompts from '$lib/components/QuickStartPrompts.svelte';
 	import { applyDeliveryUpdate } from '$lib/messaging/delivery-label';
 	import { fetchThreadPoll } from '$lib/messaging/poll-client';
 	import { latestMessageId, mergeThreadMessages } from '$lib/messaging/thread-messages';
@@ -15,7 +16,8 @@
 		counterpartName,
 		initialMessages,
 		backHref = '/messages',
-		forcePolling = false
+		forcePolling = false,
+		showQuickStartPrompts = false
 	}: {
 		threadId: string;
 		viewerId: string;
@@ -23,6 +25,7 @@
 		initialMessages: ThreadMessage[];
 		backHref?: string;
 		forcePolling?: boolean;
+		showQuickStartPrompts?: boolean;
 	} = $props();
 
 	let messages = $state.raw<ThreadMessage[]>([...initialMessages]);
@@ -215,6 +218,15 @@
 		<MessageBubble {message} {viewerId} />
 	{/each}
 </div>
+
+{#if showQuickStartPrompts}
+	<QuickStartPrompts
+		composerText={body}
+		onSelect={(nextText) => {
+			body = nextText;
+		}}
+	/>
+{/if}
 
 <form
 	class="composer"

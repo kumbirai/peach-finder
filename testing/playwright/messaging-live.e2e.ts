@@ -7,6 +7,32 @@ import {
 	SEED_DUAL_ROLE_PROFILE_ID
 } from '../../scripts/seed-core';
 
+function isProfilePage(url: string): boolean {
+	return new URL(url).pathname === '/profile';
+}
+
+async function expectProfilePage(
+	page: import('@playwright/test').Page,
+	timeout = 15_000
+): Promise<void> {
+	await expect(page).toHaveURL(isProfilePage, { timeout });
+}
+
+async function fetchDevVerificationToken(
+	request: import('@playwright/test').APIRequestContext,
+	email: string
+): Promise<string> {
+	for (let attempt = 0; attempt < 20; attempt++) {
+		const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+		if (tokenRes.ok()) {
+			const { data } = (await tokenRes.json()) as { data: { token: string } };
+			return data.token;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 250));
+	}
+	throw new Error(`Dev verification token unavailable for ${email}`);
+}
+
 async function registerAndVerifySeeker(
 	page: import('@playwright/test').Page,
 	request: import('@playwright/test').APIRequestContext,
@@ -20,21 +46,14 @@ async function registerAndVerifySeeker(
 	await page.getByLabel('Password').fill(password);
 	await page.locator('input[name="acceptedTerms"]').check();
 	await page.getByRole('button', { name: 'Create account' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+	await expectProfilePage(page);
 
-	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
-	if (!tokenRes.ok()) {
-		await page.waitForTimeout(500);
-		const retry = await request.post('/api/dev/verification-token', { data: { email } });
-		expect(retry.ok()).toBe(true);
-		const retryData = (await retry.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${retryData.data.token}&returnTo=/profile`);
-	} else {
-		const { data } = (await tokenRes.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
-	}
-	await page.getByRole('button', { name: 'Verify email' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+	const token = await fetchDevVerificationToken(request, email);
+	await page.goto(`/verify-email?token=${token}&returnTo=/profile`);
+	await Promise.all([
+		expectProfilePage(page),
+		page.getByRole('button', { name: 'Verify email' }).click()
+	]);
 }
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
@@ -42,7 +61,7 @@ async function signIn(page: import('@playwright/test').Page, email: string, pass
 	await page.getByLabel('Email').fill(email);
 	await page.getByLabel('Password').fill(password);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+	await expectProfilePage(page);
 }
 
 async function openThreadWithProvider(
@@ -195,5 +214,43 @@ test.describe('US-MSG-02 live conversation', () => {
 		expect(serious).toEqual([]);
 
 		await context.close();
+	});
+});
+
+test.describe('US-MSG-03 quick-start prompts', () => {
+	test('TC-MSG-03a: quick-start prompt inserts plain editable text into composer', async ({
+		page
+	}) => {
+		const email = `msg03a-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg03a Seeker');
+		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Opening message');
+
+		const composer = page.getByLabel('Write a message');
+		await expect(composer).toHaveValue('');
+		const outboundBefore = await page.getByTestId('message-bubble-outbound').count();
+
+		const promptButton = page.getByRole('button', { name: 'Are you available today?' });
+		await expect(promptButton).toBeVisible();
+		await promptButton.click();
+		await expect(page.getByTestId('message-bubble-outbound')).toHaveCount(outboundBefore);
+		await expect(composer).toHaveValue('Are you available today?');
+		await expect(composer).toBeEditable();
+
+		await composer.fill('Are you available today at 3pm?');
+		await expect(composer).toHaveValue('Are you available today at 3pm?');
+	});
+
+	test('TC-MSG-03b: thread view has no booking widgets or structured controls', async ({
+		page
+	}) => {
+		const email = `msg03b-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg03b Seeker');
+		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Checking UI');
+
+		await expect(page.getByRole('group', { name: 'Quick-start prompts' })).toBeVisible();
+		await expect(page.getByRole('spinbutton')).toHaveCount(0);
+		await expect(page.getByRole('combobox')).toHaveCount(0);
+		await expect(page.locator('[data-booking], [data-slot-picker]')).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /confirm booking/i })).toHaveCount(0);
 	});
 });

@@ -34,6 +34,7 @@
 		initialMessages={data.messages}
 		backHref={data.backHref}
 		forcePolling={data.forcePolling}
+		showQuickStartPrompts={data.viewerRole === 'seeker'}
 	/>
 </main>
 

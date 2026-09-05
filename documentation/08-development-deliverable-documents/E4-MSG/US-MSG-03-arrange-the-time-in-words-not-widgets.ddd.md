@@ -27,9 +27,9 @@ FR-MSG-03, FR-MSG-04, FR-AVAIL-08 (guard).
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,12 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-MSG-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-MSG-03 implemented**
+
+- **Backend (`direct-messaging`):** No new endpoints or schema — arrangement stays plain text per FR-MSG-03/04. Existing `POST …/messages` and `POST /api/messaging/threads` accept `{ body }` only; integration guard `plain-text-arrangement.integration.test.ts` (TC-MSG-03b) asserts `direct_messaging` tables carry no booking/slot/calendar columns.
+- **Frontend:** `QuickStartPrompts.svelte` + `quick-start-prompts.ts` — prototype-aligned blush/pine pill buttons insert editable plain text into the composer (not sent until user taps Send). Shown on seeker thread view (`ThreadConversation` when `viewerRole === 'seeker'`) and first-contact compose page; hidden for provider inbox view.
+- **Tests:** `quick-start-prompts.test.ts` (TC-MSG-03a unit); `plain-text-arrangement.integration.test.ts` (TC-MSG-03b schema guard); Playwright `TC-MSG-03a/b` in `testing/playwright/messaging-live.e2e.ts`.
+- **Assumption:** Prototype JS sends quick-replies immediately on click; product spec (FR-MSG-03/04, TC-MSG-03a) requires insert-into-composer-only — implementation follows the spec, not the prototype's demo behaviour.
