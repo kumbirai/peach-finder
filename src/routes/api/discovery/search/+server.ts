@@ -57,7 +57,8 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 	return json(
 		success(result.cards, {
 			nextCursor: result.nextCursor,
-			appliedIntents: JSON.stringify(result.appliedIntents)
+			appliedIntents: JSON.stringify(result.appliedIntents),
+			...(result.relaxation ? { relaxation: JSON.stringify(result.relaxation) } : {})
 		}),
 		{ headers: { 'cache-control': DISCOVERY_CACHE_CONTROL } }
 	);

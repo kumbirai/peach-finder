@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import Button from '$lib/components/Button.svelte';
+	import EmptySearchState from '$lib/components/EmptySearchState.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import NearMeControl, { type ProximityState } from '$lib/components/NearMeControl.svelte';
 	import ProviderCard from '$lib/components/ProviderCard.svelte';
@@ -14,7 +14,7 @@
 		structuredQueryToParams,
 		type SearchUrlState
 	} from '$lib/search-url';
-	import type { AppliedIntent, SearchCard } from '$lib/types/discovery';
+	import type { AppliedIntent, RelaxationSuggestion, SearchCard } from '$lib/types/discovery';
 
 	const DISCOVERY_REFRESH_MS = 60_000;
 
@@ -37,6 +37,7 @@
 			lng: number | null;
 			areaSlug: string | null;
 			proximityLabel: string | null;
+			relaxation: RelaxationSuggestion | null;
 		};
 	} = $props();
 
@@ -144,6 +145,11 @@
 			])
 		)
 	);
+	const relaxationHref = $derived(
+		data.relaxation
+			? hrefForState(removeIntentFromState(currentUrlState(), data.relaxation.intentKey))
+			: null
+	);
 
 	onMount(() => {
 		const timer = window.setInterval(() => {
@@ -219,11 +225,11 @@
 			{/each}
 		</div>
 	{:else if data.cards.length === 0}
-		<div class="empty">
-			<p class="title">No therapists match those filters.</p>
-			<p class="body">Try removing a filter or broadening your search.</p>
-			<Button href="/" variant="secondary">Clear filters</Button>
-		</div>
+		<EmptySearchState
+			appliedIntents={data.appliedIntents}
+			relaxationActionLabel={data.relaxation?.actionLabel ?? null}
+			{relaxationHref}
+		/>
 	{:else}
 		<p class="results-summary label">
 			{data.cards.length} therapist{data.cards.length === 1 ? '' : 's'} found
@@ -295,14 +301,6 @@
 	.results-summary {
 		color: var(--color-stone);
 		margin: 0;
-	}
-	.empty {
-		display: grid;
-		gap: var(--space-md);
-		padding: var(--space-xl);
-		background: var(--color-paper);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-ambient-rest);
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.search-sticky {

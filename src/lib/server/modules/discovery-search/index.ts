@@ -8,6 +8,7 @@ export {
 	type ManualFilters,
 	type ParseConfig
 } from './domain/parse-query';
+export { suggestRelaxation, type RelaxationSuggestion } from './domain/suggest-relaxation';
 export { resolveSearchCoords, type ResolvedSearchCoords } from './app/resolve-search-coords';
 export { runSearch, runSuggest, type SearchInput, type SearchResult };
 export type { SearchCard, Suggestion } from './app/serializers';

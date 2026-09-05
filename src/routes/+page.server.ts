@@ -129,6 +129,7 @@ export async function load({ url, locals, setHeaders }) {
 		cards: result.cards,
 		appliedIntents: result.appliedIntents,
 		proximityLabel: result.proximityLabel,
+		relaxation: result.relaxation,
 		q,
 		verified,
 		available,

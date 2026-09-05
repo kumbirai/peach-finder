@@ -3,6 +3,7 @@ import type { Database } from '../../../db';
 import type { AuthContext } from '../../../shared/auth-context';
 import { getConfig } from '../../platform-configuration';
 import { dedupeIntents, parseQuery } from '../domain/parse-query';
+import { suggestRelaxation, type RelaxationSuggestion } from '../domain/suggest-relaxation';
 import type { StructuredQuery } from '../domain/structured-query';
 import { resolveSearchCoords } from './resolve-search-coords';
 import {
@@ -36,6 +37,7 @@ export type SearchResult = {
 	nextCursor: string | null;
 	appliedIntents: Array<{ key: string; label: string; source: string }>;
 	proximityLabel: string | null;
+	relaxation: RelaxationSuggestion | null;
 };
 
 function buildStructuredQuery(input: SearchInput): StructuredQuery {
@@ -181,11 +183,14 @@ export async function runSearch(
 	const proximityLabel =
 		lat != null && lng != null ? (coords.areaName ? `Near ${coords.areaName}` : 'Near you') : null;
 
+	const relaxation = cards.length === 0 ? suggestRelaxation(sq) : null;
+
 	return {
 		cards,
 		nextCursor: null,
 		appliedIntents: sq.appliedIntents,
-		proximityLabel
+		proximityLabel,
+		relaxation
 	};
 }
 

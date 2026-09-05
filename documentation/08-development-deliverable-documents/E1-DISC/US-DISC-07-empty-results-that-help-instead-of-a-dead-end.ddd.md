@@ -27,9 +27,9 @@ FR-SRCH-10, FR-UX-05.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,26 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-07 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor
+
+**Approach:** Added deterministic `suggestRelaxation(sq)` in `discovery-search/domain` following LLD §9 priority order (available_now → min_rating → near_me → price band → verified → language → service_tag). `runSearch` attaches `relaxation` when the ranking query returns zero rows; search API meta exposes it as JSON. Replaced the generic empty block on `/` with prototype-matched `EmptySearchState.svelte` listing constraining filter labels and a single one-tap relaxation link built via existing `removeIntentFromState` URL helpers — one filter removed per tap, never bulk clear-all.
+
+**Files touched:**
+- `src/lib/server/modules/discovery-search/domain/suggest-relaxation.ts` (+ unit tests)
+- `src/lib/server/modules/discovery-search/app/search.ts`
+- `src/lib/server/modules/discovery-search/empty-result-relaxation.integration.test.ts`
+- `src/lib/components/EmptySearchState.svelte`
+- `src/routes/+page.svelte`, `src/routes/+page.server.ts`
+- `src/routes/api/discovery/search/+server.ts`
+- `testing/playwright/search-empty-relaxation.e2e.ts`
+
+**Assumption:** `near_me` is a relaxation candidate whenever `StructuredQuery.nearMe` is true even though V2 search SQL does not hard-filter by distance (near only affects ordering); empty results in that case are caused by co-applied filters such as price or verification.
+
+**Follow-ups:** None for this story.
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor (verification)
+
+**Verification:** `npm run check` 0 errors; `npm run lint` green (Prettier fix on `testing/playwright/search-empty-relaxation.e2e.ts`); unit 136/136; integration 90/90; Playwright `search-empty-relaxation.e2e.ts` 4/4 including axe (zero critical/serious). Build blueprint checklist complete; Definition of Done met on live-seeded stack.

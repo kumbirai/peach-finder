@@ -21,3 +21,9 @@ export type Suggestion = {
 	term: string;
 	kind: string;
 };
+
+export type RelaxationSuggestion = {
+	intentKey: string;
+	filterLabel: string;
+	actionLabel: string;
+};
