@@ -7,7 +7,8 @@ import { zId } from '$lib/server/shared/zod';
 import { sendOrHoldMessage } from '$lib/server/modules/direct-messaging';
 import { applyMessagingRateLimitsBeforeSend } from '$lib/server/modules/direct-messaging/infra/messaging-rate-limits';
 import { isEmailVerified } from '$lib/server/modules/identity-and-access';
-import { parseProviderProfileId } from '$lib/server/modules/provider-profile';
+import { parseProviderProfileId, getProfileOwnerIdDb } from '$lib/server/modules/provider-profile';
+import { notifyMessageSent } from '$lib/server/ws/hub';
 
 export const _requiredRole: Role = 'seeker';
 
@@ -106,6 +107,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (value.kind === 'sent') {
+		const ownerId = await getProfileOwnerIdDb(db, profileId.value);
+		if (ownerId) {
+			await notifyMessageSent({
+				threadId: value.threadId,
+				messageId: value.messageId,
+				senderId: locals.auth.userId,
+				recipientId: ownerId,
+				body: parsed.data.body.trim(),
+				sentAt: now
+			});
+		}
+
 		return json(
 			success({
 				status: 'sent',

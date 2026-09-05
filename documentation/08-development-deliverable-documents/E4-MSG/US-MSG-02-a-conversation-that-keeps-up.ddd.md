@@ -27,9 +27,9 @@ FR-MSG-02, SR-APP-05, SR-PERF-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,12 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-MSG-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-MSG-02 implemented**
+
+- **Backend (`direct-messaging`):** Thread participant access (`thread-access.ts`), message serializers with outbound delivery state, `sendMessageInThread`, `listThreadMessages`, `pollThreadMessages` (sets `delivered_at` on inbound fetch), `markThreadReadUpTo`. API routes: `GET/POST /api/messaging/threads/:threadId/messages`, `POST …/read`, `GET …/poll`. WS hub (`src/lib/server/ws/hub.ts`) registers connections, pushes `message.sent` / `message.delivered` / `message.read`, handles `presence.heartbeat`, `message.received` (delivery ack), `thread.typing`. `notifyMessageSent` wired from thread create/send paths. Vite dev WS upgrade plugin (`vite.ws-plugin.ts`) + `globalThis` connection map so dev/E2E share one hub instance.
+- **Frontend:** `/messages/[threadId]` thread view with `ThreadConversation` + `MessageBubble` (prototype-aligned bubbles, Sent/Delivered/Read labels per Never-Color-Alone). Client `MessagingTransport` — WS with exponential backoff, polling fallback at 4s after 3 failed reconnects (`?forcePolling=1` for tests). Compose redirects to thread when one exists; messages list and provider inbox link to thread routes.
+- **Tests:** `conversation-delivery.integration.test.ts` (TC-MSG-02b/c, block 404, delivery idempotency); domain/unit tests for delivery state and serializers; Playwright `testing/playwright/messaging-live.e2e.ts` (TC-MSG-02a–c + axe). Updated TC-MSG-01a in `search-to-contact.e2e.ts` for thread redirect flow.
+- **Assumption:** Client→server delivery ack uses `message.received` WS type (payload `{ threadId, messageId }`) — completes LLD §4.2 ack path not named in `event-catalog.md` §6; catalog lists only server→client delivery types.

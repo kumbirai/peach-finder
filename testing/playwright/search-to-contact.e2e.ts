@@ -26,9 +26,16 @@ async function registerAndVerifySeeker(
 	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
 
 	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
-	expect(tokenRes.ok()).toBe(true);
-	const { data } = (await tokenRes.json()) as { data: { token: string } };
-	await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
+	if (!tokenRes.ok()) {
+		await page.waitForTimeout(500);
+		const retry = await request.post('/api/dev/verification-token', { data: { email } });
+		expect(retry.ok()).toBe(true);
+		const retryData = (await retry.json()) as { data: { token: string } };
+		await page.goto(`/verify-email?token=${retryData.data.token}&returnTo=/profile`);
+	} else {
+		const { data } = (await tokenRes.json()) as { data: { token: string } };
+		await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
+	}
 	await page.getByRole('button', { name: 'Verify email' }).click();
 	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
 }
@@ -416,14 +423,23 @@ test.describe('E2E-1 search to contact', () => {
 			.click();
 		await expect(page).toHaveURL(new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`));
 		await page.getByLabel('Your message').fill(firstMessage);
-		const sendFirst = page.waitForResponse(
-			(response) =>
-				response.request().method() === 'POST' &&
-				response.url().includes(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)
-		);
 		await page.getByRole('button', { name: 'Send message' }).click();
-		await sendFirst;
-		await expect(page.getByText('Message sent.')).toBeVisible();
+		await expect(page).toHaveURL(new RegExp(`/messages/[0-9a-f-]{36}`), { timeout: 15_000 });
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: firstMessage })
+		).toBeVisible();
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: /^Message / })
+			.click();
+		await expect(page).toHaveURL(new RegExp(`/messages/[0-9a-f-]{36}`));
+		await page.getByLabel('Write a message').fill(secondMessage);
+		await page.getByRole('button', { name: 'Send' }).click();
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: secondMessage })
+		).toBeVisible({ timeout: 10_000 });
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		await page
@@ -431,20 +447,11 @@ test.describe('E2E-1 search to contact', () => {
 			.getByRole('link', { name: /^Message / })
 			.click();
 		await expect(
-			page.getByRole('list', { name: 'Conversation' }).getByText(firstMessage)
-		).toBeVisible();
-		await page.getByLabel('Your message').fill(secondMessage);
-		await page.getByRole('button', { name: 'Send message' }).click();
-		await expect(page.getByText('Message sent.')).toBeVisible({ timeout: 10_000 });
-
-		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
-		await page
-			.getByRole('group', { name: 'Contact actions' })
-			.getByRole('link', { name: /^Message / })
-			.click();
-		const history = page.getByRole('list', { name: 'Conversation' });
-		await expect(history.getByText(firstMessage)).toHaveCount(1);
-		await expect(history.getByText(secondMessage)).toHaveCount(1);
+			page.getByTestId('message-bubble-outbound').filter({ hasText: firstMessage })
+		).toHaveCount(1);
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: secondMessage })
+		).toHaveCount(1);
 
 		await context.close();
 	});

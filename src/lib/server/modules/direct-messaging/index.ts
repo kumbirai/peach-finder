@@ -9,6 +9,7 @@ import {
 	validateMessageBody,
 	canSeekerMessageProvider,
 	threadExistsForSeekerProvider,
+	sendMessageInThread,
 	type SendOrHoldResult,
 	type ThreadSummary
 } from './infra/messaging-commands';
@@ -26,6 +27,7 @@ export {
 	validateMessageBody,
 	canSeekerMessageProvider,
 	threadExistsForSeekerProvider,
+	sendMessageInThread,
 	getDevMessageState,
 	getPresence,
 	getResponseTime,
@@ -42,6 +44,14 @@ export {
 	handleUserBlocked,
 	handleUserUnblocked
 } from './infra/subscriptions';
+export {
+	listThreadMessages,
+	pollThreadMessages,
+	markThreadReadUpTo,
+	getThreadHeader
+} from './infra/messaging-queries';
+export { resolveThreadAccess } from './infra/thread-access';
+export type { MessageDTO } from './infra/serializers';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

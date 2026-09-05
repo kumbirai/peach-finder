@@ -19,6 +19,8 @@ import {
 } from '../../provider-profile';
 import { isBlockedBetween } from './block-cache';
 import { messages, pendingMessages, threads } from './schema';
+import { resolveThreadAccess } from './thread-access';
+import { upsertPresenceHeartbeat } from './presence-heartbeat';
 
 const MAX_BODY_LENGTH = 4000;
 
@@ -217,6 +219,71 @@ async function sendMessageInTransaction(
 	return Ok({ threadId, messageId });
 }
 
+export async function sendMessageInThread(
+	db: Database,
+	input: {
+		threadId: ThreadId;
+		senderId: UserId;
+		body: string;
+		now: Date;
+		correlationId: string;
+	}
+): Promise<
+	Result<{ threadId: ThreadId; messageId: MessageId; recipientId: UserId }, UseCaseError>
+> {
+	const bodyErr = validateMessageBody(input.body);
+	if (bodyErr) {
+		return Err({ kind: 'validation_failed', issues: [{ path: 'body', message: bodyErr }] });
+	}
+
+	const access = await resolveThreadAccess(db, input.threadId, input.senderId);
+	if (!access.ok) return access;
+
+	const body = input.body.trim();
+	const messageId = newId<'MessageId'>();
+	const recipientId = access.value.counterpartUserId;
+
+	await db.transaction(async (tx) => {
+		await tx
+			.update(threads)
+			.set({ lastActivityAt: input.now })
+			.where(eq(threads.id, input.threadId));
+
+		await tx.insert(messages).values({
+			id: messageId,
+			threadId: input.threadId,
+			senderId: input.senderId,
+			body,
+			sentAt: input.now
+		});
+
+		const msgEvent: DomainEvent<
+			'MessageSent',
+			{ threadId: string; messageId: string; senderId: string }
+		> = {
+			eventId: newId<'OutboxEventId'>(),
+			eventName: 'MessageSent',
+			version: 1,
+			occurredAt: asInstant(input.now.toISOString()),
+			correlationId: input.correlationId,
+			payload: {
+				threadId: input.threadId,
+				messageId,
+				senderId: input.senderId
+			}
+		};
+		await publish(tx, msgEvent);
+	});
+
+	await upsertPresenceHeartbeat(db, input.senderId, input.now);
+
+	return Ok({
+		threadId: input.threadId,
+		messageId,
+		recipientId
+	});
+}
+
 export async function releaseHeldMessagesForUser(
 	db: Database | Transaction,
 	userId: UserId,
@@ -254,7 +321,14 @@ export async function getThreadForSeekerProvider(
 	providerProfileId: ProviderProfileId
 ): Promise<{
 	threadId: ThreadId;
-	messages: Array<{ id: string; body: string; sentAt: Date; senderId: string }>;
+	messages: Array<{
+		id: string;
+		body: string;
+		sentAt: Date;
+		senderId: string;
+		deliveredAt: Date | null;
+		readAt: Date | null;
+	}>;
 } | null> {
 	if (await isMessagingBlockedForSeekerProvider(db, seekerId, providerProfileId)) {
 		return null;
@@ -274,7 +348,9 @@ export async function getThreadForSeekerProvider(
 			id: messages.id,
 			body: messages.body,
 			sentAt: messages.sentAt,
-			senderId: messages.senderId
+			senderId: messages.senderId,
+			deliveredAt: messages.deliveredAt,
+			readAt: messages.readAt
 		})
 		.from(messages)
 		.where(eq(messages.threadId, thread.id))

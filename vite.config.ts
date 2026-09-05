@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { wsUpgradePlugin } from './vite.ws-plugin';
 
 export default defineConfig(({ mode }) => {
 	const loaded = loadEnv(mode, process.cwd(), '');
@@ -9,7 +10,7 @@ export default defineConfig(({ mode }) => {
 	}
 
 	return {
-		plugins: [sveltekit()],
+		plugins: [sveltekit(), wsUpgradePlugin()],
 		test: {
 			expect: { requireAssertions: true },
 			environment: 'node',

@@ -1,4 +1,4 @@
-import { error, fail, type Actions } from '@sveltejs/kit';
+import { error, fail, redirect, type Actions } from '@sveltejs/kit';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import type { ProviderProfileId } from '$lib/server/shared/ids';
@@ -13,6 +13,8 @@ import { resolveComposerDraft } from '$lib/server/modules/direct-messaging/domai
 import { getPublicProfile, parseProviderProfileId } from '$lib/server/modules/provider-profile';
 import { applyMessagingRateLimitsBeforeSend } from '$lib/server/modules/direct-messaging/infra/messaging-rate-limits';
 import { useCaseErrorToHttp } from '$lib/server/shared/api';
+import { notifyMessageSent } from '$lib/server/ws/hub';
+import { getProfileOwnerIdDb } from '$lib/server/modules/provider-profile';
 
 export const _requiredRole: Role = 'seeker';
 
@@ -52,6 +54,10 @@ export async function load({ params, locals, url }) {
 		pendingBody: pending?.body ?? null,
 		hasExistingThread: thread !== null
 	});
+
+	if (thread) {
+		redirect(303, `/messages/${thread.threadId}`);
+	}
 
 	return {
 		providerProfileId: params.providerId,
@@ -114,6 +120,22 @@ export const actions: Actions = {
 			return { held: true as const };
 		}
 
-		return { sent: true as const };
+		if (result.value.kind !== 'sent') {
+			return fail(500, { message: 'Could not send message.' });
+		}
+
+		const ownerId = await getProfileOwnerIdDb(db, parsed.value);
+		if (ownerId) {
+			await notifyMessageSent({
+				threadId: result.value.threadId,
+				messageId: result.value.messageId,
+				senderId: locals.auth.userId,
+				recipientId: ownerId,
+				body: body.trim(),
+				sentAt: now
+			});
+		}
+
+		redirect(303, `/messages/${result.value.threadId}`);
 	}
 };

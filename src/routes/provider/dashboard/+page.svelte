@@ -132,10 +132,12 @@
 				<ul class="inbox-list">
 					{#each data.inbox as thread (thread.threadId)}
 						<li>
-							<Card>
-								<p class="label counterpart">{thread.counterpartName}</p>
-								<p class="body preview">{thread.lastMessagePreview}</p>
-							</Card>
+							<a class="inbox-link" href="/messages/{thread.threadId}">
+								<Card>
+									<p class="label counterpart">{thread.counterpartName}</p>
+									<p class="body preview">{thread.lastMessagePreview}</p>
+								</Card>
+							</a>
 						</li>
 					{/each}
 				</ul>
@@ -220,6 +222,16 @@
 	.preview {
 		margin: 0;
 		color: var(--color-stone);
+	}
+	.inbox-link {
+		display: block;
+		color: inherit;
+		text-decoration: none;
+		border-radius: var(--radius-card);
+	}
+	.inbox-link:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
 	}
 	.stat-row {
 		display: grid;

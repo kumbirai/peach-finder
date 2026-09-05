@@ -5,6 +5,8 @@ import { publicAppOrigin } from '../env';
 import { getDb } from '../db';
 import { SESSION_COOKIE, findActiveSession } from '../modules/identity-and-access';
 import { log } from '../shared/logger';
+import type { UserId } from '../shared/ids';
+import { handleWsClientMessage, registerWsConnection } from './hub';
 
 const wss = new WebSocketServer({ noServer: true });
 
@@ -59,6 +61,8 @@ export async function attachWsUpgrade(
 	}
 
 	wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+		const userId = session.userId as UserId;
+		registerWsConnection(userId, ws);
 		ws.send(
 			JSON.stringify({
 				type: 'connected',
@@ -66,6 +70,14 @@ export async function attachWsUpgrade(
 				sentAt: new Date().toISOString()
 			})
 		);
+		ws.on('message', (data) => {
+			const raw = typeof data === 'string' ? data : data.toString('utf8');
+			void handleWsClientMessage(userId, raw).catch((err) =>
+				log('warn', 'ws message handler failed', {
+					err: err instanceof Error ? err.message : 'unknown'
+				})
+			);
+		});
 		ws.on('error', (err) => log('warn', 'ws error', { err: err.message }));
 	});
 }
