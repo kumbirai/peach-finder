@@ -4,6 +4,7 @@ import { getDb } from '$lib/server/db';
 import { bucketSpec, consumeRateLimit } from '$lib/server/shared/rate-limit';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
 import { runSearch } from '$lib/server/modules/discovery-search';
+import { DISCOVERY_CACHE_CONTROL } from '$lib/server/modules/discovery-search/discovery-cache';
 import { getActiveLexiconForSearch } from '$lib/server/modules/platform-configuration';
 
 export const _requiredRole: Role = 'anonymous';
@@ -53,6 +54,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 		success(result.cards, {
 			nextCursor: result.nextCursor,
 			appliedIntents: JSON.stringify(result.appliedIntents)
-		})
+		}),
+		{ headers: { 'cache-control': DISCOVERY_CACHE_CONTROL } }
 	);
 };

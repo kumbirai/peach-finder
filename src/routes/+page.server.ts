@@ -1,11 +1,13 @@
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { runSearch } from '$lib/server/modules/discovery-search';
+import { DISCOVERY_CACHE_CONTROL } from '$lib/server/modules/discovery-search/discovery-cache';
 import { getActiveLexiconForSearch } from '$lib/server/modules/platform-configuration';
 
 export const _requiredRole: Role = 'anonymous';
 
-export async function load({ url, locals }) {
+export async function load({ url, locals, setHeaders }) {
+	setHeaders({ 'cache-control': DISCOVERY_CACHE_CONTROL });
 	const db = getDb();
 	const lexicon = await getActiveLexiconForSearch(db);
 

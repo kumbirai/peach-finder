@@ -12,24 +12,28 @@
 </script>
 
 <Card href="/provider/{card.providerProfileId}">
-	{#if card.photoUrl}
-		<img class="card-photo" src={card.photoUrl} alt="" loading="lazy" />
-	{:else}
-		<div class="card-photo placeholder" aria-hidden="true">Photo placeholder</div>
-	{/if}
+	<div class="photo-wrap">
+		{#if card.photoUrl}
+			<img class="card-photo" src={card.photoUrl} alt="" loading="lazy" />
+		{:else}
+			<div class="card-photo placeholder" aria-hidden="true">Photo placeholder</div>
+		{/if}
+		<div class="pill-row">
+			{#if card.availability.state === 'available'}
+				<AvailabilityPill setAt={card.availability.setAt} />
+			{/if}
+			{#if card.isFeatured}
+				<span class="featured label">Featured</span>
+			{/if}
+		</div>
+	</div>
 	<div class="card-body">
 		<div class="badges">
-			{#if card.availability.state === 'available'}
-				<AvailabilityPill />
-			{/if}
 			{#if card.badges.identityVerified}
 				<Badge kind="verified" />
 			{/if}
 			{#if card.badges.activeThisWeek}
 				<Badge kind="verified" label="Active this week" />
-			{/if}
-			{#if card.isFeatured}
-				<span class="featured label">Featured</span>
 			{/if}
 		</div>
 		<h2 class="title">{card.displayName}</h2>
@@ -44,6 +48,19 @@
 </Card>
 
 <style>
+	.photo-wrap {
+		position: relative;
+	}
+	.pill-row {
+		position: absolute;
+		top: var(--space-sm);
+		left: var(--space-sm);
+		right: var(--space-sm);
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		align-items: flex-start;
+	}
 	.badges {
 		display: flex;
 		flex-wrap: wrap;
@@ -68,7 +85,12 @@
 		color: var(--color-peach-deep);
 	}
 	.featured {
-		color: var(--color-peach-deep);
+		display: inline-flex;
+		align-items: center;
+		background: var(--color-ink);
+		color: var(--color-paper);
+		border-radius: var(--radius-pill);
+		padding: 4px 10px;
 	}
 	.placeholder {
 		display: flex;

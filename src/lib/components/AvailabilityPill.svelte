@@ -1,5 +1,15 @@
 <script lang="ts">
-	let { label = 'Available now' }: { label?: string } = $props();
+	import { availabilityPillLabel } from '$lib/availability-recency';
+
+	let {
+		setAt = null,
+		now = new Date()
+	}: {
+		setAt?: string | null;
+		now?: Date;
+	} = $props();
+
+	const label = $derived(availabilityPillLabel(setAt, now));
 </script>
 
 <span class="pill" data-component="availability-pill">
@@ -12,7 +22,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		background: var(--color-blush);
+		background: var(--color-paper);
 		color: var(--color-peach-deep-hover);
 		font-family: var(--font-label-family);
 		font-size: var(--font-label-size);
@@ -20,6 +30,7 @@
 		letter-spacing: var(--font-label-letter-spacing);
 		border-radius: var(--radius-pill);
 		padding: 4px 10px 4px 8px;
+		box-shadow: var(--shadow-ambient-rest);
 	}
 	.dot {
 		width: 6px;
@@ -27,6 +38,7 @@
 		border-radius: 50%;
 		background: var(--color-peach-deep);
 		animation: pulse var(--motion-pulse-availability) var(--motion-ease-out-expo) infinite;
+		flex-shrink: 0;
 	}
 	.text {
 		color: inherit;

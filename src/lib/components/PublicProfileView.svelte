@@ -59,7 +59,7 @@
 	<header class="profile-header">
 		<div class="badges">
 			{#if profile.availability.state === 'available'}
-				<AvailabilityPill />
+				<AvailabilityPill setAt={profile.availability.setAt} />
 			{/if}
 			{#if profile.badges.identityVerified}
 				<Badge kind="verified" />

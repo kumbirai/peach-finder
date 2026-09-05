@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import Button from '$lib/components/Button.svelte';
@@ -9,6 +10,8 @@
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import type { AppliedIntent, SearchCard } from '$lib/types/discovery';
+
+	const DISCOVERY_REFRESH_MS = 60_000;
 
 	let {
 		data
@@ -24,6 +27,14 @@
 
 	let query = $derived(data.q);
 	let searching = $state(false);
+
+	const availableCards = $derived(
+		data.cards.filter((card) => card.availability.state === 'available')
+	);
+	const restCards = $derived(data.cards.filter((card) => card.availability.state !== 'available'));
+	const isDefaultHomepage = $derived(
+		!data.q && !data.verified && !data.available && data.appliedIntents.length === 0
+	);
 
 	function buildUrl(overrides: Record<string, string | undefined>) {
 		const params = new SvelteURLSearchParams(page.url.searchParams);
@@ -50,6 +61,16 @@
 		else if (key === 'available') goto(buildUrl({ available: undefined }));
 		else goto(buildUrl({ q: undefined }));
 	}
+
+	onMount(() => {
+		const timer = window.setInterval(() => {
+			const params = new URLSearchParams(window.location.search);
+			if (!params.get('q') && params.get('verified') !== '1' && params.get('available') !== '1') {
+				void invalidateAll();
+			}
+		}, DISCOVERY_REFRESH_MS);
+		return () => window.clearInterval(timer);
+	});
 </script>
 
 <svelte:head>
@@ -114,9 +135,24 @@
 			{data.cards.length} therapist{data.cards.length === 1 ? '' : 's'} found
 		</p>
 		<div class="grid">
-			{#each data.cards as card (card.providerProfileId)}
-				<ProviderCard {card} />
-			{/each}
+			{#if isDefaultHomepage && availableCards.length > 0}
+				<h2 class="section-label">
+					{availableCards.length} available now
+				</h2>
+				{#each availableCards as card (card.providerProfileId)}
+					<ProviderCard {card} />
+				{/each}
+				{#if restCards.length > 0}
+					<h2 class="section-label section-label--rest">More therapists nearby</h2>
+					{#each restCards as card (card.providerProfileId)}
+						<ProviderCard {card} />
+					{/each}
+				{/if}
+			{:else}
+				{#each data.cards as card (card.providerProfileId)}
+					<ProviderCard {card} />
+				{/each}
+			{/if}
 		</div>
 	{/if}
 </main>
@@ -141,6 +177,20 @@
 		display: grid;
 		gap: var(--space-lg);
 		grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+	}
+	.section-label {
+		grid-column: 1 / -1;
+		font-family: var(--font-body-family);
+		font-weight: 600;
+		font-size: 1.125rem;
+		color: var(--color-ink);
+		margin: 0;
+	}
+	.section-label--rest {
+		margin-top: var(--space-sm);
+		padding-top: var(--space-lg);
+		border-top: 1px solid var(--color-divider);
+		color: var(--color-stone);
 	}
 	.results-summary {
 		color: var(--color-stone);

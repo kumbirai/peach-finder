@@ -30,9 +30,9 @@ FR-SRCH-01, FR-AVAIL-05, FR-UX-02, FR-UX-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -49,3 +49,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-DISC-01)
+
+**Approach:** Homepage default view reuses `runSearch` with empty filters (already availability-first per LLD §6/§7). Delivered US-DISC-01-specific UX: cohort section headings ("N available now" / "More therapists nearby"), availability pill on card photo with recency phrasing via `src/lib/availability-recency.ts`, SR-PERF-06 `Cache-Control: private, max-age=60, must-revalidate` on `/` SSR and `GET /api/discovery/search`, and 60s client `invalidateAll` on the unfiltered homepage.
+
+**Tests:** `homepage-available-now.integration.test.ts` (TC-DISC-01a–c), `availability-recency.test.ts`, `e2e/homepage-available-now.e2e.ts` (TC-DISC-01a–d + axe).
+
+**Verified:** `npm run check`, `npm run lint`, `npm run test`, `npm run test:integration`, `npm run boundaries`, `npm run build`, `npx playwright test e2e/homepage-available-now.e2e.ts`.
