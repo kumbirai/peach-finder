@@ -29,9 +29,9 @@ FR-PROF-01, FR-PROF-03, FR-PROF-04, SR-MEDIA-02/03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,25 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-05 — Cursor Composer
+
+**Approach:** Replaced US-PONB-02 photo placeholder with a full `media-processing` pipeline (sharp variants, EXIF strip, 10 MB / 12-photo caps) and `provider-profile` photo commands (attach, reorder, primary, delete) wired through API routes, worker subscriptions (`MediaProcessed` / `MediaRemoved`), and `PhotoUploader.svelte` on the onboarding wizard. Added `service_tag_proposal` table + `proposeTag` server action. Migration `0005_us_ponb_03_profile_media.sql`.
+
+**Storage:** Dev/test uses local filesystem under `MEDIA_LOCAL_ROOT` (default `.media-local`); MinIO client deferred — same public URL shape via `/media/[...path]`.
+
+**UI fixes discovered in E2E:** Photos-step Continue uses `href` (client `goto` unreliable under Playwright); tag proposal uses separate `?/proposeTag` form with redirect flash query params; languages step uses native checkbox chips (`:has(:checked)` styling) so form POST works without client onclick.
+
+**Tests:** `media-processing/domain/upload-policy.test.ts`, `media-processing/infra/process-photo.test.ts` (TC-PONB-03c EXIF), `provider-profile/profile-media.integration.test.ts`, `e2e/provider-profile-build.e2e.ts` (TC-PONB-03a–f + axe). Updated `e2e/provider-onboarding-guided.e2e.ts` for real uploads.
+
+**Verified:** `npm run check` (0 errors), `npm run lint`, `npm run test` (87), `npm run test:integration` (33), `npm run boundaries`, `npm run build`, E2E PONB-02/03 specs (7/7 with `CI=1`).
+
+**Follow-ups:** Wire MinIO in `media-processing/infra/storage.ts` for production parity; content-hash dedup rejects identical re-uploads at DB level (by design per LLD).
+
+### 2026-09-05 — Cursor Composer (verification pass)
+
+**Fixes:** OTP rate-limit phone hourly/daily buckets now use distinct keys (`phone_hour:` / `phone_day:`) so colliding `window_start` at UTC midnight no longer double-counts; `profile-media.integration.test.ts` guards `otpId` before verify; tag-proposal form uses `use:enhance` and renders `data.proposalFlash` directly so TC-PONB-03e status message appears after redirect.
+
+**Verified:** `npm run check`, `npm run lint`, `npm run test` (87), `npm run test:integration` (33), `npm run boundaries`, `npm run build`, E2E PONB-02/03 (7/7, `CI=1`).

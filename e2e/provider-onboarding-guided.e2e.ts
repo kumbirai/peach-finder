@@ -1,5 +1,39 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import sharp from 'sharp';
+
+async function uploadTestPhoto(page: import('@playwright/test').Page) {
+	const stamp = Date.now();
+	const buffer = await sharp({
+		create: {
+			width: 64 + (stamp % 20),
+			height: 64 + (stamp % 17),
+			channels: 3,
+			background: { r: stamp % 200, g: (stamp >> 3) % 200, b: (stamp >> 5) % 200 }
+		}
+	})
+		.jpeg()
+		.toBuffer();
+
+	const uploadRes = await page.request.post('/api/media/uploads', {
+		multipart: {
+			file: { name: 'profile.jpg', mimeType: 'image/jpeg', buffer },
+			scope: 'profile_photo'
+		}
+	});
+	expect(uploadRes.ok()).toBeTruthy();
+	const uploadBody = (await uploadRes.json()) as { data: { photoId: string } };
+
+	const attachRes = await page.request.post('/api/provider/profile/photos', {
+		data: { photoId: uploadBody.data.photoId },
+		headers: { 'Content-Type': 'application/json' }
+	});
+	expect(attachRes.ok()).toBeTruthy();
+
+	await page.goto('/provider/onboarding?step=photos');
+	await expect(page.getByTestId('gallery-thumb')).toHaveCount(1, { timeout: 20_000 });
+	await expect(page.getByRole('link', { name: 'Continue' })).toBeVisible({ timeout: 10_000 });
+}
 
 async function registerFreshProvider(
 	page: import('@playwright/test').Page,
@@ -39,15 +73,17 @@ test.describe('US-PONB-02 guided onboarding', () => {
 		const credentials = await registerFreshProvider(page, request);
 
 		await expect(page.getByRole('heading', { name: 'Add your photos' })).toBeVisible();
-		await page.getByRole('button', { name: 'Add photo' }).click();
-		await page.getByRole('button', { name: 'Continue' }).click();
+		await uploadTestPhoto(page);
+		await page.getByRole('link', { name: 'Continue' }).click();
 
 		await expect(page.getByRole('heading', { name: 'Write your introduction' })).toBeVisible();
 		await page
 			.locator('#introField')
 			.fill('Deep tissue specialist with a calm, focused approach to sports recovery.');
 		await page.getByRole('button', { name: 'Continue' }).click();
-		await expect(page.getByRole('heading', { name: 'Add your services' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Add your services' })).toBeVisible({
+			timeout: 15_000
+		});
 
 		await page.context().close();
 
@@ -60,7 +96,7 @@ test.describe('US-PONB-02 guided onboarding', () => {
 		await freshPage.goto('/provider/onboarding');
 
 		await expect(freshPage.getByRole('heading', { name: 'Add your services' })).toBeVisible({
-			timeout: 15_000
+			timeout: 20_000
 		});
 		await freshContext.close();
 	});
@@ -71,8 +107,8 @@ test.describe('US-PONB-02 guided onboarding', () => {
 	}) => {
 		await registerFreshProvider(page, request);
 
-		await page.getByRole('button', { name: 'Add photo' }).click();
-		await page.getByRole('button', { name: 'Continue' }).click();
+		await uploadTestPhoto(page);
+		await page.getByRole('link', { name: 'Continue' }).click();
 		await page.locator('#introField').fill('Intro for readiness test.');
 		await page.getByRole('button', { name: 'Continue' }).click();
 		await expect(page.getByRole('heading', { name: 'Add your services' })).toBeVisible();

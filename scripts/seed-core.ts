@@ -1,5 +1,5 @@
 import type { Database } from '../src/lib/server/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { users } from '../src/lib/server/modules/identity-and-access/infra/schema';
 import {
 	languages,
@@ -417,11 +417,22 @@ export async function seedCore(db: Database): Promise<void> {
 			.values({
 				id: p.photoId,
 				ownerId: p.userId,
+				bucket: 'media',
 				status: 'ready',
-				cardUrl: PLACEHOLDER_CARD,
-				galleryUrl: PLACEHOLDER_GALLERY
+				objectKey: 'seed/placeholder',
+				contentHash: `seed-${p.photoId}`,
+				mimeType: 'image/svg+xml',
+				sizeBytes: 0
 			})
 			.onConflictDoNothing();
+
+		await db.execute(sql`
+			insert into media_processing.photo_variant (photo_id, variant, url, width, height)
+			values
+				(${p.photoId}::uuid, 'card_640_webp', ${PLACEHOLDER_CARD}, 640, 480),
+				(${p.photoId}::uuid, 'gallery_1280_webp', ${PLACEHOLDER_GALLERY}, 1280, 720)
+			on conflict do nothing
+		`);
 
 		await db
 			.insert(providerPhotos)

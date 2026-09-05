@@ -4,11 +4,11 @@ import { getDb } from '$lib/server/db';
 import { asId } from '$lib/server/shared/ids';
 import { listAreas } from '$lib/server/modules/platform-configuration';
 import {
-	attachOnboardingPhoto,
 	addService,
 	loadOwnerProfile,
 	listActiveLanguages,
 	listActiveServiceTags,
+	proposeServiceTag,
 	setLanguages,
 	setServiceTags,
 	updateArea,
@@ -45,11 +45,17 @@ export async function load({ locals, url }) {
 	const missingSummary = profile.readiness.ready
 		? ''
 		: formatMissingFields(profile.readiness.missing);
+	const proposedTagName = url.searchParams.get('proposedTag');
+	const proposalFlash =
+		url.searchParams.get('proposal') === 'ok' && proposedTagName
+			? `“${proposedTagName}” submitted for review. You can keep building your profile.`
+			: null;
 
 	return {
 		profile,
 		activeStep,
 		missingSummary,
+		proposalFlash,
 		areas: areas
 			.filter((a) => a.isActive)
 			.map((a) => ({ id: a.id, name: a.name }))
@@ -60,20 +66,6 @@ export async function load({ locals, url }) {
 }
 
 export const actions: Actions = {
-	savePhoto: async ({ locals }) => {
-		const db = getDb();
-		const result = await attachOnboardingPhoto(
-			db,
-			locals.auth.userId!,
-			crypto.randomUUID(),
-			new Date()
-		);
-		if (!result.ok) {
-			return fail(400, { message: 'Could not add photo. Try again.' });
-		}
-		redirect(303, '/provider/onboarding?step=intro');
-	},
-
 	saveIntro: async ({ request, locals }) => {
 		const db = getDb();
 		const data = await request.formData();
@@ -175,5 +167,27 @@ export const actions: Actions = {
 			return fail(422, { issues: [{ path: 'areaId', message: 'Select a valid area.' }] });
 		}
 		redirect(303, '/provider/onboarding?step=publish');
+	},
+
+	proposeTag: async ({ request, locals }) => {
+		const db = getDb();
+		const data = await request.formData();
+		const name = String(data.get('name') ?? '');
+		const result = await proposeServiceTag(db, locals.auth.userId!, name);
+		if (!result.ok) {
+			if (result.error.kind === 'validation_failed') {
+				return fail(422, {
+					issues: result.error.issues,
+					proposalName: name,
+					proposalMessage: 'Enter a tag name up to 60 characters.'
+				});
+			}
+			return fail(400, { proposalMessage: 'Could not submit that tag proposal. Try again.' });
+		}
+		const trimmed = name.trim();
+		redirect(
+			303,
+			`/provider/onboarding?step=services&proposal=ok&proposedTag=${encodeURIComponent(trimmed)}`
+		);
 	}
 };

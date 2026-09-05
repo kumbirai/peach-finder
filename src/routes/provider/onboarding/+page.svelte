@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Chip from '$lib/components/Chip.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import OnboardingStepper from '$lib/components/onboarding/OnboardingStepper.svelte';
+	import PhotoUploader from '$lib/components/onboarding/PhotoUploader.svelte';
 	import StepTip from '$lib/components/onboarding/StepTip.svelte';
 
 	const INTRO_LIMIT = 600;
@@ -26,7 +28,7 @@
 				onboarding: {
 					steps: Array<{ step: OnboardingStep; complete: boolean }>;
 				};
-				photos: Array<{ id: string; isPrimary: boolean; cardUrl: string }>;
+				photos: Array<{ id: string; photoId: string; isPrimary: boolean; cardUrl: string }>;
 				services: Array<{
 					name: string;
 					durationMinutes: number;
@@ -37,6 +39,7 @@
 			};
 			activeStep: OnboardingStep;
 			missingSummary: string;
+			proposalFlash: string | null;
 			areas: AreaOption[];
 			languages: LanguageOption[];
 			serviceTags: TagOption[];
@@ -45,6 +48,8 @@
 			issues?: Array<{ path: string; message: string }>;
 			intro?: string;
 			message?: string;
+			proposalMessage?: string;
+			proposalName?: string;
 		};
 	} = $props();
 
@@ -54,22 +59,27 @@
 	let durationMinutes = $state('60');
 	let priceRands = $state('');
 	let selectedAreaId = $state('');
-	let selectedLanguages = $state<string[]>([]);
 	let selectedTags = $state<string[]>([]);
+	let proposedTag = $state('');
+	let proposalMessage = $state<string | null>(null);
 
 	$effect(() => {
+		proposalMessage = data.proposalFlash;
 		if (form?.intro !== undefined) {
 			introValue = form.intro;
 			return;
+		}
+		if (form?.proposalMessage !== undefined) {
+			proposalMessage = form.proposalMessage;
+		}
+		if (form?.proposalName !== undefined) {
+			proposedTag = form.proposalName;
 		}
 		if (activeStep === 'intro') {
 			introValue = data.profile.intro ?? '';
 		}
 		if (activeStep === 'area') {
 			selectedAreaId = data.profile.areaId ?? data.areas[0]?.id ?? '';
-		}
-		if (activeStep === 'languages') {
-			selectedLanguages = [...data.profile.languageCodes];
 		}
 		if (activeStep === 'services') {
 			selectedTags = [...data.profile.selectedTagIds];
@@ -79,7 +89,9 @@
 	const completedEssentials = $derived(
 		data.profile.onboarding.steps.filter((s) => s.complete && s.step !== 'publish').length
 	);
-	const introLength = $derived(introValue.length);
+	const introLength = $derived(
+		activeStep === 'intro' ? introValue.length : (data.profile.intro ?? '').length
+	);
 
 	function selectStep(step: OnboardingStep) {
 		goto(`/provider/onboarding?step=${step}`);
@@ -93,12 +105,6 @@
 		}
 	}
 
-	function toggleLanguage(code: string) {
-		selectedLanguages = selectedLanguages.includes(code)
-			? selectedLanguages.filter((c) => c !== code)
-			: [...selectedLanguages, code];
-	}
-
 	function toggleTag(id: string) {
 		selectedTags = selectedTags.includes(id)
 			? selectedTags.filter((t) => t !== id)
@@ -107,6 +113,10 @@
 
 	function formatPrice(cents: number): string {
 		return `R${(cents / 100).toFixed(0)}`;
+	}
+
+	async function refreshProfile() {
+		await invalidateAll();
 	}
 </script>
 
@@ -145,37 +155,11 @@
 					filters, and show your actual treatment space — it is what makes a seeker comfortable
 					messaging first.
 				</StepTip>
-				<div class="upload-grid">
-					{#each data.profile.photos as photo (photo.id)}
-						<div class="upload-thumb">
-							<img src={photo.cardUrl} alt="" class="thumb-img" />
-							{#if photo.isPrimary}
-								<span class="primary-tag label">Primary</span>
-							{/if}
-						</div>
-					{/each}
-					{#if data.profile.photos.length < 12}
-						<form method="POST" action="?/savePhoto" class="upload-form">
-							<button type="submit" class="upload-dropzone">
-								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-									<path
-										d="M12 5v14M5 12h14"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-									/>
-								</svg>
-								Add photo
-							</button>
-						</form>
-					{/if}
-				</div>
+				<PhotoUploader photos={data.profile.photos} onUploaded={refreshProfile} />
 				<div class="onboarding-actions">
 					<span></span>
 					{#if data.profile.photos.length > 0}
-						<Button variant="primary" type="button" onclick={() => selectStep('intro')}>
-							Continue
-						</Button>
+						<Button variant="primary" href="/provider/onboarding?step=intro">Continue</Button>
 					{/if}
 				</div>
 			{:else if activeStep === 'intro'}
@@ -222,7 +206,7 @@
 						{/each}
 					</ul>
 				{/if}
-				<form method="POST" action="?/saveService" class="step-form">
+				<form id="saveServiceForm" method="POST" action="?/saveService" class="step-form">
 					<div class="service-row">
 						<div>
 							<label class="field-label" for="serviceName">Service name</label>
@@ -272,11 +256,32 @@
 					{#each selectedTags as tagId (tagId)}
 						<input type="hidden" name="tagIds" value={tagId} />
 					{/each}
-					<div class="onboarding-actions">
-						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
-						<Button variant="primary" type="submit">Continue</Button>
+				</form>
+				<form method="POST" action="?/proposeTag" class="proposal-form" use:enhance>
+					<div class="proposal-row">
+						<label class="field-label" for="proposedTag">Missing a tag?</label>
+						<div class="proposal-input-row">
+							<input
+								class="field-input"
+								id="proposedTag"
+								name="name"
+								placeholder="Propose a new tag"
+								bind:value={proposedTag}
+								maxlength="60"
+							/>
+							<Button variant="secondary" type="submit">Propose</Button>
+						</div>
+						{#if data.proposalFlash || proposalMessage}
+							<p class="proposal-note body" role="status">
+								{data.proposalFlash ?? proposalMessage}
+							</p>
+						{/if}
 					</div>
 				</form>
+				<div class="onboarding-actions">
+					<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
+					<Button variant="primary" type="submit" form="saveServiceForm">Continue</Button>
+				</div>
 			{:else if activeStep === 'languages'}
 				<h2 class="headline step-title">Languages you speak</h2>
 				<StepTip>
@@ -285,22 +290,22 @@
 				<form method="POST" action="?/saveLanguages" class="step-form">
 					<div class="chip-row">
 						{#each data.languages as lang (lang.code)}
-							<Chip
-								selected={selectedLanguages.includes(lang.code)}
-								onclick={() => toggleLanguage(lang.code)}
-							>
+							<label class="chip chip-selectable">
+								<input
+									type="checkbox"
+									class="chip-input"
+									name="codes"
+									value={lang.code}
+									checked={data.profile.languageCodes.includes(lang.code)}
+									aria-label={lang.name}
+								/>
 								{lang.name}
-							</Chip>
+							</label>
 						{/each}
 					</div>
-					{#each selectedLanguages as code (code)}
-						<input type="hidden" name="codes" value={code} />
-					{/each}
 					<div class="onboarding-actions">
 						<Button variant="ghost" type="button" onclick={goBack}>Back</Button>
-						<Button variant="primary" type="submit" disabled={selectedLanguages.length === 0}>
-							Continue
-						</Button>
+						<Button variant="primary" type="submit">Continue</Button>
 					</div>
 				</form>
 			{:else if activeStep === 'area'}
@@ -462,62 +467,6 @@
 		margin-top: 4px;
 		color: var(--color-stone);
 	}
-	.upload-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-		gap: var(--space-sm);
-	}
-	.upload-form {
-		display: contents;
-	}
-	.upload-dropzone {
-		aspect-ratio: 1 / 1;
-		border: 1.5px dashed var(--color-divider);
-		border-radius: var(--radius-md);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 4px;
-		color: var(--color-stone);
-		background: none;
-		font-family: var(--font-body-family);
-		font-size: 0.75rem;
-		font-weight: 600;
-		cursor: pointer;
-		min-height: 44px;
-		width: 100%;
-	}
-	.upload-dropzone:hover {
-		border-color: var(--color-peach-deep);
-		color: var(--color-peach-deep);
-	}
-	.upload-dropzone:focus-visible {
-		outline: 2px solid var(--color-peach-deep);
-		outline-offset: 2px;
-	}
-	.upload-thumb {
-		position: relative;
-		aspect-ratio: 1 / 1;
-		border-radius: var(--radius-md);
-		background: linear-gradient(155deg, var(--color-blush) 0%, #ecd2bd 100%);
-		overflow: hidden;
-	}
-	.thumb-img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-	.primary-tag {
-		position: absolute;
-		bottom: 4px;
-		left: 4px;
-		background: var(--color-ink);
-		color: var(--color-paper);
-		font-size: 0.625rem;
-		padding: 2px 6px;
-		border-radius: var(--radius-pill);
-	}
 	.service-row {
 		display: grid;
 		grid-template-columns: 2fr 1fr 1fr;
@@ -534,6 +483,41 @@
 		flex-wrap: wrap;
 		gap: var(--space-sm);
 		margin-bottom: var(--space-md);
+	}
+	.chip-selectable {
+		font-family: var(--font-label-family);
+		font-size: var(--font-label-size);
+		font-weight: var(--font-label-weight);
+		letter-spacing: var(--font-label-letter-spacing);
+		background: var(--color-paper);
+		color: var(--color-ink);
+		border: 1px solid var(--color-stone);
+		border-radius: var(--radius-pill);
+		padding: 8px 16px;
+		cursor: pointer;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+	}
+	.chip-selectable:focus-within {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
+	}
+	.chip-selectable:has(.chip-input:checked) {
+		background: var(--color-ink);
+		color: var(--color-paper);
+		border-color: var(--color-ink);
+	}
+	.chip-input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 	.onboarding-actions {
 		display: flex;
@@ -570,5 +554,24 @@
 	}
 	.step-form {
 		display: block;
+	}
+	.proposal-row {
+		margin-top: var(--space-md);
+	}
+	.proposal-form {
+		display: block;
+		margin: 0;
+	}
+	.proposal-input-row {
+		display: flex;
+		gap: var(--space-sm);
+		align-items: center;
+	}
+	.proposal-input-row .field-input {
+		flex: 1;
+	}
+	.proposal-note {
+		margin: var(--space-sm) 0 0;
+		color: var(--color-pine);
 	}
 </style>

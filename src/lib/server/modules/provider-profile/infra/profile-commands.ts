@@ -1,6 +1,14 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import sharp from 'sharp';
 import type { Database, Transaction } from '../../../db';
-import { newId, type AreaId, type ProviderProfileId, type UserId } from '../../../shared/ids';
+import { uploadProfilePhoto } from '../../media-processing';
+import {
+	newId,
+	type AreaId,
+	type PhotoId,
+	type ProviderProfileId,
+	type UserId
+} from '../../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
@@ -10,14 +18,14 @@ import { validateServiceInput, type ServiceInput } from '../domain/service-polic
 import {
 	languages,
 	providerLanguages,
-	providerPhotos,
 	providerProfiles,
 	providerServiceTags,
 	services,
 	serviceTags
 } from './schema';
+import { attachProfilePhoto } from './photo-commands';
+import { getGalleryReadyCount } from './gallery-count';
 
-const PLACEHOLDER_PHOTO_URL = '/placeholder-photo.svg';
 const MAX_GALLERY_PHOTOS = 12;
 
 async function requireOwnedProfile(
@@ -237,59 +245,47 @@ export async function attachOnboardingPhoto(
 	const owned = await requireOwnedProfile(db, userId);
 	if (!owned.ok) return owned;
 
-	const photoId = newId<'PhotoId'>();
-	const providerPhotoId = newId();
+	const readyCount = await getGalleryReadyCount(db, userId);
+	if (readyCount >= MAX_GALLERY_PHOTOS) {
+		return Err({ kind: 'conflict', reason: 'You already have the maximum number of photos.' });
+	}
 
-	return db.transaction(async (tx) => {
-		await tx.execute(sql`
-			select id from provider_profile.provider_profile
-			where id = ${owned.value.profileId}::uuid
-			for update
-		`);
-
-		const readyCountRows = await tx.execute<{ count: number }>(sql`
-			select count(*)::int as count
-			from provider_profile.provider_photo
-			where provider_profile_id = ${owned.value.profileId}::uuid
-			  and status = 'ready'
-		`);
-		const readyCount = (readyCountRows as unknown as { count: number }[])[0]?.count ?? 0;
-		if (readyCount >= MAX_GALLERY_PHOTOS) {
-			return Err({ kind: 'conflict', reason: 'You already have the maximum number of photos.' });
+	const bytes = await sharp({
+		create: {
+			width: 64,
+			height: 64,
+			channels: 3,
+			background: {
+				r: Math.floor(Math.random() * 200) + 20,
+				g: Math.floor(Math.random() * 200) + 20,
+				b: Math.floor(Math.random() * 200) + 20
+			}
 		}
+	})
+		.jpeg()
+		.toBuffer();
 
-		const existingPhotos = await tx
-			.select({ count: sql<number>`count(*)::int` })
-			.from(providerPhotos)
-			.where(eq(providerPhotos.providerProfileId, owned.value.profileId));
-		const isFirst = (existingPhotos[0]?.count ?? 0) === 0;
+	const uploaded = await uploadProfilePhoto(
+		db,
+		userId,
+		bytes,
+		'profile_photo',
+		readyCount,
+		correlationId,
+		now
+	);
+	if (!uploaded.ok) return uploaded;
 
-		await tx.execute(sql`
-			insert into media_processing.photo (id, owner_id, status, card_url, gallery_url)
-			values (${photoId}::uuid, ${userId}::uuid, 'ready', ${PLACEHOLDER_PHOTO_URL}, ${PLACEHOLDER_PHOTO_URL})
-		`);
+	const attached = await attachProfilePhoto(
+		db,
+		userId,
+		uploaded.value.photoId as PhotoId,
+		correlationId,
+		now
+	);
+	if (!attached.ok) return attached;
 
-		await tx.insert(providerPhotos).values({
-			id: providerPhotoId,
-			providerProfileId: owned.value.profileId,
-			photoId,
-			status: 'ready',
-			sortOrder: existingPhotos[0]?.count ?? 0,
-			isPrimary: isFirst
-		});
-
-		const event: DomainEvent<'PhotoAdded', { providerProfileId: string; photoId: string }> = {
-			eventId: newId<'OutboxEventId'>(),
-			eventName: 'PhotoAdded',
-			version: 1,
-			occurredAt: asInstant(now.toISOString()),
-			correlationId,
-			payload: { providerProfileId: owned.value.profileId, photoId }
-		};
-		await publish(tx, event);
-
-		return Ok({ photoId });
-	});
+	return Ok({ photoId: uploaded.value.photoId });
 }
 
 export async function listActiveLanguages(db: Database) {

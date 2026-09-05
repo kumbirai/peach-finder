@@ -65,9 +65,14 @@ export async function loadOwnerProfile(
 
 	const [photoRows, serviceRows, languageRows, tagRows, areaRow] = await Promise.all([
 		db.execute<{ id: string; photo_id: string; is_primary: boolean; card_url: string }>(sql`
-			select pp.id, pp.photo_id, pp.is_primary, coalesce(mp.card_url, '/placeholder-photo.svg') as card_url
+			select pp.id, pp.photo_id, pp.is_primary,
+				coalesce(
+					(select pv.url from media_processing.photo_variant pv
+					 where pv.photo_id = pp.photo_id and pv.variant like 'card_640%'
+					 limit 1),
+					'/placeholder-photo.svg'
+				) as card_url
 			from provider_profile.provider_photo pp
-			left join media_processing.photo mp on mp.id = pp.photo_id
 			where pp.provider_profile_id = ${profileId}::uuid
 			  and pp.status = 'ready'
 			order by pp.sort_order

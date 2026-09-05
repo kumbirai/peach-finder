@@ -131,6 +131,15 @@ export {
 	listActiveLanguages,
 	listActiveServiceTags
 } from './infra/profile-commands';
+export { getGalleryReadyCount, getGalleryTotalCount } from './infra/gallery-count';
+export {
+	attachProfilePhoto,
+	reorderProfilePhotos,
+	setPrimaryProfilePhoto,
+	deleteProfilePhoto
+} from './infra/photo-commands';
+export { proposeServiceTag } from './infra/tag-proposal-commands';
+export { handleMediaProcessed, handleMediaRemoved } from './infra/subscriptions';
 export { formatMissingFields, MISSING_FIELD_LABELS } from './domain/missing-field-labels';
 export { INTRO_MAX_LENGTH, validateIntro } from './domain/intro-policy';
 export {

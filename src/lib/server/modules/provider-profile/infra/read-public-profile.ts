@@ -80,9 +80,18 @@ export async function loadProfileView(
 		.where(eq(providerLanguages.providerProfileId, providerProfileId));
 
 	const photoRows = await db.execute<PhotoRow>(sql`
-		SELECT pp.id, p.gallery_url AS "galleryUrl", pp.is_primary AS "isPrimary"
+		SELECT pp.id,
+			coalesce(
+				(select pv.url from media_processing.photo_variant pv
+				 where pv.photo_id = pp.photo_id and pv.variant like 'gallery_1280%'
+				 limit 1),
+				(select pv.url from media_processing.photo_variant pv
+				 where pv.photo_id = pp.photo_id and pv.variant like 'card_640%'
+				 limit 1),
+				'/placeholder-photo.svg'
+			) AS "galleryUrl",
+			pp.is_primary AS "isPrimary"
 		FROM provider_profile.provider_photo pp
-		INNER JOIN media_processing.photo p ON p.id = pp.photo_id
 		WHERE pp.provider_profile_id = ${providerProfileId}
 		  AND pp.status = 'ready'
 		ORDER BY pp.sort_order

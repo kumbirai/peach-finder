@@ -128,7 +128,7 @@ pass "unquoted <<TASK prompt bodies escape backticks"
 # Render the FOUNDATION prompt (no agent) and assert identifiers survive.
 DUMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$DUMP_DIR"' EXIT
-LOG_DIR="$DUMP_DIR" "$DRIVER" --dry-run --only FOUNDATION --resume-dirty >/dev/null
+LOG_DIR="$DUMP_DIR" "$DRIVER" --dry-run --force --only FOUNDATION --resume-dirty >/dev/null
 prompt="$(find "$DUMP_DIR" -name 'FOUNDATION-*.prompt.txt' -print | sort | tail -n1)"
 [[ -n "$prompt" && -f "$prompt" ]] || fail "dry-run did not write a FOUNDATION prompt"
 grep -Fq '`platform-configuration`' "$prompt" \
@@ -138,5 +138,14 @@ grep -Fq '`src/hooks.server.ts`' "$prompt" \
 grep -Fq '`src/lib/server/modules/<module>/`' "$prompt" \
   || fail "FOUNDATION prompt lost module-layout path"
 pass "dry-run FOUNDATION prompt preserves backtick-quoted identifiers"
+
+# run_agent must not pass prompt-file contents as argv (Linux MAX_ARG_STRLEN
+# is 128KiB; US-PONB-03's review prompt was 221KB and failed with exit 126).
+if grep -A30 '^run_agent()' "$DRIVER" | grep -Fq 'prompt="$(<'; then
+  fail "run_agent still loads the prompt file into argv"
+fi
+grep -A30 '^run_agent()' "$DRIVER" | grep -Fq 'prompt_file' \
+  || fail "run_agent must point the agent at the prompt file"
+pass "run_agent does not pass prompt contents as argv"
 
 echo "all checks passed"

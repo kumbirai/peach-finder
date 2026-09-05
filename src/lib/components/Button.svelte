@@ -8,6 +8,7 @@
 		type = 'button',
 		disabled = false,
 		href,
+		form,
 		onclick,
 		messageDraftKey,
 		children
@@ -16,6 +17,7 @@
 		type?: 'button' | 'submit';
 		disabled?: boolean;
 		href?: string;
+		form?: string;
 		onclick?: (event: MouseEvent) => void;
 		messageDraftKey?: string | undefined;
 		children: Snippet;
@@ -36,7 +38,7 @@
 		{@render children()}
 	</a>
 {:else}
-	<button class="btn btn-{variant}" {type} {disabled} {onclick}>
+	<button class="btn btn-{variant}" {type} {disabled} {form} {onclick}>
 		{@render children()}
 	</button>
 {/if}

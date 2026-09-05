@@ -9,6 +9,7 @@ import {
 	handleEmailVerified,
 	handleAccountDeletionRequested
 } from '../lib/server/modules/direct-messaging';
+import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import { log } from '../lib/server/shared/logger';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
@@ -35,6 +36,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			event.eventName === 'AccountDeletionRequested'
 		) {
 			await handleAccountDeletionRequested(db, event as never);
+		}
+		if (subscriber === 'provider-profile.attach-photo' && event.eventName === 'MediaProcessed') {
+			await handleMediaProcessed(db, event as never);
+		}
+		if (subscriber === 'provider-profile.detach-photo' && event.eventName === 'MediaRemoved') {
+			await handleMediaRemoved(db, event as never);
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';

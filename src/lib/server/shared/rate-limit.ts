@@ -77,7 +77,7 @@ export async function consumeOtpRequestRateLimits(
 	const phoneHour = await consumeRateLimit(
 		db,
 		bucketSpec('otp_request', 60 * 60_000, 3),
-		`phone:${input.phone}`,
+		`phone_hour:${input.phone}`,
 		now
 	);
 	if (!phoneHour.ok) return phoneHour;
@@ -85,7 +85,7 @@ export async function consumeOtpRequestRateLimits(
 	return consumeRateLimit(
 		db,
 		bucketSpec('otp_request', 24 * 60 * 60_000, 10),
-		`phone:${input.phone}`,
+		`phone_day:${input.phone}`,
 		now
 	);
 }

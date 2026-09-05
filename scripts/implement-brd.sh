@@ -776,6 +776,10 @@ TASK
   if it has none) rather than inventing a new document.
 - Stop only on unrecoverable errors, or per "# Fallback" below. When you
   stop, surface the failing command, its output, and your best next step.
+- NEVER start a long-running process (\`npm run dev\`, \`npm start\`, Vite,
+  file watchers, \`docker compose up\` without \`-d\`) in the foreground --
+  that hangs this driver until killed. Background it, use Playwright's
+  webServer, or curl a server that is already listening, then continue.
 
 # Process
 
@@ -952,6 +956,13 @@ $slice_paths
   \`stub_mode: forbidden\`.
 - Do not expand into unrelated dirty files outside Slice paths unless a
   confirmed defect in this slice cannot be fixed without touching them.
+- The verification-specialist "DO NOT MODIFY THE PROJECT" rule above is
+  superseded for this pass: you MUST fix confirmed defects. You still
+  MUST NOT commit.
+- NEVER start a long-running process (\`npm run dev\`, \`npm start\`, Vite,
+  file watchers, \`docker compose up\` without \`-d\`) in the foreground --
+  that hangs this driver until killed. Background it, use Playwright's
+  webServer, or curl a server that is already listening, then continue.
 
 # Process
 
@@ -1001,8 +1012,13 @@ TASK
 
 run_agent() {
   local prompt_file="$1" log_file="$2"
-  local prompt
-  prompt="$(< "$prompt_file")"
+  # Linux MAX_ARG_STRLEN is 128KiB. Passing the prompt as argv fails with
+  # "Argument list too long" (exit 126) once review prompts include a long
+  # slice-path list — US-PONB-03's review prompt was 221KB. Point the agent
+  # at the already-written file instead.
+  local pointer
+  pointer="The complete task prompt is the file below. Read it in full with your file tool, then follow it exactly. Do not ask questions. Begin immediately.
+${prompt_file}"
 
   "$AGENT_BIN" \
     --model "$MODEL" \
@@ -1011,7 +1027,7 @@ run_agent() {
     --workspace "$ROOT" \
     --trust \
     --output-format "$OUTPUT_FORMAT" \
-    "$prompt" \
+    "$pointer" \
     >"$log_file" 2>&1
 }
 
