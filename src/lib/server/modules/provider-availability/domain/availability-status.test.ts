@@ -53,6 +53,21 @@ describe('availability-status domain', () => {
 		}
 	});
 
+	it('clear from ExpiryWarned yields NotAvailable', () => {
+		const status: AvailabilityStatus = {
+			kind: 'ExpiryWarned',
+			providerProfileId: profileId,
+			setAt: now,
+			expiresAt,
+			warnedAt: asInstant('2026-09-05T13:45:00Z')
+		};
+		const result = clear(status);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.value.kind).toBe('NotAvailable');
+		}
+	});
+
 	it('ExpiryWarned collapses to available for discovery', () => {
 		const status: AvailabilityStatus = {
 			kind: 'ExpiryWarned',

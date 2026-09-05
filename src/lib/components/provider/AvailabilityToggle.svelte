@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 
 	export type AvailabilityUiState = {
 		state: 'not_available' | 'available' | 'expiry_warned';
@@ -10,18 +10,20 @@
 
 	let {
 		availability,
-		variant = 'hero'
+		variant = 'hero',
+		formAction = '?/toggleAvailability'
 	}: {
 		availability: Pick<AvailabilityUiState, 'state' | 'expiresAt'>;
 		variant?: 'hero' | 'compact';
+		formAction?: string;
 	} = $props();
 
 	let saving = $state(false);
 	let errorMessage = $state<string | null>(null);
-	let optimisticLive = $state<boolean | null>(null);
+	let userOverride = $state<boolean | null>(null);
 
 	const serverLive = $derived(availability.state !== 'not_available');
-	const live = $derived(optimisticLive ?? serverLive);
+	const live = $derived(userOverride ?? serverLive);
 	const expiresAtLabel = $derived(formatExpiryLabel(availability.expiresAt));
 
 	function formatExpiryLabel(expiresAt: string | null): string | null {
@@ -31,60 +33,17 @@
 	}
 
 	function statusHeadline(isLive: boolean): string {
-		return isLive ? "You're available now" : 'Set yourself available';
+		return isLive ? "You're available now" : "You're away";
 	}
 
 	function statusCopy(isLive: boolean, expiryLabel: string | null): string {
 		if (!isLive) {
-			return 'One tap shows you first to nearby seekers looking right now.';
+			return 'Your profile remains listed, but you no longer appear in the available-now group.';
 		}
 		if (expiryLabel) {
 			return `Shown first to nearby seekers. Expires at ${expiryLabel}, and we'll remind you before it does.`;
 		}
 		return 'Shown first to nearby seekers looking right now.';
-	}
-
-	async function persistToggle(nextLive: boolean) {
-		if (saving) return;
-
-		saving = true;
-		errorMessage = null;
-
-		try {
-			const response = await fetch('/api/availability/status', {
-				method: nextLive ? 'POST' : 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
-				body: '{}'
-			});
-
-			if (!response.ok) {
-				optimisticLive = null;
-				errorMessage = 'Could not update your availability. Please try again.';
-				return;
-			}
-
-			await response.json();
-			optimisticLive = nextLive;
-			await invalidateAll();
-			optimisticLive = null;
-		} catch {
-			optimisticLive = null;
-			errorMessage = 'Could not update your availability. Please try again.';
-		} finally {
-			saving = false;
-		}
-	}
-
-	function handleToggle() {
-		if (saving) return;
-		const next = !live;
-		optimisticLive = next;
-		void persistToggle(next);
-	}
-
-	function handleSubmit(event: SubmitEvent) {
-		event.preventDefault();
-		handleToggle();
 	}
 </script>
 
@@ -92,7 +51,31 @@
 	class="availability-control"
 	class:availability-control--hero={variant === 'hero'}
 	class:availability-control--compact={variant === 'compact'}
-	onsubmit={handleSubmit}
+	method="POST"
+	action={formAction}
+	use:enhance={() => {
+		if (saving) return;
+
+		const previous = live;
+		const next = !live;
+		saving = true;
+		errorMessage = null;
+		userOverride = next;
+
+		return async ({ result, update }) => {
+			try {
+				if (result.type === 'failure') {
+					userOverride = previous;
+					errorMessage = 'Could not update your availability. Please try again.';
+					return;
+				}
+				userOverride = null;
+				await update();
+			} finally {
+				saving = false;
+			}
+		};
+	}}
 >
 	<div class="copy">
 		<h2 class="status-headline" id="availability-status-label">{statusHeadline(live)}</h2>

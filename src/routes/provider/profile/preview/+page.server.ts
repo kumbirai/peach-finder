@@ -1,8 +1,12 @@
-import { redirect, type Actions } from '@sveltejs/kit';
+import { fail, redirect, type Actions } from '@sveltejs/kit';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { getProfilePreviewForOwner, loadOwnerProfile } from '$lib/server/modules/provider-profile';
-import { getAvailabilityStatusForOwner } from '$lib/server/modules/provider-availability';
+import {
+	clearAvailabilityForOwner,
+	getAvailabilityStatusForOwner,
+	setAvailabilityForOwner
+} from '$lib/server/modules/provider-availability';
 
 export const _requiredRole: Role = 'provider';
 
@@ -44,4 +48,25 @@ export async function load({ locals }) {
 	};
 }
 
-export const actions: Actions = {};
+export const actions: Actions = {
+	toggleAvailability: async ({ locals }) => {
+		const db = getDb();
+		const now = new Date();
+		const correlationId = crypto.randomUUID();
+		const current = await getAvailabilityStatusForOwner(db, locals.auth.userId!, now);
+		if (!current.ok) {
+			return fail(404, { message: 'We could not find your profile.' });
+		}
+
+		const result =
+			current.value.state === 'not_available'
+				? await setAvailabilityForOwner(db, locals.auth.userId!, correlationId, now)
+				: await clearAvailabilityForOwner(db, locals.auth.userId!, correlationId, now);
+
+		if (!result.ok) {
+			return fail(400, { message: 'Could not update your availability.' });
+		}
+
+		return { availability: result.value };
+	}
+};

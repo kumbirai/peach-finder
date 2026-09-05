@@ -157,3 +157,60 @@ test.describe('US-AVAIL-01 one tap available', () => {
 		await anonContext.close();
 	});
 });
+
+test.describe('US-AVAIL-02 one tap im done', () => {
+	test('TC-AVAIL-02a: single-tap clear removes provider from available-now surfaces', async ({
+		page,
+		browser
+	}) => {
+		const { profileId, displayName } = await registerAndPublishProvider(page);
+
+		const setRes = await page.request.post('/api/availability/status');
+		expect(setRes.ok(), await setRes.text()).toBeTruthy();
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+
+		const toggle = page.getByRole('switch', { name: "You're available now" });
+		await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+		await anonPage.goto('/');
+		const card = anonPage.locator(`a[href="/provider/${profileId}"]`).first();
+		await expect(card.getByText('Available now')).toBeVisible({ timeout: 15_000 });
+		await anonContext.close();
+
+		const [clearResponse] = await Promise.all([
+			page.waitForResponse(
+				(response) =>
+					response.url().includes('/provider/dashboard') && response.request().method() === 'POST'
+			),
+			page.getByTestId('availability-toggle').click()
+		]);
+		expect(clearResponse.ok(), await clearResponse.text()).toBeTruthy();
+
+		const clearedToggle = page.getByTestId('availability-toggle');
+		await expect(clearedToggle).toHaveAttribute('aria-checked', 'false');
+		await expect(page.getByRole('heading', { name: "You're away" })).toBeVisible();
+
+		const statusRes = await page.request.get('/api/availability/status/me');
+		expect(statusRes.ok()).toBeTruthy();
+		const statusBody = (await statusRes.json()) as {
+			data: { availability: { state: string } };
+		};
+		expect(statusBody.data.availability.state).toBe('not_available');
+
+		const anonAfter = await browser.newContext();
+		const anonAfterPage = await anonAfter.newPage();
+		await anonAfterPage.goto('/');
+		await expect(anonAfterPage.getByText(displayName).first()).toBeVisible({ timeout: 15_000 });
+		const clearedCard = anonAfterPage.locator(`a[href="/provider/${profileId}"]`).first();
+		await expect(clearedCard.getByText('Available now')).toHaveCount(0);
+		await anonAfter.close();
+
+		const axe = await new AxeBuilder({ page }).analyze();
+		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
+			[]
+		);
+	});
+});

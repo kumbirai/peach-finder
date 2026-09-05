@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import { mirrorAvailabilityOnProjection } from '../../discovery-search';
 import { getConfig } from '../../platform-configuration';
@@ -229,7 +229,7 @@ export async function clearAvailabilityForOwner(
 			return;
 		}
 
-		await tx
+		const updated = await tx
 			.update(availabilityStatus)
 			.set({
 				state: 'not_available',
@@ -238,7 +238,18 @@ export async function clearAvailabilityForOwner(
 				warnedAt: null,
 				updatedAt: now
 			})
-			.where(eq(availabilityStatus.providerProfileId, profileId));
+			.where(
+				and(
+					eq(availabilityStatus.providerProfileId, profileId),
+					ne(availabilityStatus.state, 'not_available')
+				)
+			)
+			.returning({ providerProfileId: availabilityStatus.providerProfileId });
+
+		if (updated.length === 0) {
+			dto = toAvailabilityStatusDto(cleared.value, now);
+			return;
+		}
 
 		await tx.insert(availabilityHistory).values({
 			id: newId<'AvailabilityEventId'>(),
