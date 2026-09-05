@@ -18,7 +18,10 @@ async function expectProfilePage(
 	await expect(page).toHaveURL(isProfilePage, { timeout });
 }
 
-async function signInSeeker(page: import('@playwright/test').Page, returnTo = '/profile'): Promise<void> {
+async function signInSeeker(
+	page: import('@playwright/test').Page,
+	returnTo = '/profile'
+): Promise<void> {
 	await page.goto(`/sign-in?flow=sign-in&returnTo=${encodeURIComponent(returnTo)}`);
 	await page.getByLabel('Email').fill(SEED_DUAL_ROLE_EMAIL);
 	await page.getByLabel('Password').fill(SEED_DUAL_ROLE_PASSWORD);

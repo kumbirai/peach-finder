@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	BADGE_EXPLANATIONS,
 	BADGE_LABELS,
+	SAFETY_FOOTER_LABEL,
 	SAFETY_PAGE_PATH,
 	isTrustBadgeKind
 } from './trust-badges';
@@ -23,6 +24,7 @@ describe('trust-badges', () => {
 
 	it('links badges to the safety information page', () => {
 		expect(SAFETY_PAGE_PATH).toBe('/safety');
+		expect(SAFETY_FOOTER_LABEL).toBe('Safety information');
 	});
 
 	it('recognises only the two trust badge kinds', () => {

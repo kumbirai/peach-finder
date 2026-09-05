@@ -1,6 +1,6 @@
 import type { Database } from '../../../db';
 import type { UserId } from '../../../shared/ids';
-import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
+import { Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { listBlocksForUser, type BlockListItem } from '../infra/block-queries';
 
 export async function listBlocks(

@@ -1,5 +1,8 @@
 export const SAFETY_PAGE_PATH = '/safety';
 
+/** Footer link label for the safety-information page (FR-TRUST-09). */
+export const SAFETY_FOOTER_LABEL = 'Safety information';
+
 export type TrustBadgeKind = 'verified' | 'active-week';
 
 export const BADGE_LABELS: Record<TrustBadgeKind, string> = {
