@@ -1,5 +1,10 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { formatExpiryCountdown } from '$lib/active-this-week-transparency';
+	import { remainingSeconds } from '$lib/availability-expiry-countdown';
+	import ActiveThisWeekTransparency from '$lib/components/provider/ActiveThisWeekTransparency.svelte';
+	import type { ActiveThisWeekTransparencyUi } from '$lib/active-this-week-transparency';
 
 	export type AvailabilityUiState = {
 		state: 'not_available' | 'available' | 'expiry_warned';
@@ -10,10 +15,12 @@
 
 	let {
 		availability,
+		activeThisWeek = null,
 		variant = 'hero',
 		formAction = '?/toggleAvailability'
 	}: {
-		availability: Pick<AvailabilityUiState, 'state' | 'expiresAt'>;
+		availability: Pick<AvailabilityUiState, 'state' | 'expiresAt' | 'expiresInSeconds'>;
+		activeThisWeek?: ActiveThisWeekTransparencyUi | null;
 		variant?: 'hero' | 'compact';
 		formAction?: string;
 	} = $props();
@@ -21,11 +28,47 @@
 	let saving = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let userOverride = $state<boolean | null>(null);
+	let nowMs = $state(Date.now());
+	let tickTimer: ReturnType<typeof setInterval> | undefined;
 
 	const serverLive = $derived(availability.state !== 'not_available');
 	const warned = $derived(availability.state === 'expiry_warned');
 	const live = $derived(userOverride ?? serverLive);
 	const expiresAtLabel = $derived(formatExpiryLabel(availability.expiresAt));
+	const countdownSeconds = $derived(
+		live
+			? (remainingSeconds(availability.expiresAt, nowMs) ?? availability.expiresInSeconds ?? null)
+			: null
+	);
+	const countdownLabel = $derived(
+		countdownSeconds !== null ? formatExpiryCountdown(countdownSeconds) : null
+	);
+
+	$effect(() => {
+		if (!live || !availability.expiresAt) {
+			if (tickTimer) {
+				clearInterval(tickTimer);
+				tickTimer = undefined;
+			}
+			return;
+		}
+
+		nowMs = Date.now();
+		tickTimer = setInterval(() => {
+			nowMs = Date.now();
+		}, 30_000);
+
+		return () => {
+			if (tickTimer) {
+				clearInterval(tickTimer);
+				tickTimer = undefined;
+			}
+		};
+	});
+
+	onDestroy(() => {
+		if (tickTimer) clearInterval(tickTimer);
+	});
 
 	function formatExpiryLabel(expiresAt: string | null): string | null {
 		if (!expiresAt) return null;
@@ -95,6 +138,18 @@
 				<span class="live-dot" aria-hidden="true"></span>
 				Available now
 			</p>
+			{#if countdownLabel}
+				<p
+					class="expiry-countdown label"
+					data-testid="availability-expiry-countdown"
+					aria-live="polite"
+				>
+					{countdownLabel}
+				</p>
+			{/if}
+		{/if}
+		{#if activeThisWeek}
+			<ActiveThisWeekTransparency {activeThisWeek} />
 		{/if}
 	</div>
 	<button
@@ -153,6 +208,10 @@
 		gap: var(--space-xs);
 		color: var(--color-peach-deep);
 		font-weight: 600;
+	}
+	.expiry-countdown {
+		margin: 0;
+		color: var(--color-stone);
 	}
 	.live-dot {
 		width: 8px;

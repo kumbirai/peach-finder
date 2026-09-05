@@ -4,10 +4,13 @@ export {
 	setAvailabilityForOwner,
 	clearAvailabilityForOwner,
 	getAvailabilityStatusForOwner,
+	getAvailabilityTransparencyForOwner,
 	getRecentActivityCount,
 	loadAvailabilityStatus,
 	toAvailabilityStatusDto,
-	type AvailabilityStatusDto
+	type AvailabilityStatusDto,
+	type ActiveThisWeekTransparencyDto,
+	type AvailabilityTransparencyDto
 } from './infra/availability-commands';
 
 export {

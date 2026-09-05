@@ -11,7 +11,7 @@ import {
 import { countReviewsOnProfile } from '$lib/server/modules/provider-reviews';
 import {
 	clearAvailabilityForOwner,
-	getAvailabilityStatusForOwner,
+	getAvailabilityTransparencyForOwner,
 	setAvailabilityForOwner
 } from '$lib/server/modules/provider-availability';
 import {
@@ -38,6 +38,7 @@ export async function load({ locals, url }) {
 				expiresAt: null,
 				expiresInSeconds: null
 			},
+			activeThisWeek: null,
 			renewalNotification: null
 		};
 	}
@@ -56,26 +57,32 @@ export async function load({ locals, url }) {
 				expiresAt: null,
 				expiresInSeconds: null
 			},
+			activeThisWeek: null,
 			renewalNotification: null
 		};
 	}
 
-	const [inbox, reviewCount, availabilityResult, notifications] = await Promise.all([
+	const [inbox, reviewCount, transparencyResult, notifications] = await Promise.all([
 		listProviderInbox(db, locals.auth.userId!),
 		countReviewsOnProfile(db, dashboard.profileId),
-		getAvailabilityStatusForOwner(db, locals.auth.userId!, new Date()),
+		getAvailabilityTransparencyForOwner(db, locals.auth.userId!, new Date()),
 		listUnreadInAppNotifications(db, locals.auth.userId!, 5)
 	]);
 
 	const availability =
-		availabilityResult.ok && ownerProfile.publishState === 'published'
-			? availabilityResult.value
+		transparencyResult.ok && ownerProfile.publishState === 'published'
+			? transparencyResult.value.availability
 			: {
 					state: 'not_available' as const,
 					setAt: null,
 					expiresAt: null,
 					expiresInSeconds: null
 				};
+
+	const activeThisWeek =
+		transparencyResult.ok && ownerProfile.publishState === 'published'
+			? transparencyResult.value.activeThisWeek
+			: null;
 
 	const renewalNotification =
 		availability.state !== 'not_available'
@@ -91,6 +98,7 @@ export async function load({ locals, url }) {
 			lastActivityAt: t.lastActivityAt.toISOString()
 		})),
 		availability,
+		activeThisWeek,
 		renewalNotification,
 		analytics: {
 			profileViews: 142,
@@ -138,13 +146,13 @@ export const actions: Actions = {
 		const db = getDb();
 		const now = new Date();
 		const correlationId = crypto.randomUUID();
-		const current = await getAvailabilityStatusForOwner(db, locals.auth.userId!, now);
+		const current = await getAvailabilityTransparencyForOwner(db, locals.auth.userId!, now);
 		if (!current.ok) {
 			return fail(404, { message: 'We could not find your profile.' });
 		}
 
 		const result =
-			current.value.state === 'not_available'
+			current.value.availability.state === 'not_available'
 				? await setAvailabilityForOwner(db, locals.auth.userId!, correlationId, now)
 				: await clearAvailabilityForOwner(db, locals.auth.userId!, correlationId, now);
 
@@ -152,7 +160,15 @@ export const actions: Actions = {
 			return fail(400, { message: 'Could not update your availability.' });
 		}
 
-		return { availability: result.value };
+		const refreshed = await getAvailabilityTransparencyForOwner(db, locals.auth.userId!, now);
+		if (!refreshed.ok) {
+			return { availability: result.value };
+		}
+
+		return {
+			availability: refreshed.value.availability,
+			activeThisWeek: refreshed.value.activeThisWeek
+		};
 	},
 
 	renewAvailability: async ({ locals, request }) => {
@@ -173,6 +189,15 @@ export const actions: Actions = {
 			await markAvailabilityRenewalReadForOwner(db, locals.auth.userId!, now);
 		}
 
-		return { availability: result.value, renewalNotification: null };
+		const refreshed = await getAvailabilityTransparencyForOwner(db, locals.auth.userId!, now);
+		if (!refreshed.ok) {
+			return { availability: result.value, renewalNotification: null };
+		}
+
+		return {
+			availability: refreshed.value.availability,
+			activeThisWeek: refreshed.value.activeThisWeek,
+			renewalNotification: null
+		};
 	}
 };

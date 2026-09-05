@@ -34,6 +34,18 @@
 				expiresAt: string | null;
 				expiresInSeconds: number | null;
 			};
+			activeThisWeek: {
+				qualifies: boolean;
+				badgeActive: boolean;
+				sinceIso: string;
+				signals: {
+					signedIn: boolean;
+					availabilitySet: boolean;
+					availabilitySetCount: number;
+					profileEdited: boolean;
+					messageSent: boolean;
+				};
+			} | null;
 			renewalNotification: {
 				id: string;
 				title: string;
@@ -63,7 +75,11 @@
 				{#if data.renewalNotification}
 					<AvailabilityRenewalBanner notification={data.renewalNotification} />
 				{/if}
-				<AvailabilityToggle availability={data.availability} variant="hero" />
+				<AvailabilityToggle
+					availability={data.availability}
+					activeThisWeek={data.activeThisWeek}
+					variant="hero"
+				/>
 			</section>
 		{/if}
 

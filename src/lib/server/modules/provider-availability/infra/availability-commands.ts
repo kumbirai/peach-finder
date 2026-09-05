@@ -3,6 +3,12 @@ import type { Database, Transaction } from '../../../db';
 import { mirrorAvailabilityOnProjection } from '../../discovery-search';
 import { getConfig } from '../../platform-configuration';
 import { loadOwnerProfile } from '../../provider-profile';
+import {
+	activeThisWeekWindowStart,
+	evaluateActiveThisWeekSignals,
+	isActiveThisWeek,
+	loadBadgeDisplayState
+} from '../../trust-and-safety';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
 import { newId, type ProviderProfileId, type UserId } from '../../../shared/ids';
@@ -16,6 +22,24 @@ export type AvailabilityStatusDto = {
 	setAt: string | null;
 	expiresAt: string | null;
 	expiresInSeconds: number | null;
+};
+
+export type ActiveThisWeekTransparencyDto = {
+	qualifies: boolean;
+	badgeActive: boolean;
+	sinceIso: string;
+	signals: {
+		signedIn: boolean;
+		availabilitySet: boolean;
+		availabilitySetCount: number;
+		profileEdited: boolean;
+		messageSent: boolean;
+	};
+};
+
+export type AvailabilityTransparencyDto = {
+	availability: AvailabilityStatusDto;
+	activeThisWeek: ActiveThisWeekTransparencyDto;
 };
 
 async function requireOwnedProfile(
@@ -288,6 +312,41 @@ export async function getAvailabilityStatusForOwner(
 
 	const status = await loadAvailabilityStatus(db, owned.value.profileId);
 	return Ok(toAvailabilityStatusDto(status, now));
+}
+
+export async function getAvailabilityTransparencyForOwner(
+	db: Database,
+	userId: UserId,
+	now: Date
+): Promise<Result<AvailabilityTransparencyDto, UseCaseError>> {
+	const profile = await loadOwnerProfile(db, userId);
+	if (!profile) return Err({ kind: 'not_found', resource: 'provider_profile' });
+
+	const profileId = profile.profileId as ProviderProfileId;
+	const since = activeThisWeekWindowStart(now);
+
+	const [status, availabilityCount, evaluatedSignals, badgeDisplay] = await Promise.all([
+		loadAvailabilityStatus(db, profileId),
+		getRecentActivityCount(db, profileId, since),
+		evaluateActiveThisWeekSignals(db, { providerProfileId: profileId, ownerId: userId }, since),
+		loadBadgeDisplayState(db, profileId)
+	]);
+
+	return Ok({
+		availability: toAvailabilityStatusDto(status, now),
+		activeThisWeek: {
+			qualifies: isActiveThisWeek(evaluatedSignals),
+			badgeActive: badgeDisplay.activeThisWeek,
+			sinceIso: since.toISOString(),
+			signals: {
+				signedIn: evaluatedSignals.signedIn,
+				availabilitySet: evaluatedSignals.availabilitySet,
+				availabilitySetCount: availabilityCount,
+				profileEdited: evaluatedSignals.profileEdited,
+				messageSent: evaluatedSignals.messageSent
+			}
+		}
+	});
 }
 
 export async function getRecentActivityCount(
