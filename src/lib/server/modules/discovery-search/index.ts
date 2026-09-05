@@ -21,6 +21,7 @@ export {
 	updateSearchBadgeFlag,
 	mirrorAvailabilityOnProjection
 } from './infra/projection-handlers';
+export { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

@@ -19,6 +19,10 @@ import {
 	refreshSearchProjection,
 	mirrorAvailabilityOnProjection
 } from '../lib/server/modules/discovery-search/infra/projection-handlers';
+import {
+	handleUserBlocked as handleDiscoveryUserBlocked,
+	handleUserUnblocked as handleDiscoveryUserUnblocked
+} from '../lib/server/modules/discovery-search/infra/subscriptions';
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import {
 	handleBadgeFlagEvent,
@@ -74,6 +78,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		}
 		if (subscriber === 'direct-messaging.unblock-cache' && event.eventName === 'UserUnblocked') {
 			await handleMessagingUserUnblocked(db, event as never);
+		}
+		if (subscriber === 'discovery-search.exclude-blocker' && event.eventName === 'UserBlocked') {
+			await handleDiscoveryUserBlocked(db, event as never);
+		}
+		if (subscriber === 'discovery-search.include-blocker' && event.eventName === 'UserUnblocked') {
+			await handleDiscoveryUserUnblocked(db, event as never);
 		}
 		if (subscriber === 'provider-profile.attach-photo' && event.eventName === 'MediaProcessed') {
 			await handleMediaProcessed(db, event as never);

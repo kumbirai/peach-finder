@@ -4,6 +4,13 @@ import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result'
 import { getSelfAccountSummary } from '../../identity-and-access';
 import { insertBlock } from '../infra/block-commands';
 
+export type BlockUserResult = {
+	blocked: true;
+	created: boolean;
+	blockerId: UserId;
+	blockedId: UserId;
+};
+
 export async function blockUser(
 	db: Database,
 	input: {
@@ -12,7 +19,7 @@ export async function blockUser(
 		now: Date;
 		correlationId: string;
 	}
-): Promise<Result<{ blocked: true }, UseCaseError>> {
+): Promise<Result<BlockUserResult, UseCaseError>> {
 	if (input.blockerId === input.blockedId) {
 		return Err({
 			kind: 'validation_failed',
@@ -28,6 +35,11 @@ export async function blockUser(
 		});
 	}
 
-	await insertBlock(db, input);
-	return Ok({ blocked: true });
+	const created = await insertBlock(db, input);
+	return Ok({
+		blocked: true,
+		created,
+		blockerId: input.blockerId,
+		blockedId: input.blockedId
+	});
 }

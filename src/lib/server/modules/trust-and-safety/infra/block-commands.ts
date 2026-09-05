@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import { publish } from '../../../shared/outbox';
+import { applyUserBlockedSync, applyUserUnblockedSync } from '../../../shared/block-sync';
 import { newId, type UserId } from '../../../shared/ids';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
@@ -14,9 +15,10 @@ export async function insertBlock(
 		now: Date;
 		correlationId: string;
 	}
-): Promise<void> {
-	if (input.blockerId === input.blockedId) return;
+): Promise<boolean> {
+	if (input.blockerId === input.blockedId) return false;
 
+	let created = false;
 	await db.transaction(async (tx) => {
 		const inserted = await tx
 			.insert(blocks)
@@ -29,6 +31,7 @@ export async function insertBlock(
 			.returning({ blockerId: blocks.blockerId });
 
 		if (inserted.length === 0) return;
+		created = true;
 
 		const event: DomainEvent<'UserBlocked', { blockerId: string; blockedId: string }> = {
 			eventId: newId<'OutboxEventId'>(),
@@ -39,7 +42,9 @@ export async function insertBlock(
 			payload: { blockerId: input.blockerId, blockedId: input.blockedId }
 		};
 		await publish(tx, event);
+		await applyUserBlockedSync(tx, input.blockerId, input.blockedId, input.now);
 	});
+	return created;
 }
 
 export async function removeBlock(
@@ -50,11 +55,16 @@ export async function removeBlock(
 		now: Date;
 		correlationId: string;
 	}
-): Promise<void> {
+): Promise<boolean> {
+	let removed = false;
 	await db.transaction(async (tx) => {
-		await tx
+		const deleted = await tx
 			.delete(blocks)
-			.where(and(eq(blocks.blockerId, input.blockerId), eq(blocks.blockedId, input.blockedId)));
+			.where(and(eq(blocks.blockerId, input.blockerId), eq(blocks.blockedId, input.blockedId)))
+			.returning({ blockerId: blocks.blockerId });
+
+		if (deleted.length === 0) return;
+		removed = true;
 
 		const event: DomainEvent<'UserUnblocked', { blockerId: string; blockedId: string }> = {
 			eventId: newId<'OutboxEventId'>(),
@@ -65,5 +75,7 @@ export async function removeBlock(
 			payload: { blockerId: input.blockerId, blockedId: input.blockedId }
 		};
 		await publish(tx, event);
+		await applyUserUnblockedSync(tx, input.blockerId, input.blockedId);
 	});
+	return removed;
 }

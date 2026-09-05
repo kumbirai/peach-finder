@@ -3,6 +3,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import BlockedPeopleList from '$lib/components/BlockedPeopleList.svelte';
 	import { enhance } from '$app/forms';
 
 	let {
@@ -19,6 +20,7 @@
 			providerProfile: {
 				identityBadgeNotice: { suppressed: boolean; message: string | null };
 			} | null;
+			blockedPeople: Array<{ blockedId: string; displayName: string; blockedAt: string }>;
 			deleteConfirm: boolean;
 		};
 		form?: {
@@ -166,6 +168,11 @@
 				</Card>
 			</section>
 		{/if}
+
+		<section class="section" aria-labelledby="blocked-heading">
+			<h2 id="blocked-heading" class="title">Blocked people</h2>
+			<BlockedPeopleList blocks={data.blockedPeople} />
+		</section>
 
 		<section class="section danger-zone" aria-labelledby="delete-heading">
 			<h2 id="delete-heading" class="title">Delete account</h2>

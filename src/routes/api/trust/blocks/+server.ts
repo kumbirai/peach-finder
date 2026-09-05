@@ -4,13 +4,31 @@ import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
 import { asId, type UserId } from '$lib/server/shared/ids';
-import { blockUser } from '$lib/server/modules/trust-and-safety';
+import { blockUser, listBlocks } from '$lib/server/modules/trust-and-safety';
 
 export const _requiredRole: Role = 'seeker';
 
 const BlockUserSchema = z.object({
 	blockedId: z.string().uuid()
 });
+
+export const GET: RequestHandler = async ({ locals }) => {
+	if (!locals.auth.userId) {
+		return json(
+			{ error: { code: 'UNAUTHENTICATED', message: 'Please sign in.', fields: null } },
+			{ status: 401 }
+		);
+	}
+
+	const db = getDb();
+	const result = await listBlocks(db, locals.auth.userId);
+	if (!result.ok) {
+		const mapped = useCaseErrorToHttp(result.error);
+		return json(mapped.body, { status: mapped.status });
+	}
+
+	return json(success(result.value));
+};
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.auth.userId) {
@@ -70,10 +88,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	const db = getDb();
+	const now = new Date();
 	const result = await blockUser(db, {
 		blockerId: locals.auth.userId,
 		blockedId,
-		now: new Date(),
+		now,
 		correlationId: locals.correlationId
 	});
 
@@ -82,5 +101,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json(mapped.body, { status: mapped.status });
 	}
 
-	return json(success(result.value));
+	return json(success({ blocked: true }));
 };

@@ -30,9 +30,9 @@ FR-TRUST-08, FR-NOTIF-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -49,3 +49,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-SAFE-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-SAFE-02 delivered**
+
+- **Backend:** Extended `POST /api/trust/blocks` with synchronous `applyUserBlockedSync` (messaging `block_cache`, discovery `blocked_pair`, notifications `notif_block_cache`) for instant FR-TRUST-08 enforcement without waiting for the worker. Added `GET /api/trust/blocks`, `DELETE /api/trust/blocks/:blockedId`, `listBlocks` / `unblockUser` use cases, and discovery-search `UserBlocked` / `UserUnblocked` subscribers wired in `src/worker/index.ts`. `insertBlock` / `removeBlock` now return whether a row changed and only publish outbox events on actual writes.
+- **Frontend:** `BlockedPeopleList.svelte` on `/profile` — view and undo blocks with design-system `Card` / `Button`, empty-state copy matching prototype tone, `data-testid` hooks for e2e.
+- **Seed:** `scripts/seed-blocking.ts` — TC-MSG-01c pre-blocked pair (with full cache mirrors), `safe02-seeker@example.com` thread + review history with Amara, Amara login credentials for e2e asymmetric discovery assertions.
+- **Tests:** `block-unblock.integration.test.ts` (TC-SAFE-02a–d), `testing/playwright/e2e-block-unblock.e2e.ts` (live-stack-seeded).
+- **Assumption:** Profile-update notifications do not exist in V1; TC-SAFE-02c silence is asserted via zero block notifications plus no new notifications when a blocked party's message send is rejected post-block.

@@ -11,12 +11,13 @@ import {
 } from '$lib/server/modules/identity-and-access';
 import { loadOwnerProfile, ownsProfileDb } from '$lib/server/modules/provider-profile';
 import { applyIdentityAttributesChangedSync } from '$lib/server/shared/identity-change-sync';
+import { listBlocks } from '$lib/server/modules/trust-and-safety';
 
 export const _requiredRole: Role = 'anonymous';
 
 export async function load({ locals, url }) {
 	if (!locals.auth.userId || locals.auth.role === 'anonymous') {
-		return { account: null, deleteConfirm: false };
+		return { account: null, providerProfile: null, blockedPeople: [], deleteConfirm: false };
 	}
 
 	const db = getDb();
@@ -24,9 +25,12 @@ export async function load({ locals, url }) {
 	const providerProfile = (await ownsProfileDb(db, locals.auth.userId))
 		? await loadOwnerProfile(db, locals.auth.userId)
 		: null;
+	const blocksResult = await listBlocks(db, locals.auth.userId);
+	const blockedPeople = blocksResult.ok ? blocksResult.value : [];
 	return {
 		account,
 		providerProfile,
+		blockedPeople,
 		deleteConfirm: url.searchParams.get('deleteConfirm') === '1'
 	};
 }
