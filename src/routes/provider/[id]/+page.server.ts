@@ -29,7 +29,7 @@ export async function load({ params, locals, url }) {
 		og: {
 			title: result.value.displayName,
 			description: result.value.intro.slice(0, 150),
-			image: result.value.photos[0]?.url ?? null
+			image: result.value.photos[0]?.url ? new URL(result.value.photos[0].url, origin).href : null
 		},
 		canonical: url.href
 	};

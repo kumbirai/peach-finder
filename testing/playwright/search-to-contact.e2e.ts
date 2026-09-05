@@ -72,6 +72,68 @@ test.describe('E2E-1 search to contact', () => {
 		await anonContext.close();
 	});
 
+	test('TC-VIEW-01a: full profile field set renders on seeded provider', async ({ browser }) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		await anonPage.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await expect(anonPage.getByRole('heading', { level: 1, name: 'Amara T.' })).toBeVisible();
+		await expect(anonPage.getByTestId('profile-intro')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-services')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-tags')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-languages')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-reviews')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-response-time')).toBeVisible();
+		await expect(anonPage.getByTestId('profile-online-status')).toBeVisible();
+		await expect(anonPage.getByRole('group', { name: 'Contact actions' })).toBeVisible();
+		await expect(
+			anonPage
+				.getByRole('group', { name: 'Contact actions' })
+				.getByRole('link', { name: 'Message' })
+		).toBeVisible();
+
+		await anonContext.close();
+	});
+
+	test('TC-VIEW-01b: trust signals are above the fold at 360px', async ({ browser }) => {
+		const anonContext = await browser.newContext({ viewport: { width: 360, height: 800 } });
+		const anonPage = await anonContext.newPage();
+
+		await anonPage.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		const badges = anonPage.getByTestId('profile-trust-badges');
+		const rating = anonPage.getByTestId('profile-rating');
+		await expect(badges).toBeVisible();
+		await expect(rating).toBeVisible();
+
+		const badgesBox = await badges.boundingBox();
+		const ratingBox = await rating.boundingBox();
+		expect(badgesBox).toBeTruthy();
+		expect(ratingBox).toBeTruthy();
+		expect(badgesBox!.y).toBeLessThan(800);
+		expect(ratingBox!.y).toBeLessThan(800);
+
+		await anonContext.close();
+	});
+
+	test('TC-VIEW-01c: anonymous cold load is server-rendered with link-preview metadata', async ({
+		browser
+	}) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		const response = await anonPage.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		expect(response?.ok()).toBeTruthy();
+		const html = await response!.text();
+		expect(html).toContain('Amara T.');
+		expect(html).toContain('Deep tissue specialist');
+		expect(html).toMatch(/property="og:title"/);
+		expect(html).toMatch(/property="og:description"/);
+		expect(html).toMatch(/property="og:image"/);
+		await expect(anonPage.getByTestId('profile-name')).toBeVisible();
+
+		await anonContext.close();
+	});
+
 	test('golden path: homepage to profile to sign-up preserves message context', async ({
 		page
 	}) => {

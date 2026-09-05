@@ -9,15 +9,21 @@
 			profile: import('$lib/types/profile').PublicProfile;
 			providerProfileId: string;
 			actions: { message: string; review: string; report: string; block: string };
+			og: { title: string; description: string; image: string | null };
+			canonical: string;
 		};
 	} = $props();
 </script>
 
 <svelte:head>
 	<title>{data.profile.displayName} — Peach Finder</title>
-	<meta name="description" content={data.profile.intro.slice(0, 150)} />
-	{#if data.profile.photos[0]?.url}
-		<meta property="og:image" content={data.profile.photos[0].url} />
+	<meta name="description" content={data.og.description} />
+	<meta property="og:title" content={data.og.title} />
+	<meta property="og:description" content={data.og.description} />
+	<meta property="og:url" content={data.canonical} />
+	<meta property="og:type" content="profile" />
+	{#if data.og.image}
+		<meta property="og:image" content={data.og.image} />
 	{/if}
 </svelte:head>
 

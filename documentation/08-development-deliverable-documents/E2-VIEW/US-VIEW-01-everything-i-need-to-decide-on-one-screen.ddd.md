@@ -29,9 +29,9 @@ FR-PROF-01, FR-PROF-10, FR-ACC-01, FR-UX-02, FR-UX-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VIEW-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-VIEW-01)
+
+- **Backend:** Wired `direct-messaging.getPresence` and `getResponseTime` facades (message-activity based; no presence table yet) into `loadProfileView`. Public profile API unchanged (`GET /api/provider/profile/:id`); serializers already exposed full field set.
+- **Frontend:** Enhanced `PublicProfileView` — photo gallery with thumbnails, trust badges under name (FR-PROF-10), rating/online/response-time stats, service descriptions, review formatting, prototype-aligned section styling. Added `active-week` badge kind. Full Open Graph metadata on `/provider/:id`.
+- **Seed:** Extended Amara profile with 2 extra gallery photos, 3 response-time sample threads, and recent provider message for presence display.
+- **Tests:** `profile-display.test.ts`, `presence-buckets.test.ts`, `response-time-bucket.test.ts`, `provider-profile-view.integration.test.ts` (TC-VIEW-01a); extended `search-to-contact.e2e.ts` with TC-VIEW-01a/b/c.
+- **Assumption:** Online status and response time derive from `direct_messaging.message` activity until the presence heartbeat table lands in US-MSG stories; graceful `null` when sample count &lt; 3 for response time.
+
+### Verification 2026-09-05
+
+- `npm run check` — 0 errors (5 pre-existing Svelte warnings).
+- `npm run lint` — clean.
+- `npm run test` — 159/159 unit tests passed.
+- `npm run test:integration -- provider-profile-view` — 1/1 passed (TC-VIEW-01a API field set).
+- `npm run test:e2e -- search-to-contact.e2e.ts` — 7/7 passed (TC-VIEW-01a/b/c, axe clean).

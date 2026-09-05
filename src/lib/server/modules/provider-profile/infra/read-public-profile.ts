@@ -1,6 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { asId, type ProviderProfileId } from '../../../shared/ids';
+import { getPresence, getResponseTime } from '../../direct-messaging';
 import { loadBadgeDisplayState } from '../../trust-and-safety';
 import {
 	languages,
@@ -132,6 +133,12 @@ export async function loadProfileView(
 	const rating = (ratingRows as unknown as RatingRow[])[0];
 	const avail = (availRows as unknown as AvailRow[])[0];
 	const liveAvailability = avail?.state === 'available' || avail?.state === 'expiry_warned';
+	const now = new Date();
+	const ownerId = asId<'UserId'>(profile.ownerId);
+	const [responseTime, onlineStatus] = await Promise.all([
+		getResponseTime(db, providerProfileId, now),
+		getPresence(db, ownerId, now)
+	]);
 
 	return {
 		id: asId<'ProviderProfileId'>(profile.id),
@@ -162,8 +169,8 @@ export async function loadProfileView(
 		},
 		ratingAverage: rating?.average ?? null,
 		ratingCount: rating?.count ?? 0,
-		responseTime: 'within_30_min',
-		onlineStatus: liveAvailability ? 'online' : 'today',
+		responseTime,
+		onlineStatus,
 		availabilityState: liveAvailability ? 'available' : 'not_available',
 		availabilitySetAt: avail?.setAt
 			? avail.setAt instanceof Date

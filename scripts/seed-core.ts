@@ -577,6 +577,8 @@ export async function seedCore(db: Database): Promise<void> {
 			.onConflictDoNothing();
 	}
 
+	await seedAmaraProfileExtras(db, amara);
+
 	const suggestRows = [
 		{ term: 'deep tissue', kind: 'service' },
 		{ term: 'swedish', kind: 'service' },
@@ -592,6 +594,140 @@ export async function seedCore(db: Database): Promise<void> {
 	}
 
 	await seedDualRoleUser(db, areaBySlug, publishedAt);
+}
+
+async function seedAmaraProfileExtras(db: Database, amara: ProviderSeed): Promise<void> {
+	const extraPhotos = [
+		{
+			photoId: '01900000-0000-7000-8000-000000000311',
+			providerPhotoId: '01900000-0000-7000-8000-000000000411',
+			sortOrder: 1
+		},
+		{
+			photoId: '01900000-0000-7000-8000-000000000312',
+			providerPhotoId: '01900000-0000-7000-8000-000000000412',
+			sortOrder: 2
+		}
+	];
+
+	for (const photo of extraPhotos) {
+		await db
+			.insert(photos)
+			.values({
+				id: photo.photoId,
+				ownerId: amara.userId,
+				bucket: 'media',
+				status: 'ready',
+				objectKey: 'seed/placeholder',
+				contentHash: `seed-${photo.photoId}`,
+				mimeType: 'image/svg+xml',
+				sizeBytes: 0
+			})
+			.onConflictDoNothing();
+
+		await db.execute(sql`
+			insert into media_processing.photo_variant (photo_id, variant, url, width, height)
+			values
+				(${photo.photoId}::uuid, 'card_640_webp', ${PLACEHOLDER_CARD}, 640, 480),
+				(${photo.photoId}::uuid, 'gallery_1280_webp', ${PLACEHOLDER_GALLERY}, 1280, 720)
+			on conflict do nothing
+		`);
+
+		await db
+			.insert(providerPhotos)
+			.values({
+				id: photo.providerPhotoId,
+				providerProfileId: amara.profileId,
+				photoId: photo.photoId,
+				status: 'ready',
+				sortOrder: photo.sortOrder,
+				isPrimary: false
+			})
+			.onConflictDoNothing();
+	}
+
+	const responseSeekers = [
+		'01900000-0000-7000-8000-000000000091',
+		'01900000-0000-7000-8000-000000000092',
+		'01900000-0000-7000-8000-000000000093'
+	];
+
+	for (let i = 0; i < responseSeekers.length; i++) {
+		const seekerId = responseSeekers[i]!;
+		const threadId = `01900000-0000-7000-8000-0000000008${String(i).padStart(2, '0')}`;
+		const seekerMessageId = `01900000-0000-7000-8000-0000000009${String(i).padStart(2, '0')}`;
+		const providerReplyId = `01900000-0000-7000-8000-000000000a${String(i).padStart(2, '0')}`;
+		const threadCreated = new Date(`2026-09-01T10:00:00Z`);
+		const providerReplyAt = new Date(threadCreated.getTime() + 10 * 60_000);
+
+		await db
+			.insert(users)
+			.values({
+				id: seekerId,
+				displayName: `Response seeker ${i + 1}`,
+				email: `response-seeker-${i + 1}@example.com`,
+				emailVerifiedAt: new Date(),
+				status: 'active'
+			})
+			.onConflictDoNothing();
+
+		await db
+			.insert(threads)
+			.values({
+				id: threadId,
+				seekerId,
+				providerProfileId: amara.profileId,
+				createdAt: threadCreated,
+				lastActivityAt: providerReplyAt
+			})
+			.onConflictDoNothing();
+
+		await db
+			.insert(messages)
+			.values({
+				id: seekerMessageId,
+				threadId,
+				senderId: seekerId,
+				body: 'Are you available this week?',
+				sentAt: threadCreated
+			})
+			.onConflictDoNothing();
+
+		await db
+			.insert(messages)
+			.values({
+				id: providerReplyId,
+				threadId,
+				senderId: amara.userId,
+				body: 'Yes, I have openings — let me know what works.',
+				sentAt: providerReplyAt
+			})
+			.onConflictDoNothing();
+	}
+
+	const recentPresenceAt = new Date();
+	const presenceThreadId = '01900000-0000-7000-8000-000000000800';
+	await db
+		.insert(threads)
+		.values({
+			id: presenceThreadId,
+			seekerId: REVIEWER_ID,
+			providerProfileId: amara.profileId,
+			createdAt: new Date(recentPresenceAt.getTime() - 60_000),
+			lastActivityAt: recentPresenceAt
+		})
+		.onConflictDoNothing();
+
+	await db
+		.insert(messages)
+		.values({
+			id: '01900000-0000-7000-8000-000000000b01',
+			threadId: presenceThreadId,
+			senderId: amara.userId,
+			body: 'Recent activity for presence display.',
+			sentAt: recentPresenceAt
+		})
+		.onConflictDoNothing();
 }
 
 async function seedDualRoleUser(

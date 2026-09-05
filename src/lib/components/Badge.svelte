@@ -3,24 +3,41 @@
 		kind = 'verified',
 		label
 	}: {
-		kind?: 'verified' | 'available';
+		kind?: 'verified' | 'available' | 'active-week';
 		label?: string;
 	} = $props();
 
-	const text = $derived(label ?? (kind === 'verified' ? 'Identity verified' : 'Available now'));
+	const text = $derived(
+		label ??
+			(kind === 'verified'
+				? 'Identity verified'
+				: kind === 'active-week'
+					? 'Active this week'
+					: 'Available now')
+	);
 </script>
 
 <span class="badge badge-{kind}" data-component="badge" data-kind={kind}>
-	{#if kind === 'verified'}
+	{#if kind === 'verified' || kind === 'active-week'}
 		<svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-			<path
-				d="M9 12l2 2 4-4"
-				stroke="currentColor"
-				stroke-width="2.5"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			/>
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" />
+			{#if kind === 'verified'}
+				<path
+					d="M9 12l2 2 4-4"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+				<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" />
+			{:else}
+				<path
+					d="M3 12h4l2-7 4 14 2-7h6"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			{/if}
 		</svg>
 	{:else}
 		<span class="dot" aria-hidden="true"></span>
@@ -42,6 +59,10 @@
 		padding: 4px 10px;
 	}
 	.badge-verified {
+		color: var(--color-pine);
+	}
+	.badge-active-week {
+		background: var(--color-paper);
 		color: var(--color-pine);
 	}
 	.badge-available {
