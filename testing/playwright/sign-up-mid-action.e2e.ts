@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { SEED_CORE_PRIMARY_PROFILE_ID } from '../scripts/seed-core';
+import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
 
 const DRAFT = 'Hi Amara, are you free tomorrow afternoon?';
 

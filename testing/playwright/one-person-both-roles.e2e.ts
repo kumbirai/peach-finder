@@ -5,7 +5,7 @@ import {
 	SEED_DUAL_ROLE_PASSWORD,
 	SEED_DUAL_ROLE_PROVIDER_INBOX_PREVIEW,
 	SEED_DUAL_ROLE_SEEKER_THREAD_PREVIEW
-} from '../scripts/seed-core';
+} from '../../scripts/seed-core';
 
 async function signInDualRole(page: import('@playwright/test').Page) {
 	await page.goto('/sign-in?returnTo=/messages&flow=sign-in');

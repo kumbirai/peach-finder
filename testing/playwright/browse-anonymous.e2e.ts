@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { SEED_CORE_PRIMARY_PROFILE_ID } from '../scripts/seed-core';
+import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
 
 test.describe('US-ACC-01 anonymous browse', () => {
 	test('TC-ACC-01a: homepage search filter and profile without login wall', async ({ page }) => {

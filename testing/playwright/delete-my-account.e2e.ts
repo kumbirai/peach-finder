@@ -4,7 +4,7 @@ import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD,
 	SEED_DUAL_ROLE_PROFILE_ID
-} from '../scripts/seed-core';
+} from '../../scripts/seed-core';
 
 async function signIn(
 	page: import('@playwright/test').Page,
