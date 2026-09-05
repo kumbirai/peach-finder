@@ -1,6 +1,16 @@
 import type { UserId } from '../../shared/ids';
 
-/** Wave 0 stub — populated by later waves. */
-export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
+export {
+	setAvailabilityForOwner,
+	clearAvailabilityForOwner,
+	getAvailabilityStatusForOwner,
+	getRecentActivityCount,
+	loadAvailabilityStatus,
+	toAvailabilityStatusDto,
+	type AvailabilityStatusDto
+} from './infra/availability-commands';
+
+export async function exportFor(userId: UserId): Promise<Record<string, never>> {
+	void userId;
 	return {};
 }

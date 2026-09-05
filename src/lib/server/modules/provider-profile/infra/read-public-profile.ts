@@ -116,7 +116,7 @@ export async function loadProfileView(
 	`);
 
 	const availRows = await db.execute<AvailRow>(sql`
-		SELECT state, set_at AS "setAt" FROM provider_availability.availability
+		SELECT state, set_at AS "setAt" FROM provider_availability.availability_status
 		WHERE provider_profile_id = ${providerProfileId}
 		LIMIT 1
 	`);
@@ -131,6 +131,7 @@ export async function loadProfileView(
 
 	const rating = (ratingRows as unknown as RatingRow[])[0];
 	const avail = (availRows as unknown as AvailRow[])[0];
+	const liveAvailability = avail?.state === 'available' || avail?.state === 'expiry_warned';
 
 	return {
 		id: asId<'ProviderProfileId'>(profile.id),
@@ -162,8 +163,8 @@ export async function loadProfileView(
 		ratingAverage: rating?.average ?? null,
 		ratingCount: rating?.count ?? 0,
 		responseTime: 'within_30_min',
-		onlineStatus: avail?.state === 'available' ? 'online' : 'today',
-		availabilityState: avail?.state === 'available' ? 'available' : 'not_available',
+		onlineStatus: liveAvailability ? 'online' : 'today',
+		availabilityState: liveAvailability ? 'available' : 'not_available',
 		availabilitySetAt: avail?.setAt
 			? avail.setAt instanceof Date
 				? avail.setAt

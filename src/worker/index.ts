@@ -2,7 +2,7 @@ import PgBoss from 'pg-boss';
 import { databaseUrl } from '../lib/server/env';
 import { getDb } from '../lib/server/db';
 import { bootApp, tickConfigRefresh } from '../lib/server/boot';
-import { deadLetter } from '../lib/server/shared/outbox';
+import { deadLetter, markProcessed } from '../lib/server/shared/outbox';
 import { cleanupRateLimitBuckets } from '../lib/server/shared/rate-limit';
 import { handleConfigChanged } from '../lib/server/modules/platform-configuration';
 import {
@@ -14,7 +14,8 @@ import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
 import { upsertSearchProjection } from '../lib/server/modules/discovery-search';
 import {
 	refreshSearchDisplayName,
-	refreshSearchProjection
+	refreshSearchProjection,
+	mirrorAvailabilityOnProjection
 } from '../lib/server/modules/discovery-search/infra/projection-handlers';
 import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access';
 import {
@@ -73,6 +74,38 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 				await upsertSearchProjection(
 					tx,
 					payload.providerProfileId as never,
+					new Date(event.occurredAt)
+				);
+			});
+		}
+		if (
+			subscriber === 'discovery-search.projection-upsert' &&
+			(event.eventName === 'AvailabilitySet' ||
+				event.eventName === 'AvailabilityCleared' ||
+				event.eventName === 'AvailabilityExpired')
+		) {
+			const payload = event.payload as { providerProfileId: string; setAt?: string };
+			await db.transaction(async (tx) => {
+				const inserted = await markProcessed(tx, event.eventId, subscriber);
+				if (!inserted) return;
+
+				if (event.eventName === 'AvailabilitySet' && payload.setAt) {
+					const setAt = new Date(payload.setAt);
+					await mirrorAvailabilityOnProjection(
+						tx,
+						payload.providerProfileId as never,
+						'available',
+						setAt,
+						new Date(event.occurredAt)
+					);
+					return;
+				}
+
+				await mirrorAvailabilityOnProjection(
+					tx,
+					payload.providerProfileId as never,
+					'not_available',
+					null,
 					new Date(event.occurredAt)
 				);
 			});

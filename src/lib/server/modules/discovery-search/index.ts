@@ -10,7 +10,8 @@ export { upsertSearchProjection } from './infra/projection-upsert';
 export {
 	refreshSearchProjection,
 	refreshSearchDisplayName,
-	updateSearchBadgeFlag
+	updateSearchBadgeFlag,
+	mirrorAvailabilityOnProjection
 } from './infra/projection-handlers';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {

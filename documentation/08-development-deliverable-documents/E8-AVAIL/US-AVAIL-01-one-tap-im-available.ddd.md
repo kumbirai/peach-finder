@@ -28,9 +28,9 @@ FR-AVAIL-01, FR-AVAIL-04, SR-APP-03/04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-AVAIL-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-AVAIL-01)
+
+- Migration `0008_us_avail_01_one_tap_available.sql`: renamed Wave 0 `availability` → `availability_status`, added `warned_at`, enums, `availability_history`, indexes; idempotent for the project's re-run-all-migrations harness; drops orphan `availability` table recreated by `0001` on subsequent runs.
+- Domain: `provider-availability/domain/availability-status.ts` state machine (set/renew/clear, discovery collapse for `expiry_warned`).
+- Commands: `setAvailabilityForOwner`, `clearAvailabilityForOwner`, `getAvailabilityStatusForOwner` in `infra/availability-commands.ts`; synchronous `mirrorAvailabilityOnProjection` in discovery-search for ≤30s SLA plus async worker handler for `AvailabilitySet`/`AvailabilityCleared`/`AvailabilityExpired`.
+- API: `POST`/`DELETE` `/api/availability/status`, `GET` `/api/availability/status/me`; `availability_toggle` rate limit bucket applied.
+- UI: `AvailabilityToggle.svelte` on provider dashboard (hero) and profile preview (compact); matches prototype toggle tokens and copy.
+- Tests: domain unit (`availability-status.test.ts`), integration (`set-availability.integration.test.ts` TC-AVAIL-01a/b/c), E2E (`e2e/availability-one-tap.e2e.ts`).
+- Verified: `npm run check`, `npm run lint`, `npm run test` (94), integration slice (3/3), `npm run build`, E2E availability-one-tap (2/2, `CI=1`).

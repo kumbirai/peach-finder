@@ -3,6 +3,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
 
 	let {
 		data,
@@ -23,6 +24,12 @@
 				contactRequests: number;
 				reviewsReceived: number;
 			} | null;
+			availability: {
+				state: 'not_available' | 'available' | 'expiry_warned';
+				setAt: string | null;
+				expiresAt: string | null;
+				expiresInSeconds: number | null;
+			};
 		};
 		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
 	} = $props();
@@ -41,6 +48,13 @@
 	</p>
 
 	{#if data.profile && data.analytics}
+		{#if data.publishState === 'published'}
+			<section class="section" aria-labelledby="availability-heading">
+				<h2 id="availability-heading" class="visually-hidden">Your availability</h2>
+				<AvailabilityToggle availability={data.availability} variant="hero" />
+			</section>
+		{/if}
+
 		<section class="section" aria-labelledby="setup-heading">
 			<h2 id="setup-heading" class="title">
 				{#if data.publishState === 'published'}
@@ -210,6 +224,17 @@
 	.stat-value {
 		margin: 0;
 		color: var(--color-peach-deep);
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 	@media (min-width: 768px) {
 		.stat-row {

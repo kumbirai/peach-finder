@@ -45,6 +45,53 @@ export async function refreshSearchDisplayName(
 		.where(eq(searchProjection.providerProfileId, profileId));
 }
 
+export async function mirrorAvailabilityOnProjection(
+	tx: Transaction,
+	providerProfileId: ProviderProfileId,
+	availabilityState: 'available' | 'not_available',
+	availabilitySetAt: Date | null,
+	now: Date
+): Promise<void> {
+	const published = await tx.execute<{ publish_state: string }>(sql`
+		select publish_state from provider_profile.provider_profile
+		where id = ${providerProfileId}::uuid
+		limit 1
+	`);
+	const row = (published as unknown as Array<{ publish_state: string }>)[0];
+	if (row?.publish_state !== 'published') return;
+
+	if (availabilityState === 'available' && availabilitySetAt) {
+		const existing = await tx
+			.select({ lastActivityAt: searchProjection.lastActivityAt })
+			.from(searchProjection)
+			.where(eq(searchProjection.providerProfileId, providerProfileId))
+			.limit(1);
+		const prior = existing[0]?.lastActivityAt;
+		const lastActivityAt =
+			prior && prior.getTime() > availabilitySetAt.getTime() ? prior : availabilitySetAt;
+
+		await tx
+			.update(searchProjection)
+			.set({
+				availabilityState: 'available',
+				availabilitySetAt,
+				lastActivityAt,
+				updatedAt: now
+			})
+			.where(eq(searchProjection.providerProfileId, providerProfileId));
+		return;
+	}
+
+	await tx
+		.update(searchProjection)
+		.set({
+			availabilityState: 'not_available',
+			availabilitySetAt: null,
+			updatedAt: now
+		})
+		.where(eq(searchProjection.providerProfileId, providerProfileId));
+}
+
 export async function updateSearchBadgeFlag(
 	tx: Transaction,
 	providerProfileId: ProviderProfileId,

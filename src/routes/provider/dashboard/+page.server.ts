@@ -9,6 +9,7 @@ import {
 	unpublishProfileForOwnerDb
 } from '$lib/server/modules/provider-profile';
 import { countReviewsOnProfile } from '$lib/server/modules/provider-reviews';
+import { getAvailabilityStatusForOwner } from '$lib/server/modules/provider-availability';
 
 export const _requiredRole: Role = 'provider';
 
@@ -36,16 +37,28 @@ export async function load({ locals, url }) {
 		};
 	}
 
-	const [inbox, reviewCount] = await Promise.all([
+	const [inbox, reviewCount, availabilityResult] = await Promise.all([
 		listProviderInbox(db, locals.auth.userId!),
-		countReviewsOnProfile(db, dashboard.profileId)
+		countReviewsOnProfile(db, dashboard.profileId),
+		getAvailabilityStatusForOwner(db, locals.auth.userId!, new Date())
 	]);
+
+	const availability =
+		availabilityResult.ok && ownerProfile.publishState === 'published'
+			? availabilityResult.value
+			: {
+					state: 'not_available' as const,
+					setAt: null,
+					expiresAt: null,
+					expiresInSeconds: null
+				};
 
 	return {
 		profile: dashboard,
 		publishState: ownerProfile.publishState,
 		unpublishConfirm: url.searchParams.get('unpublishConfirm') === '1',
 		inbox,
+		availability,
 		analytics: {
 			profileViews: 142,
 			searchAppearances: 89,

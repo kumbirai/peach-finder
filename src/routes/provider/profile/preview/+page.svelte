@@ -3,6 +3,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import PublicProfileView from '$lib/components/PublicProfileView.svelte';
+	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
 	import type { PublicProfile } from '$lib/types/profile';
 
 	let {
@@ -11,6 +12,12 @@
 		data: {
 			profileId: string;
 			phoneVisible: boolean;
+			availability: {
+				state: 'not_available' | 'available' | 'expiry_warned';
+				setAt: string | null;
+				expiresAt: string | null;
+				expiresInSeconds: number | null;
+			};
 			anonymousPreview: PublicProfile;
 			seekerPreview: PublicProfile;
 		};
@@ -36,6 +43,13 @@
 				: 'hidden from visitors without an account'}).
 		</p>
 	</header>
+
+	{#if data.availability}
+		<section aria-labelledby="profile-availability-heading">
+			<h2 id="profile-availability-heading" class="visually-hidden">Your availability</h2>
+			<AvailabilityToggle availability={data.availability} variant="compact" />
+		</section>
+	{/if}
 
 	<div class="preview-grid">
 		<section class="preview-panel" aria-labelledby="anonymous-heading">
@@ -121,6 +135,17 @@
 		flex-wrap: wrap;
 		gap: var(--space-sm);
 		margin: 0;
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 	@media (min-width: 900px) {
 		.preview-grid {
