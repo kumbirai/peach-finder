@@ -54,6 +54,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Deviation:** No new migration — uses existing `direct_messaging` and `provider_profile` tables from Wave 0/US-ACC-01/02. Minimal read helpers added to `direct-messaging` (`listSeekerThreads`, `listProviderInbox`) and `provider-reviews` (`listReviewsWrittenBySeeker`, `countReviewsOnProfile`) to prove UI separation; full messaging/analytics modules remain later-wave scope. Provider analytics headline numbers (profile views, search appearances) are seeded static values until `provider-analytics` lands — contact requests and reviews received are live counts from DB.
 
-**Verification:** `npm run check`, `lint`, `test` (64), `test:integration` (11 incl. `one-person-both-roles.integration.test.ts`), `boundaries`, `build`, `test:e2e` `e2e/one-person-both-roles.e2e.ts` (3/3, TC-ACC-04a + axe on messages/dashboard).
+**Verification:** `npm run check`, `lint`, `test` (64), `test:integration` (11 incl. `one-person-both-roles.integration.test.ts`), `boundaries`, `build`, `test:e2e` `testing/playwright/one-person-both-roles.e2e.ts` (3/3, TC-ACC-04a + axe on messages/dashboard).
 
 **Follow-ups:** Wire live analytics aggregates when `provider-analytics` (Wave 4+) ships; thread detail routes when US-MSG stories land.

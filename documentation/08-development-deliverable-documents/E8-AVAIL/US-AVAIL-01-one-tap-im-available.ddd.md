@@ -57,5 +57,5 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Commands: `setAvailabilityForOwner`, `clearAvailabilityForOwner`, `getAvailabilityStatusForOwner` in `infra/availability-commands.ts`; synchronous `mirrorAvailabilityOnProjection` in discovery-search for ≤30s SLA plus async worker handler for `AvailabilitySet`/`AvailabilityCleared`/`AvailabilityExpired`.
 - API: `POST`/`DELETE` `/api/availability/status`, `GET` `/api/availability/status/me`; `availability_toggle` rate limit bucket applied.
 - UI: `AvailabilityToggle.svelte` on provider dashboard (hero) and profile preview (compact); matches prototype toggle tokens and copy.
-- Tests: domain unit (`availability-status.test.ts`), integration (`set-availability.integration.test.ts` TC-AVAIL-01a/b/c), E2E (`e2e/availability-one-tap.e2e.ts`).
+- Tests: domain unit (`availability-status.test.ts`), integration (`set-availability.integration.test.ts` TC-AVAIL-01a/b/c), E2E (`testing/playwright/availability-one-tap.e2e.ts`).
 - Verified: `npm run check`, `npm run lint`, `npm run test` (94), integration slice (3/3), `npm run build`, E2E availability-one-tap (2/2, `CI=1`).

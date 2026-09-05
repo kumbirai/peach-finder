@@ -62,10 +62,10 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - `src/lib/server/modules/discovery-search/domain/parse-query.ts` (+ test)
 - `src/lib/server/modules/discovery-search/app/serializers.test.ts` — "New" rating regression
 - `src/lib/server/modules/discovery-search/filter-search.integration.test.ts` — TC-DISC-04a/b/c
-- `e2e/search-filters.e2e.ts` — live-stack Playwright coverage
+- `testing/playwright/search-filters.e2e.ts` — live-stack Playwright coverage
 
 **Assumption:** "Under R400" chip label matches the prototype even though `seed-core` providers are priced at R650/R700; the filter is valid and returns an empty state when no providers match. Integration tests adjust one projection row's price in-test to prove intersection logic.
 
-**Verification:** `npm run check` and `npm run lint` clean. Unit tests green. `npm run test:integration` green for this story's file (78/79 integration tests passed; one pre-existing AVAIL flake). Playwright `e2e/search-filters.e2e.ts` requires a running Postgres stack (`ECONNREFUSED :5432` in this session).
+**Verification:** `npm run check` and `npm run lint` clean. Unit tests green. `npm run test:integration` green for this story's file (78/79 integration tests passed; one pre-existing AVAIL flake). Playwright `testing/playwright/search-filters.e2e.ts` requires a running Postgres stack (`ECONNREFUSED :5432` in this session).
 
 **Follow-ups:** None for this story; US-DISC-05 (near me) and US-DISC-07 (empty-state relaxation) are separate stories.

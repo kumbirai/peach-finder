@@ -57,6 +57,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Deviations:** Full six-step onboarding wizard UI is US-PONB-02 scope — this story lands a read-only checklist on `/provider/onboarding` that reflects `isPublishReady` fields. `PHONE_PEPPER` uses a dev fallback when unset (production throws). SMS delivery is dev-store backed (`ALLOW_DEV_HELPERS=1`) until `user-notifications` wires outbound SMS.
 
-**Verification:** `npm run check`, `lint`, `test` (76), `test:integration` (20), `boundaries`, `build` green; `e2e/provider-register.e2e.ts` 3/3 (TC-PONB-01a/c + axe).
+**Verification:** `npm run check`, `lint`, `test` (76), `test:integration` (20), `boundaries`, `build` green; `testing/playwright/provider-register.e2e.ts` 3/3 (TC-PONB-01a/c + axe).
 
 **Follow-ups:** US-PONB-02 should replace the onboarding placeholder with the resumable stepper; wire real SMS in `user-notifications`; set `PHONE_PEPPER` in production secrets.

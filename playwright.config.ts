@@ -10,7 +10,7 @@ const port = resolveE2ePort();
 const baseURL = resolveE2eBaseUrl(port);
 
 export default defineConfig({
-	testDir: 'e2e',
+	testDir: 'testing/playwright',
 	testMatch: '**/*.e2e.ts',
 	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),

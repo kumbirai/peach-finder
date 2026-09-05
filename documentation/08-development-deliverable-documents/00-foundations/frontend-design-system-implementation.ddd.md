@@ -62,7 +62,7 @@ Perceived-performance requirements that are implementation decisions, not just t
 
 - [x] Token pipeline generates CSS/theme values from `DESIGN.md`'s frontmatter (or `.impeccable/design.json`) programmatically — no hand-copied hex values in component code.
 - [x] Every component in §3 exists as a single reusable implementation before any story DDD's frontend task is started against it.
-- [x] `e2e-visual-quality-design-system.spec-design.md`'s token-conformance and accessibility assertions pass against the component library in isolation (`e2e/components.e2e.ts` + `/dev/components`), before they're asked to pass per-screen.
+- [x] `e2e-visual-quality-design-system.spec-design.md`'s token-conformance and accessibility assertions pass against the component library in isolation (`testing/playwright/components.e2e.ts` + `/dev/components`), before they're asked to pass per-screen.
 - [x] Performance budgets in §5 are treated as build constraints (`npm run check:bundle` for SR-PERF-05, SSR homepage, reserved `aspect-ratio` on card photos, Skeleton primitive) — not discovered as test failures after the fact.
 
 ## Implementation Notes (Wave 0)
@@ -121,4 +121,4 @@ Read runtime config only through `platform-configuration.getConfig(key)`. Unknow
 
 - Unit: `src/**/*.test.ts`
 - Integration: `src/**/*.integration.test.ts`
-- E2E: `e2e/*.e2e.ts` — live stack, no `page.route`
+- E2E: `testing/playwright/*.e2e.ts` — live stack, no `page.route`

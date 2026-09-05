@@ -59,7 +59,7 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **UI fixes discovered in E2E:** Photos-step Continue uses `href` (client `goto` unreliable under Playwright); tag proposal uses separate `?/proposeTag` form with redirect flash query params; languages step uses native checkbox chips (`:has(:checked)` styling) so form POST works without client onclick.
 
-**Tests:** `media-processing/domain/upload-policy.test.ts`, `media-processing/infra/process-photo.test.ts` (TC-PONB-03c EXIF), `provider-profile/profile-media.integration.test.ts`, `e2e/provider-profile-build.e2e.ts` (TC-PONB-03a–f + axe). Updated `e2e/provider-onboarding-guided.e2e.ts` for real uploads.
+**Tests:** `media-processing/domain/upload-policy.test.ts`, `media-processing/infra/process-photo.test.ts` (TC-PONB-03c EXIF), `provider-profile/profile-media.integration.test.ts`, `testing/playwright/provider-profile-build.e2e.ts` (TC-PONB-03a–f + axe). Updated `testing/playwright/provider-onboarding-guided.e2e.ts` for real uploads.
 
 **Verified:** `npm run check` (0 errors), `npm run lint`, `npm run test` (87), `npm run test:integration` (33), `npm run boundaries`, `npm run build`, E2E PONB-02/03 specs (7/7 with `CI=1`).
 

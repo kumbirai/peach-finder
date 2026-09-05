@@ -55,5 +55,5 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - **API:** `PUT /api/provider/profile/phone-visibility` with `{ visible: boolean }` returns `toOwnerProfile`.
 - **Provider UI:** `/provider/profile/edit` — `PhoneVisibilitySetting.svelte` with FRS label, plain-language explanation, prototype-matched `Toggle.svelte` (role=switch, ≥44px touch target, terracotta focus ring, reduced-motion).
 - **Seeker UI:** `/provider/[id]` renders Contact section + sticky Call link only when `toPublicProfile` includes `phone` (server-side; never CSS-hidden).
-- **Tests:** `phone-visibility.integration.test.ts` (TC-PONB-07a/b/c + idempotent toggle), extended `serializers.test.ts`, E2E `e2e/provider-phone-visibility.e2e.ts` (live-stack-seeded, axe on edit page).
+- **Tests:** `phone-visibility.integration.test.ts` (TC-PONB-07a/b/c + idempotent toggle), extended `serializers.test.ts`, E2E `testing/playwright/provider-phone-visibility.e2e.ts` (live-stack-seeded, axe on edit page).
 - **Assumption:** Default OFF is enforced by DB column default and draft creation; no migration required (column exists from US-ACC-01).

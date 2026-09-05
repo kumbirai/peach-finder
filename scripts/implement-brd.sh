@@ -764,10 +764,16 @@ TASK
   \`page.route\` stubs, fixture JSON standing in for real HTTP, any
   \`E2E_LIVE=0\`-style skip-by-stub path. If the live stack is down,
   \`test.skip\` -- never mock.
+- Playwright specs live under \`testing/playwright/\` (\`*.e2e.ts\`),
+  matched by the repo-root \`playwright.config.ts\`'s
+  \`testDir: 'testing/playwright'\`. This superseded the Wave 0-era
+  \`e2e/\` location -- do not recreate an \`e2e/\` directory or add a new
+  spec anywhere else.
 - Follow the test-toolchain and directory conventions the Wave 0
   foundation established (Vitest, the Postgres integration-test
-  mechanism, the Playwright config and spec-file layout) -- check its
-  own Implementation Notes for what it set up rather than re-deciding it.
+  mechanism, the Playwright spec-file layout under \`testing/playwright/\`)
+  -- check its own Implementation Notes for what it set up rather than
+  re-deciding it.
 - Do NOT commit. Leave all changes in the working tree -- committing is
   this script's job, after its own review-and-fix pass, never the agent's.
 - Update this DDD's own "## 4. Build blueprint" checklist as work

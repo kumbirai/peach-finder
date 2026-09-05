@@ -56,6 +56,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Approach:** Homepage default view reuses `runSearch` with empty filters (already availability-first per LLD §6/§7). Delivered US-DISC-01-specific UX: cohort section headings ("N available now" / "More therapists nearby"), availability pill on card photo with recency phrasing via `src/lib/availability-recency.ts`, SR-PERF-06 `Cache-Control: private, max-age=60, must-revalidate` on `/` SSR and `GET /api/discovery/search`, and 60s client `invalidateAll` on the unfiltered homepage.
 
-**Tests:** `homepage-available-now.integration.test.ts` (TC-DISC-01a–c), `availability-recency.test.ts`, `e2e/homepage-available-now.e2e.ts` (TC-DISC-01a–d + axe).
+**Tests:** `homepage-available-now.integration.test.ts` (TC-DISC-01a–c), `availability-recency.test.ts`, `testing/playwright/homepage-available-now.e2e.ts` (TC-DISC-01a–d + axe).
 
 **Verified:** `npm run check`, `npm run lint`, `npm run test`, `npm run test:integration`, `npm run boundaries`, `npm run build`, `npx playwright test e2e/homepage-available-now.e2e.ts`.

@@ -57,6 +57,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Deviations:** OAuth-only accounts without a password must set one (via reset email) before self-delete — LLD reauth is password-based and no OAuth re-proof flow exists in W1. Provider unpublish runs synchronously in the delete transaction (not only async) so TC-ACC-05b immediate-discovery removal holds without waiting for the outbox worker.
 
-**Verification:** `npm run check`, `lint`, `test`, `test:integration`, `boundaries`, `build`, `test:e2e` (incl. `e2e/delete-my-account.e2e.ts` TC-ACC-05a–c + axe).
+**Verification:** `npm run check`, `lint`, `test`, `test:integration`, `boundaries`, `build`, `test:e2e` (incl. `testing/playwright/delete-my-account.e2e.ts` TC-ACC-05a–c + axe).
 
 **Follow-ups:** Wire `provider-profile.unpublish-on-delete` and `listing-billing.cancel-on-delete` worker handlers as idempotent backups if synchronous path is ever split; add OAuth-native delete confirmation when SR-INT-04 gains a re-proof path.

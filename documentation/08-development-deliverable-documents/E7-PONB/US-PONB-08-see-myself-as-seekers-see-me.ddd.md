@@ -54,4 +54,4 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Deviations:** No dedicated Playwright spec-design file existed for US-PONB-08; E2E authored directly from `03-test-cases/provider-profile-and-media.md` TC-PONB-08a plus the project-wide visual/a11y spec-design conventions. Prototype had no preview screen (flagged gap in `06-ui-ux-design/README.md`); UI follows existing provider dashboard/edit patterns and design tokens.
 
-**Verification:** `npm run check`, `lint`, `test` (89), `test:integration` (52), `boundaries`, `build`, `e2e/provider-preview-as-seeker.e2e.ts` (2/2) — all green.
+**Verification:** `npm run check`, `lint`, `test` (89), `test:integration` (52), `boundaries`, `build`, `testing/playwright/provider-preview-as-seeker.e2e.ts` (2/2) — all green.

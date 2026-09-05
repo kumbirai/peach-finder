@@ -53,6 +53,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Approach:** Extended `runSuggest` to LLD §8 trigram + prefix ordering with `toSuggestions()` serializer. Added `SearchBar.svelte` (pill search bar, debounced `/api/discovery/suggest` fetch, skeleton loading panel, combobox a11y, kind labels) wired into homepage `+page.svelte`. Fixed CSP hydration blocker: moved `script-src` hashes to `svelte.config.js` `csp.mode = 'hash'` and stopped hooks from overwriting SvelteKit's CSP header (client interactivity required for typeahead).
 
-**Tests:** `serializers.test.ts`, `suggest-kind-label.test.ts`, `suggest.integration.test.ts` (TC-DISC-03a/b + fuzzy/blank), `e2e/search-suggestions.e2e.ts` (5/5 + axe).
+**Tests:** `serializers.test.ts`, `suggest-kind-label.test.ts`, `suggest.integration.test.ts` (TC-DISC-03a/b + fuzzy/blank), `testing/playwright/search-suggestions.e2e.ts` (5/5 + axe).
 
 **Verified:** `npm run check`, `npm run lint`, `npm run test`, `npm run test:integration`, `npm run boundaries`, `npm run build`, `npx playwright test e2e/search-suggestions.e2e.ts`.

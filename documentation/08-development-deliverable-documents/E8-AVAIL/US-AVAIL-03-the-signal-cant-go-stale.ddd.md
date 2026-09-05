@@ -59,5 +59,5 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Frontend: `AvailabilityRenewalBanner.svelte` + dashboard `renewAvailability` action; `AvailabilityToggle` copy for `expiry_warned`.
 - Dev helper: `POST /api/dev/availability-tick` runs lifecycle tick and inline notification dispatch for tests.
 - Seed: `scripts/seed-availability.ts` (`SEED_PACK=seed-availability`).
-- Tests: domain unit extensions, `expiry-sweep.integration.test.ts` (TC-AVAIL-03a/b/c), E2E `e2e/availability-lifecycle.e2e.ts`.
+- Tests: domain unit extensions, `expiry-sweep.integration.test.ts` (TC-AVAIL-03a/b/c), E2E `testing/playwright/availability-lifecycle.e2e.ts`.
 - Assumption: push/email channels for `availability_expiry_warning` deferred — in-app is the M baseline per FR-NOTIF-01; push adapter lands with full notifications wave.

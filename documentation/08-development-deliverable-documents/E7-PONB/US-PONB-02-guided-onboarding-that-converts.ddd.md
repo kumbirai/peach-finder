@@ -57,7 +57,7 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Frontend:** `OnboardingStepper.svelte`, `StepTip.svelte`, design-system `Button`/`Chip`/`Card` tokens; dashboard "Continue setup" links to onboarding. Publish step shows review rows plus a plain-language blocked message listing missing minimum fields (`formatMissingFields`).
 
-**Tests:** Unit (`intro-policy`, `service-policy`, existing `publish-readiness`); integration `guided-onboarding.integration.test.ts` (TC-PONB-02a/b logic); E2E `e2e/provider-onboarding-guided.e2e.ts` (TC-PONB-02a/b + axe). Verified: `check`, `lint`, `test` (82), `test:integration` (26), `boundaries`, `build`, onboarding + register E2E (6/6).
+**Tests:** Unit (`intro-policy`, `service-policy`, existing `publish-readiness`); integration `guided-onboarding.integration.test.ts` (TC-PONB-02a/b logic); E2E `testing/playwright/provider-onboarding-guided.e2e.ts` (TC-PONB-02a/b + axe). Verified: `check`, `lint`, `test` (82), `test:integration` (26), `boundaries`, `build`, onboarding + register E2E (6/6).
 
 **Deviations:** Photo attach uses placeholder image URLs and synchronous ready status (no `media-processing` upload pipeline) — sufficient for onboarding progress/readiness until US-PONB-03. Actual publish action remains US-PONB-04; publish step ends with "Finish setup" → dashboard when readiness passes. `?step=publish` is allowed before all essentials are complete so providers can inspect the readiness gate (TC-PONB-02b).
 

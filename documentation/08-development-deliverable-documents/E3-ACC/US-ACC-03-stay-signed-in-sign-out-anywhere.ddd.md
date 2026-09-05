@@ -55,6 +55,6 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Deviations:** Email/phone change endpoints (LLD #14–15) deferred to US-ACC-05 / provider onboarding — this story’s test matrix exercises password reset and password change only; reauth API is implemented for downstream credential flows. Password-reset emails are dev-store backed (`ALLOW_DEV_HELPERS=1`) until `user-notifications` wires outbound mail. Sign-in accepts `?flow=sign-in` so returning users land directly on login without toggling modes.
 
-**Verification:** `npm run check`, `lint`, `test` (62), `test:integration` (8), `boundaries`, `build`, `test:e2e` (17 incl. `e2e/stay-signed-in.e2e.ts` TC-ACC-03a–d + axe on profile/forgot-password).
+**Verification:** `npm run check`, `lint`, `test` (62), `test:integration` (8), `boundaries`, `build`, `test:e2e` (17 incl. `testing/playwright/stay-signed-in.e2e.ts` TC-ACC-03a–d + axe on profile/forgot-password).
 
 **Follow-ups:** Wire real reset email via `user-notifications`; add email/phone change UI when US-ACC-05 lands; mobile nav could expose sign-out without visiting profile (optional polish).

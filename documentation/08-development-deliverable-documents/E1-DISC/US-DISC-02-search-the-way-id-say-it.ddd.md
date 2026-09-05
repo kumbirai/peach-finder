@@ -55,7 +55,7 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 
 **Approach:** Extended the deterministic `parseQuery` lexicon-driven parser in `discovery-search` with config-backed rating thresholds, vertical noise token dropping (`massage`/`therapist`), and expanded `LEXICON_SEED` + migration `0010_us_disc_02_search_lexicon.sql` for BRD §13 phrases (`speaks zulu`, `deep tissue`, `available tonight`, service tags). Homepage load canonicalizes natural-language `q` into structured URL params (`lang`, `tag`, `available`, `near`, `minRating`) so derived filters are individually removable via link-based chips (`SearchFilters` + `Chip`). Sticky search bar wrapper matches prototype behavior.
 
-**Tests:** `parse-query.test.ts` (BRD §13 acceptance set), `search-url.test.ts`, `natural-language-search.integration.test.ts` (TC-DISC-02a/b/c), `e2e/search-natural-language.e2e.ts` (5/5 live-stack).
+**Tests:** `parse-query.test.ts` (BRD §13 acceptance set), `search-url.test.ts`, `natural-language-search.integration.test.ts` (TC-DISC-02a/b/c), `testing/playwright/search-natural-language.e2e.ts` (5/5 live-stack).
 
 **Verified:** `npm run check`, `lint`, `test` (112), `test:integration` (71), `boundaries`, `build`, E2E US-DISC-02 (5/5), axe clean on filtered search.
 
