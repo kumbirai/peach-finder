@@ -7,6 +7,7 @@
 	import OnboardingStepper from '$lib/components/onboarding/OnboardingStepper.svelte';
 	import PhotoUploader from '$lib/components/onboarding/PhotoUploader.svelte';
 	import StepTip from '$lib/components/onboarding/StepTip.svelte';
+	import { RESPONSE_TIME_DISCLOSURE_ONBOARDING } from '$lib/messaging/response-time-disclosure';
 
 	const INTRO_LIMIT = 600;
 
@@ -365,6 +366,9 @@
 						Publish is blocked until you complete: {data.missingSummary}.
 					</p>
 				{/if}
+				<StepTip>
+					{RESPONSE_TIME_DISCLOSURE_ONBOARDING}
+				</StepTip>
 				<StepTip>
 					Your profile goes live immediately when you publish — there is no review step. You can
 					unpublish it yourself at any time, with no data lost.

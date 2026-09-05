@@ -35,6 +35,7 @@
 		backHref={data.backHref}
 		forcePolling={data.forcePolling}
 		showQuickStartPrompts={data.viewerRole === 'seeker'}
+		showResponseTimeDisclosure={data.viewerRole === 'provider'}
 	/>
 </main>
 

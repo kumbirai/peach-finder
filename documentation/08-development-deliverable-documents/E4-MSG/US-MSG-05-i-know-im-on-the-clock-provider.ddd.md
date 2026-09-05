@@ -27,9 +27,9 @@ FR-MSG-07, FR-MSG-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,12 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-MSG-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**2026-09-05 — US-MSG-05 implemented**
+
+- **Backend (`direct-messaging`):** No new HTTP endpoints — FR-MSG-08 first-reply-only metric already lives in `getResponseTime` (`presence-read.ts`, LATERAL first provider message per thread). Added `response-time-first-reply.integration.test.ts` (TC-MSG-05b): five slow follow-up messages in one thread do not change the bucket after three fast first-reply samples.
+- **Frontend:** Shared copy in `src/lib/messaging/response-time-disclosure.ts`. Provider onboarding publish step (`/provider/onboarding?step=publish`) uses `StepTip` with full disclosure. Provider thread view renders `ResponseTimeDisclosure.svelte` (blush/pine note, clock icon, `data-testid="response-time-disclosure"`); seekers do not see it.
+- **Tests:** `response-time-disclosure.test.ts` (copy assertions); `response-time-first-reply.integration.test.ts` (TC-MSG-05b); Playwright `TC-MSG-05a` + seeker non-disclosure check in `testing/playwright/messaging-live.e2e.ts`.
+- **Assumption:** Disclosure copy uses the documented default 30-day trailing window (FR-MSG-08); admin-configurable window changes are surfaced when platform-configuration admin UI lands (US-ADMIN-06).

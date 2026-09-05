@@ -299,3 +299,52 @@ test.describe('US-MSG-04 inbox at a glance', () => {
 		await seekerContext.close();
 	});
 });
+
+test.describe('US-MSG-05 on the clock (provider)', () => {
+	test('TC-MSG-05a: onboarding and thread UI disclose response-time measurement', async ({
+		browser
+	}) => {
+		const providerContext = await browser.newContext();
+		const seekerContext = await browser.newContext();
+		const providerPage = await providerContext.newPage();
+		const seekerPage = await seekerContext.newPage();
+
+		const seekerEmail = `msg05a-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(
+			seekerPage,
+			seekerPage.request,
+			seekerEmail,
+			'password123',
+			'Msg05a Seeker'
+		);
+		await signIn(providerPage, SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD);
+
+		await providerPage.goto('/provider/onboarding?step=publish');
+		await expect(providerPage.getByText(/first.?reply/i).first()).toBeVisible();
+		await expect(providerPage.getByText(/measur/i).first()).toBeVisible();
+		await expect(providerPage.getByText(/profile/i).first()).toBeVisible();
+
+		const threadId = await openThreadWithProvider(
+			seekerPage,
+			SEED_DUAL_ROLE_PROFILE_ID,
+			'Response-time disclosure check'
+		);
+
+		await providerPage.goto(`/messages/${threadId}`);
+		const disclosure = providerPage.getByTestId('response-time-disclosure');
+		await expect(disclosure).toBeVisible();
+		await expect(disclosure).toContainText(/first.?reply/i);
+		await expect(disclosure).toContainText(/measur/i);
+		await expect(disclosure).toContainText(/profile/i);
+
+		await providerContext.close();
+		await seekerContext.close();
+	});
+
+	test('thread view hides response-time disclosure for seekers', async ({ page }) => {
+		const email = `msg05-seeker-${Date.now()}@example.com`;
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg05 Seeker');
+		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Seeker view check');
+		await expect(page.getByTestId('response-time-disclosure')).toHaveCount(0);
+	});
+});

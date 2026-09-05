@@ -4,6 +4,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import MessageBubble from '$lib/components/MessageBubble.svelte';
 	import QuickStartPrompts from '$lib/components/QuickStartPrompts.svelte';
+	import ResponseTimeDisclosure from '$lib/components/ResponseTimeDisclosure.svelte';
 	import { applyDeliveryUpdate } from '$lib/messaging/delivery-label';
 	import { fetchThreadPoll } from '$lib/messaging/poll-client';
 	import { latestMessageId, mergeThreadMessages } from '$lib/messaging/thread-messages';
@@ -17,7 +18,8 @@
 		initialMessages,
 		backHref = '/messages',
 		forcePolling = false,
-		showQuickStartPrompts = false
+		showQuickStartPrompts = false,
+		showResponseTimeDisclosure = false
 	}: {
 		threadId: string;
 		viewerId: string;
@@ -26,6 +28,7 @@
 		backHref?: string;
 		forcePolling?: boolean;
 		showQuickStartPrompts?: boolean;
+		showResponseTimeDisclosure?: boolean;
 	} = $props();
 
 	let messages = $state.raw<ThreadMessage[]>([...initialMessages]);
@@ -212,6 +215,10 @@
 		</p>
 	</div>
 </header>
+
+{#if showResponseTimeDisclosure}
+	<ResponseTimeDisclosure />
+{/if}
 
 <div class="thread-body" bind:this={threadBodyEl} aria-label="Conversation">
 	{#each messages as message (message.id)}
