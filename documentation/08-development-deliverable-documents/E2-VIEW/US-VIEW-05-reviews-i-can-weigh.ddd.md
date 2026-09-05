@@ -27,9 +27,9 @@ FR-REV-03, FR-REV-04, FR-REV-06.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VIEW-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-VIEW-05)
+
+- **Backend:** Migration `0013_us_view_05_reviews.sql` adds `is_edited`, `edited_at`, `reply_body`, `replied_at` to `provider_reviews.review`. Implemented `provider-reviews` public read path: `toPublicReview` serializer (first-name + initial, month/year only — no exact timestamps in public payloads), `listPublicReviewsForProvider` with cursor pagination, and `GET /api/reviews/provider/:providerProfileId` (anonymous, `search_query` rate limit). `provider-profile.getPublicProfile` now loads reviews via the `provider-reviews` facade instead of inline SQL.
+- **Frontend:** `PublicProfileView` reviews section shows rating stars, reviewer label, body, month/year date, italic `edited` marker, and a Pine-tinted provider-reply block beneath when present. SSR uses server-serialized `dateLabel` so exact ISO dates never appear in HTML.
+- **Seed:** `seedView05Reviews` seeds six Amara T. reviews with distinct reviewer identities, one edited review, and one provider reply (`SEED_VIEW_05_*` constants for e2e).
+- **Assumption:** Submit/edit/delete/reply write paths and domain events remain scoped to US-REV-* stories; VIEW-05 only delivers the public read surface and profile embedding per FR-REV-03/04/06 display requirements.
+- **Tests:** `serializers.test.ts`, `provider-reviews.integration.test.ts` (TC-VIEW-05a/b), extended `provider-profile-view.integration.test.ts`, `testing/playwright/profile-reviews.e2e.ts`.
+
+### Verification 2026-09-05
+
+- `npm run check` — 0 errors (5 pre-existing Svelte warnings).
+- `npm run lint` — clean.
+- `npm run test` — 183/183 passed.
+- `npm run test:e2e -- profile-reviews.e2e.ts` — 2/2 passed (axe clean on reviews section).
+- Adversarial: `curl -s http://127.0.0.1:5173/api/reviews/provider/not-a-uuid` returned `NOT_FOUND` / 404.

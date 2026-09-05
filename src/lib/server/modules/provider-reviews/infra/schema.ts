@@ -1,4 +1,4 @@
-import { integer, numeric, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, numeric, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { pgSchema } from 'drizzle-orm/pg-core';
 
 export const providerReviewsSchema = pgSchema('provider_reviews');
@@ -15,6 +15,10 @@ export const reviews = providerReviewsSchema.table('review', {
 	providerProfileId: uuid('provider_profile_id').notNull(),
 	reviewerId: uuid('reviewer_id').notNull(),
 	rating: smallint('rating').notNull(),
-	body: text('body').notNull(),
+	body: text('body'),
+	isEdited: boolean('is_edited').notNull().default(false),
+	editedAt: timestamp('edited_at', { withTimezone: true, mode: 'date' }),
+	replyBody: text('reply_body'),
+	repliedAt: timestamp('replied_at', { withTimezone: true, mode: 'date' }),
 	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 });

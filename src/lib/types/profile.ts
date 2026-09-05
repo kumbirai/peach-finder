@@ -24,6 +24,8 @@ export type PublicProfile = {
 		rating: number;
 		body: string;
 		reviewerName: string;
-		createdAt: string;
+		dateLabel: string;
+		isEdited: boolean;
+		providerReply: { body: string } | null;
 	}>;
 };

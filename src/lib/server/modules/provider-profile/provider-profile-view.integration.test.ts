@@ -33,7 +33,9 @@ describe('US-VIEW-01 provider profile view integration', () => {
 			expect(profile.value.services[0]?.priceCents).toBeGreaterThanOrEqual(0);
 			expect(profile.value.tags.length).toBeGreaterThan(0);
 			expect(profile.value.languages.length).toBeGreaterThan(0);
-			expect(profile.value.reviews.length).toBeGreaterThan(0);
+			expect(profile.value.reviews.length).toBeGreaterThanOrEqual(6);
+			expect(profile.value.reviews[0]?.reviewerName).toMatch(/^[A-Za-z]+(?:\s[A-Z]\.)?$/);
+			expect(profile.value.reviews[0]?.dateLabel).toMatch(/^[A-Za-z]+ \d{4}$/);
 			expect(profile.value.responseTime).toBe('within_30_min');
 			expect(profile.value.onlineStatus).toBeTruthy();
 			expect(profile.value.badges.identityVerified).toBe(true);

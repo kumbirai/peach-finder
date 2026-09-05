@@ -4,13 +4,7 @@
 	import ProfileContactBar from '$lib/components/ProfileContactBar.svelte';
 	import ProfileSafetyActions from '$lib/components/ProfileSafetyActions.svelte';
 	import { resolveCallHref } from '$lib/contact-actions';
-	import {
-		formatOnlineStatus,
-		formatRatingLabel,
-		formatResponseTime,
-		formatReviewDate,
-		reviewerInitialName
-	} from '$lib/profile-display';
+	import { formatOnlineStatus, formatRatingLabel, formatResponseTime } from '$lib/profile-display';
 	import type { PublicProfile } from '$lib/types/profile';
 
 	let {
@@ -194,15 +188,28 @@
 			<h3 id="reviews-heading-{profile.id}" class="title">Reviews</h3>
 			<ul class="reviews" data-testid="profile-reviews">
 				{#each profile.reviews as review (review.id)}
-					<li>
-						<p class="review-meta">
-							<span class="review-name">{reviewerInitialName(review.reviewerName)}</span>
+					<li class="review-item" data-testid="profile-review-item">
+						<div class="review-meta">
+							<span class="review-name" data-testid="profile-review-name"
+								>{review.reviewerName}</span
+							>
 							<span class="stars" aria-label="{review.rating} out of 5 stars">
 								{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
 							</span>
+						</div>
+						<p class="review-body">{review.body}</p>
+						<p class="review-foot">
+							<span class="review-date" data-testid="profile-review-date">{review.dateLabel}</span>
+							{#if review.isEdited}
+								<span class="review-edited" data-testid="profile-review-edited">edited</span>
+							{/if}
 						</p>
-						<p>{review.body}</p>
-						<p class="review-date">{formatReviewDate(review.createdAt)}</p>
+						{#if review.providerReply}
+							<div class="review-reply" data-testid="profile-review-reply">
+								<p class="review-reply-label">Provider reply</p>
+								<p>{review.providerReply.body}</p>
+							</div>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -350,13 +357,50 @@
 		gap: var(--space-sm);
 		margin: 0 0 var(--space-xs);
 	}
+	.review-item {
+		padding-bottom: var(--space-md);
+		border-bottom: 1px solid var(--color-divider);
+	}
+	.review-item:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
 	.review-name {
 		font-weight: 600;
 	}
-	.review-date {
-		margin-top: var(--space-xs);
+	.review-body {
+		margin: 0;
+		color: var(--color-stone);
+	}
+	.review-foot {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+		margin: var(--space-xs) 0 0;
 		color: var(--color-stone);
 		font-size: 0.875rem;
+	}
+	.review-date {
+		margin: 0;
+	}
+	.review-edited {
+		font-style: italic;
+	}
+	.review-reply {
+		margin-top: var(--space-sm);
+		padding: var(--space-sm) var(--space-md);
+		background: var(--color-blush);
+		border-radius: var(--radius-sm);
+	}
+	.review-reply-label {
+		margin: 0 0 var(--space-xs);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-pine);
+	}
+	.review-reply p:last-child {
+		margin: 0;
+		color: var(--color-stone);
 	}
 	.contact-copy {
 		margin: 0 0 var(--space-sm);

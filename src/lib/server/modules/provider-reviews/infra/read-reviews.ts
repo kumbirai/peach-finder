@@ -36,7 +36,7 @@ export async function listReviewsWrittenBySeeker(
 			id: row.id,
 			providerName,
 			rating: row.rating,
-			body: row.body
+			body: row.body ?? ''
 		});
 	}
 	return summaries;

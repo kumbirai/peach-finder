@@ -87,7 +87,7 @@ const PROVIDERS: ProviderSeed[] = [
 		activeThisWeek: true,
 		featured: true,
 		rating: { average: 4.9, count: 128 },
-		reviewCount: 3,
+		reviewCount: 6,
 		tagSlug: 'deep-tissue',
 		languageCode: 'en'
 	},
@@ -325,6 +325,46 @@ const PROVIDERS: ProviderSeed[] = [
 ];
 
 const REVIEWER_ID = '01900000-0000-7000-8000-000000000099';
+
+const VIEW_05_REVIEWERS = [
+	{
+		id: '01900000-0000-7000-8000-000000000c01',
+		displayName: 'Thandi Mokoena',
+		email: 'thandi.view05@example.com'
+	},
+	{
+		id: '01900000-0000-7000-8000-000000000c02',
+		displayName: 'Naledi Sithole',
+		email: 'naledi.view05@example.com'
+	},
+	{
+		id: '01900000-0000-7000-8000-000000000c03',
+		displayName: 'Chris Khumalo',
+		email: 'chris.view05@example.com'
+	},
+	{
+		id: '01900000-0000-7000-8000-000000000c04',
+		displayName: 'Priya Naidoo',
+		email: 'priya.view05@example.com'
+	},
+	{
+		id: '01900000-0000-7000-8000-000000000c05',
+		displayName: 'Daniel Kgatle',
+		email: 'daniel.view05@example.com'
+	},
+	{
+		id: '01900000-0000-7000-8000-000000000c06',
+		displayName: 'Sipho Dlamini',
+		email: 'sipho.view05@example.com'
+	}
+] as const;
+
+export const SEED_VIEW_05_NEWEST_REVIEWER_LABEL = 'Thandi M.';
+export const SEED_VIEW_05_EDITED_REVIEW_BODY =
+	'Updated after my second visit — even better pressure and focus on my shoulders.';
+export const SEED_VIEW_05_REPLY_BODY =
+	'Thank you, Thandi — glad the follow-up session hit the spot. See you next month.';
+export const SEED_VIEW_05_REVIEW_COUNT = 6;
 
 export const SEED_DUAL_ROLE_USER_ID = '01900000-0000-7000-8000-000000000098';
 export const SEED_DUAL_ROLE_PROFILE_ID = '01900000-0000-7000-8000-000000000198';
@@ -564,22 +604,10 @@ export async function seedCore(db: Database): Promise<void> {
 			.onConflictDoNothing();
 	}
 
-	// Sample reviews for Amara T.
+	// US-VIEW-05 review fixtures for Amara T.
 	const amara = PROVIDERS[0]!;
 	const thandi = PROVIDERS[1]!;
-	for (let i = 0; i < amara.reviewCount; i++) {
-		await db
-			.insert(reviews)
-			.values({
-				id: `01900000-0000-7000-8000-0000000006${String(i).padStart(2, '0')}`,
-				providerProfileId: amara.profileId,
-				reviewerId: REVIEWER_ID,
-				rating: 5,
-				body: `Wonderful session — review ${i + 1}`,
-				createdAt: new Date(`2026-08-${10 + i}T12:00:00Z`)
-			})
-			.onConflictDoNothing();
-	}
+	await seedView05Reviews(db, amara.profileId);
 
 	await seedAmaraProfileExtras(db, amara);
 	await seedView02PresenceFixtures(db, thandi);
@@ -599,6 +627,95 @@ export async function seedCore(db: Database): Promise<void> {
 	}
 
 	await seedDualRoleUser(db, areaBySlug, publishedAt);
+}
+
+async function seedView05Reviews(db: Database, providerProfileId: string): Promise<void> {
+	await db.delete(reviews).where(eq(reviews.providerProfileId, providerProfileId));
+
+	for (const reviewer of VIEW_05_REVIEWERS) {
+		await db
+			.insert(users)
+			.values({
+				id: reviewer.id,
+				displayName: reviewer.displayName,
+				email: reviewer.email,
+				emailVerifiedAt: new Date(),
+				status: 'active'
+			})
+			.onConflictDoNothing();
+	}
+
+	const fixtures = [
+		{
+			id: '01900000-0000-7000-8000-000000000701',
+			reviewerId: VIEW_05_REVIEWERS[0]!.id,
+			rating: 5,
+			body: 'Booked for lower back pain after a long drive. Amara found the exact spot and the relief lasted for days.',
+			createdAt: new Date('2026-09-01T12:00:00Z'),
+			isEdited: false,
+			replyBody: SEED_VIEW_05_REPLY_BODY,
+			repliedAt: new Date('2026-09-02T14:00:00Z')
+		},
+		{
+			id: '01900000-0000-7000-8000-000000000702',
+			reviewerId: VIEW_05_REVIEWERS[1]!.id,
+			rating: 5,
+			body: SEED_VIEW_05_EDITED_REVIEW_BODY,
+			createdAt: new Date('2026-08-28T12:00:00Z'),
+			isEdited: true,
+			editedAt: new Date('2026-08-29T09:00:00Z')
+		},
+		{
+			id: '01900000-0000-7000-8000-000000000703',
+			reviewerId: VIEW_05_REVIEWERS[2]!.id,
+			rating: 5,
+			body: 'On time, professional, and the room was calm and clean. Already rebooked for next month.',
+			createdAt: new Date('2026-08-22T12:00:00Z'),
+			isEdited: false
+		},
+		{
+			id: '01900000-0000-7000-8000-000000000704',
+			reviewerId: VIEW_05_REVIEWERS[3]!.id,
+			rating: 4,
+			body: 'Great sports massage before my race. Would ask for a bit more pressure next time, but overall excellent.',
+			createdAt: new Date('2026-08-18T12:00:00Z'),
+			isEdited: false
+		},
+		{
+			id: '01900000-0000-7000-8000-000000000705',
+			reviewerId: VIEW_05_REVIEWERS[4]!.id,
+			rating: 5,
+			body: 'Deep tissue exactly where I needed it — shoulders feel brand new.',
+			createdAt: new Date('2026-08-12T12:00:00Z'),
+			isEdited: false
+		},
+		{
+			id: '01900000-0000-7000-8000-000000000706',
+			reviewerId: VIEW_05_REVIEWERS[5]!.id,
+			rating: 5,
+			body: 'Warm, skilled, and listened to what I wanted. Highly recommend.',
+			createdAt: new Date('2026-08-05T12:00:00Z'),
+			isEdited: false
+		}
+	] as const;
+
+	for (const fixture of fixtures) {
+		await db
+			.insert(reviews)
+			.values({
+				id: fixture.id,
+				providerProfileId,
+				reviewerId: fixture.reviewerId,
+				rating: fixture.rating,
+				body: fixture.body,
+				createdAt: fixture.createdAt,
+				isEdited: fixture.isEdited,
+				editedAt: 'editedAt' in fixture ? fixture.editedAt : null,
+				replyBody: 'replyBody' in fixture ? fixture.replyBody : null,
+				repliedAt: 'repliedAt' in fixture ? fixture.repliedAt : null
+			})
+			.onConflictDoNothing();
+	}
 }
 
 async function seedAmaraProfileExtras(db: Database, amara: ProviderSeed): Promise<void> {

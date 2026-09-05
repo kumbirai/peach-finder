@@ -1,5 +1,6 @@
 import type { AuthContext } from '../../../shared/auth-context';
 import type { ProviderProfileId } from '../../../shared/ids';
+import type { PublicReviewDto } from '../../provider-reviews';
 
 export type PublicService = {
 	id: string;
@@ -24,13 +25,7 @@ export type PublicProfile = {
 	onlineStatus: string | null;
 	availability: { state: 'available' | 'not_available'; setAt: string | null };
 	phone?: string;
-	reviews: Array<{
-		id: string;
-		rating: number;
-		body: string;
-		reviewerName: string;
-		createdAt: string;
-	}>;
+	reviews: PublicReviewDto[];
 };
 
 export type ProfileViewRow = {
@@ -54,17 +49,15 @@ export type ProfileViewRow = {
 	availabilityState: string;
 	availabilitySetAt: Date | null;
 	phone: string | null;
-	reviews: Array<{
-		id: string;
-		rating: number;
-		body: string;
-		reviewerId: string;
-		reviewerName: string;
-		createdAt: string;
-	}>;
 };
 
-export function toPublicProfile(view: ProfileViewRow, viewer: AuthContext): PublicProfile {
+export type EnrichedProfileView = ProfileViewRow & {
+	displayName: string;
+	phone: string | null;
+	reviews: PublicReviewDto[];
+};
+
+export function toPublicProfile(view: EnrichedProfileView, viewer: AuthContext): PublicProfile {
 	const includePhone = view.phone !== null && (view.phoneVisible || viewer.role !== 'anonymous');
 
 	const rating =
@@ -90,6 +83,6 @@ export function toPublicProfile(view: ProfileViewRow, viewer: AuthContext): Publ
 			setAt: view.availabilitySetAt?.toISOString() ?? null
 		},
 		...(includePhone ? { phone: view.phone! } : {}),
-		reviews: view.reviews.map(({ reviewerId: _reviewerId, ...review }) => review)
+		reviews: view.reviews
 	};
 }

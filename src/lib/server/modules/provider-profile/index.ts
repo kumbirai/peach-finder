@@ -5,6 +5,7 @@ import type { AuthContext } from '../../shared/auth-context';
 import { asId, InvalidIdError, type ProviderProfileId, type UserId } from '../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../shared/result';
 import { getContactPhone, getDisplayIdentity } from '../identity-and-access';
+import { listPublicReviewsForProvider } from '../provider-reviews';
 import { providerProfiles } from './infra/schema';
 import {
 	loadProfileView,
@@ -107,20 +108,13 @@ export async function getPublicProfile(
 
 	const identity = await getDisplayIdentity(db, asId<'UserId'>(view.ownerId));
 
-	const reviewerIds = [...new Set(view.reviews.map((r) => r.reviewerId))];
-	const reviewerNames = new Map<string, string>();
-	for (const reviewerId of reviewerIds) {
-		const who = await getDisplayIdentity(db, asId<'UserId'>(reviewerId));
-		reviewerNames.set(reviewerId, who.isDeleted ? 'Former user' : who.displayName);
-	}
+	const { reviews } = await listPublicReviewsForProvider(db, providerProfileId, { limit: 20 });
+
 	const enriched = {
 		...view,
 		displayName: identity.isDeleted ? 'Former user' : identity.displayName,
 		phone: await getContactPhone(db, asId<'UserId'>(view.ownerId)),
-		reviews: view.reviews.map((r) => ({
-			...r,
-			reviewerName: reviewerNames.get(r.reviewerId) ?? 'Former user'
-		}))
+		reviews
 	};
 
 	return Ok(toPublicProfile(enriched, viewer));

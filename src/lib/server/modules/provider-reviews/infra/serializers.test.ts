@@ -1,0 +1,32 @@
+import { describe, expect, it } from 'vitest';
+import { abbreviateReviewerName, formatPublicReviewDate, toPublicReview } from './serializers';
+
+describe('provider-reviews serializers', () => {
+	it('abbreviates reviewer names for public display', () => {
+		expect(abbreviateReviewerName('Thandi Mokoena')).toBe('Thandi M.');
+		expect(abbreviateReviewerName('Former user')).toBe('Former user');
+		expect(abbreviateReviewerName('Chris')).toBe('Chris');
+	});
+
+	it('formats review dates as month and year only', () => {
+		expect(formatPublicReviewDate(new Date('2026-08-15T12:00:00Z'))).toMatch(/August 2026/);
+	});
+
+	it('toPublicReview omits exact timestamps and includes edited marker state', () => {
+		const dto = toPublicReview({
+			id: '01900000-0000-7000-8000-000000000601',
+			rating: 5,
+			body: 'Great session',
+			isEdited: true,
+			replyBody: 'Thanks for visiting.',
+			createdAt: new Date('2026-09-01T12:00:00Z'),
+			reviewerDisplayName: 'Naledi Sithole'
+		});
+
+		expect(dto.reviewerName).toBe('Naledi S.');
+		expect(dto.dateLabel).toMatch(/September 2026/);
+		expect(dto.isEdited).toBe(true);
+		expect(dto.providerReply).toEqual({ body: 'Thanks for visiting.' });
+		expect(JSON.stringify(dto)).not.toMatch(/2026-09-01T/);
+	});
+});

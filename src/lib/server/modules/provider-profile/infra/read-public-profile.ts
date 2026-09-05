@@ -16,13 +16,6 @@ import type { ProfileViewRow } from './serializers';
 type ListingRow = { state: string };
 type RatingRow = { average: string | null; count: number };
 type AvailRow = { state: string; setAt: Date | null };
-type ReviewRow = {
-	id: string;
-	rating: number;
-	body: string;
-	reviewerId: string;
-	createdAt: Date;
-};
 type PhotoRow = { id: string; galleryUrl: string; isPrimary: boolean };
 
 export type LoadProfileViewOptions = {
@@ -122,14 +115,6 @@ export async function loadProfileView(
 		LIMIT 1
 	`);
 
-	const reviewRows = await db.execute<ReviewRow>(sql`
-		SELECT id, rating, body, reviewer_id AS "reviewerId", created_at AS "createdAt"
-		FROM provider_reviews.review
-		WHERE provider_profile_id = ${providerProfileId}
-		ORDER BY created_at DESC
-		LIMIT 10
-	`);
-
 	const rating = (ratingRows as unknown as RatingRow[])[0];
 	const avail = (availRows as unknown as AvailRow[])[0];
 	const liveAvailability = avail?.state === 'available' || avail?.state === 'expiry_warned';
@@ -177,18 +162,7 @@ export async function loadProfileView(
 				? avail.setAt
 				: new Date(avail.setAt)
 			: null,
-		phone: null,
-		reviews: (reviewRows as unknown as ReviewRow[]).map((r) => ({
-			id: r.id,
-			rating: r.rating,
-			body: r.body,
-			reviewerId: r.reviewerId,
-			reviewerName: '',
-			createdAt:
-				r.createdAt instanceof Date
-					? r.createdAt.toISOString()
-					: new Date(r.createdAt).toISOString()
-		}))
+		phone: null
 	};
 }
 

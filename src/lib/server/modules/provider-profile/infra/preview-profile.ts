@@ -6,6 +6,7 @@ import type { ProviderProfileId, UserId } from '../../../shared/ids';
 import { asId } from '../../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { getContactPhone, getDisplayIdentity } from '../../identity-and-access';
+import { listPublicReviewsForProvider } from '../../provider-reviews';
 import { loadProfileView } from './read-public-profile';
 import { providerProfiles } from './schema';
 import { toPublicProfile, type PublicProfile } from './serializers';
@@ -48,12 +49,7 @@ export async function getProfilePreviewForOwner(
 	}
 
 	const identity = await getDisplayIdentity(db, asId<'UserId'>(view.ownerId));
-	const reviewerIds = [...new Set(view.reviews.map((r) => r.reviewerId))];
-	const reviewerNames = new Map<string, string>();
-	for (const reviewerId of reviewerIds) {
-		const who = await getDisplayIdentity(db, asId<'UserId'>(reviewerId));
-		reviewerNames.set(reviewerId, who.isDeleted ? 'Former user' : who.displayName);
-	}
+	const { reviews } = await listPublicReviewsForProvider(db, profileId, { limit: 20 });
 
 	const forcedViewer = forcedViewerAuth(audience, ipAddress);
 	const includePhone = view.phoneVisible || forcedViewer.role !== 'anonymous';
@@ -62,10 +58,7 @@ export async function getProfilePreviewForOwner(
 		...view,
 		displayName: identity.isDeleted ? 'Former user' : identity.displayName,
 		phone: includePhone ? await getContactPhone(db, asId<'UserId'>(view.ownerId)) : null,
-		reviews: view.reviews.map((r) => ({
-			...r,
-			reviewerName: reviewerNames.get(r.reviewerId) ?? 'Former user'
-		}))
+		reviews
 	};
 
 	return Ok(toPublicProfile(enriched, forcedViewer));
