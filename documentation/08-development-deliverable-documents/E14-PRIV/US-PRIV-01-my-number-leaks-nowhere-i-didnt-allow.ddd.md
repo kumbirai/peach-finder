@@ -27,9 +27,9 @@ FR-PRIV-01, FR-PROF-08, SR-SEC-09.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,23 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PRIV-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PRIV-01)
+
+- **Scope:** US-PRIV-01 formalizes the server-side phone-visibility privacy guarantee (FR-PRIV-01, SR-SEC-09) already introduced in US-PONB-07. No new product surface — the story adds regression coverage proving the number is absent from served JSON/HTML at the network layer, not merely hidden in CSS.
+- **Serializer:** `toPublicProfile` in `serializers.ts` omits the `phone` key entirely via conditional spread when `phoneVisible=false` and viewer is anonymous. Unit test now asserts `'phone' in dto === false` and `JSON.stringify` absence (test-strategy §2.2 bug class).
+- **Integration:** `phone-privacy.integration.test.ts` covers TC-PRIV-01a across `getPublicProfile`, `runSearch` cards, and `getProfilePreviewForOwner` anonymous preview — all assert key absence and no `+27` digits in serialized output.
+- **E2E:** `testing/playwright/search-to-contact.e2e.ts` (traceability `e2e-search-to-contact`) verifies TC-PRIV-01a at API, SSR HTML, homepage, and discovery-search layers using `seed-core` (Thandi M. phone-OFF vs Amara T. phone-ON). Includes partial golden-path (homepage → profile → sign-up mid-action with draft preserved).
+- **Seed exports:** `SEED_CORE_PHONE_OFF_PROFILE_ID`, `SEED_CORE_PHONE_OFF_NUMBER`, `SEED_CORE_PHONE_OFF_DISPLAY_NAME`, `SEED_CORE_PHONE_ON_NUMBER` added to `scripts/seed-core.ts` for stable E2E assertions.
+- **Assumption:** Signed-in seekers continue to see phone when visibility is OFF (FR-PROF-08) — unchanged from US-PONB-07; US-PRIV-01 only guards anonymous-facing leakage.
+
+### Verification 2026-09-05
+
+- `npm run check` — 0 errors (5 pre-existing Svelte warnings).
+- `npm run lint` — clean.
+- `npm run test` — 148/148 unit tests passed.
+- `npm run test:integration -- phone-privacy.integration.test.ts` — 4/4 passed (TC-PRIV-01a).
+- `npx playwright test search-to-contact.e2e.ts` — 4/4 passed (TC-PRIV-01a API/SSR/homepage/search + profile Call link + axe).
+- Test-file renames: `auth-commands.test.ts` and `badge-read.test.ts` moved to `*.integration.test.ts` (they already used `withTestDatabase`; vitest unit config excludes `*.integration.test.ts`).

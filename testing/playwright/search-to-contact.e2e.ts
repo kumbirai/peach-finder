@@ -1,0 +1,123 @@
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import {
+	SEED_CORE_PHONE_OFF_DISPLAY_NAME,
+	SEED_CORE_PHONE_OFF_NUMBER,
+	SEED_CORE_PHONE_OFF_PROFILE_ID,
+	SEED_CORE_PHONE_ON_NUMBER,
+	SEED_CORE_PRIMARY_PROFILE_ID
+} from '../../scripts/seed-core';
+
+const DRAFT = 'Hi, are you available this afternoon?';
+
+test.describe('E2E-1 search to contact', () => {
+	test('TC-PRIV-01a: anonymous responses omit phone when visibility is OFF', async ({
+		browser
+	}) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		const apiRes = await anonPage.request.get(
+			`/api/provider/profile/${SEED_CORE_PHONE_OFF_PROFILE_ID}`
+		);
+		expect(apiRes.ok()).toBeTruthy();
+		const apiBody = (await apiRes.json()) as { data: Record<string, unknown> };
+		expect('phone' in apiBody.data).toBe(false);
+		expect(JSON.stringify(apiBody)).not.toContain(SEED_CORE_PHONE_OFF_NUMBER);
+
+		const htmlRes = await anonPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		expect(htmlRes?.ok()).toBeTruthy();
+		const html = await htmlRes!.text();
+		expect(html).not.toContain(SEED_CORE_PHONE_OFF_NUMBER);
+		expect(html).not.toMatch(/tel:\+27/);
+		await expect(anonPage.getByRole('link', { name: 'Call' })).toHaveCount(0);
+
+		const searchRes = await anonPage.request.get('/api/discovery/search');
+		expect(searchRes.ok()).toBeTruthy();
+		const searchBody = await searchRes.json();
+		expect(JSON.stringify(searchBody)).not.toContain(SEED_CORE_PHONE_OFF_NUMBER);
+		expect(JSON.stringify(searchBody)).not.toContain('"phone"');
+
+		const homepageRes = await anonPage.goto('/');
+		expect(homepageRes?.ok()).toBeTruthy();
+		const homepageHtml = await homepageRes!.text();
+		expect(homepageHtml).not.toContain(SEED_CORE_PHONE_OFF_NUMBER);
+		await expect(anonPage.getByText(SEED_CORE_PHONE_OFF_DISPLAY_NAME)).toBeVisible();
+
+		const phoneOnApi = await anonPage.request.get(
+			`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`
+		);
+		const phoneOnBody = (await phoneOnApi.json()) as { data: { phone?: string } };
+		expect(phoneOnBody.data.phone).toBe(SEED_CORE_PHONE_ON_NUMBER);
+
+		await anonContext.close();
+	});
+
+	test('anonymous phone visibility respects seeded provider settings on profile pages', async ({
+		browser
+	}) => {
+		const anonContext = await browser.newContext();
+		const anonPage = await anonContext.newPage();
+
+		await anonPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		await expect(
+			anonPage.getByRole('heading', { level: 1, name: SEED_CORE_PHONE_OFF_DISPLAY_NAME })
+		).toBeVisible();
+		await expect(anonPage.getByRole('link', { name: 'Call' })).toHaveCount(0);
+
+		await anonPage.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await expect(anonPage.getByRole('link', { name: 'Call' })).toBeVisible();
+		await expect(anonPage.locator('a[href^="tel:+27"]')).toHaveCount(2);
+
+		await anonContext.close();
+	});
+
+	test('golden path: homepage to profile to sign-up preserves message context', async ({
+		page
+	}) => {
+		const email = `e2e-stc-${Date.now()}@example.com`;
+
+		await page.goto('/');
+		await expect(page.getByRole('heading', { level: 2, name: /\d+ available now/i })).toBeVisible();
+
+		const card = page.locator(`a[href="/provider/${SEED_CORE_PRIMARY_PROFILE_ID}"]`).first();
+		await expect(card).toBeVisible();
+		await card.click();
+		await expect(page).toHaveURL(new RegExp(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`));
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Call' })).toBeVisible();
+
+		await page.evaluate(
+			({ id, draft }) => sessionStorage.setItem(`pf_message_draft_${id}`, draft),
+			{ id: SEED_CORE_PRIMARY_PROFILE_ID, draft: DRAFT }
+		);
+		await page.reload();
+
+		await page
+			.getByRole('group', { name: 'Contact actions' })
+			.getByRole('link', { name: 'Message' })
+			.click();
+		await expect(page).toHaveURL(/\/sign-in\?/);
+		await expect(page).toHaveURL(/draft=/);
+
+		await page.getByLabel('Your name').fill('Search Contact E2E');
+		await page.getByLabel('Email').fill(email);
+		await page.getByLabel('Password').fill('password123');
+		await page.locator('input[name="acceptedTerms"]').check();
+		await page.getByRole('button', { name: 'Create account' }).click();
+
+		await expect(page).toHaveURL(
+			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}\\?draft=`)
+		);
+		await expect(page.getByLabel('Your message')).toHaveValue(DRAFT, { timeout: 10_000 });
+	});
+
+	test('profile page has no critical or serious axe violations', async ({ page }) => {
+		await page.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		const results = await new AxeBuilder({ page }).analyze();
+		const serious = results.violations.filter(
+			(v) => v.impact === 'critical' || v.impact === 'serious'
+		);
+		expect(serious).toEqual([]);
+	});
+});

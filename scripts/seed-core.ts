@@ -827,3 +827,7 @@ async function seedDualRoleUser(
 }
 
 export const SEED_CORE_PRIMARY_PROFILE_ID = PROVIDERS[0]!.profileId;
+export const SEED_CORE_PHONE_ON_NUMBER = PROVIDERS[0]!.phone;
+export const SEED_CORE_PHONE_OFF_PROFILE_ID = PROVIDERS[1]!.profileId;
+export const SEED_CORE_PHONE_OFF_NUMBER = PROVIDERS[1]!.phone;
+export const SEED_CORE_PHONE_OFF_DISPLAY_NAME = PROVIDERS[1]!.displayName;

@@ -31,6 +31,9 @@ describe('toPublicProfile', () => {
 	it('omits phone for anonymous viewers when phone_visible is off', () => {
 		const dto = toPublicProfile(baseView, anonymousAuth('127.0.0.1'));
 		expect(dto.phone).toBeUndefined();
+		expect('phone' in dto).toBe(false);
+		expect(JSON.stringify(dto)).not.toContain('"phone"');
+		expect(JSON.stringify(dto)).not.toContain('+27821234001');
 	});
 
 	it('includes phone for signed-in seekers when phone_visible is off', () => {
