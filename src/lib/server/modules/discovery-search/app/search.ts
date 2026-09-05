@@ -115,7 +115,11 @@ export async function runSearch(
 					cos(radians(a.centroid_lng) - radians(${lng}::double precision)) +
 					sin(radians(${lat}::double precision)) * sin(radians(a.centroid_lat))
 				)))
-			END AS distance_km
+			END AS distance_km,
+			CASE
+				WHEN ${sq.freeText} = '' THEN 0
+				ELSE ts_rank(p.intro_tsvector, plainto_tsquery('english', ${sq.freeText}))
+			END AS rel_rank
 		FROM discovery_search.search_projection p
 		JOIN platform_configuration.area a ON a.id = p.area_id
 		WHERE
@@ -145,6 +149,7 @@ export async function runSearch(
 			(p.availability_state = 'available') DESC,
 			p.availability_set_at DESC NULLS LAST,
 			p.is_featured DESC,
+			rel_rank DESC,
 			distance_km ASC NULLS LAST,
 			p.badge_active_this_week DESC,
 			p.last_activity_at DESC NULLS LAST,

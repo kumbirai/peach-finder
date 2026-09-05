@@ -27,7 +27,19 @@
 				<AvailabilityPill setAt={card.availability.setAt} />
 			{/if}
 			{#if card.isFeatured}
-				<span class="featured label">Featured</span>
+				<span class="featured label" data-testid="featured-label">
+					<svg
+						class="spark"
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						aria-hidden="true"
+					>
+						<path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6L12 2z" />
+					</svg>
+					Featured
+				</span>
 			{/if}
 		</div>
 	</div>
@@ -98,10 +110,17 @@
 	.featured {
 		display: inline-flex;
 		align-items: center;
+		gap: 5px;
 		background: var(--color-ink);
 		color: var(--color-paper);
+		font-weight: 600;
+		font-size: 0.75rem;
+		letter-spacing: 0.02em;
 		border-radius: var(--radius-pill);
 		padding: 4px 10px;
+	}
+	.spark {
+		flex-shrink: 0;
 	}
 	.placeholder {
 		display: flex;

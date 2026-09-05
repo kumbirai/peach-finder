@@ -30,9 +30,9 @@ FR-SRCH-03, FR-SRCH-08, FR-SRCH-09.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -49,3 +49,22 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-06 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor
+
+**Approach:** Availability-first ranking and featured boost were already encoded in `runSearch` `ORDER BY` (terms 1–3 per LLD §6). This story completed LLD alignment by adding `rel_rank` as term 4 (relevance within availability tiers), hardened the Featured label on `ProviderCard` to match the prototype (ink pill + spark icon, always visible via `data-testid="featured-label"`), and added adversarial integration + Playwright coverage for TC-DISC-06a–d. FR-SRCH-09 discoverability remains projection-membership: unpublished/lapsed providers are excluded when their projection row is removed (verified in integration test via `removeSearchProjection` + listing `unpublished`).
+
+**Files touched:**
+- `src/lib/server/modules/discovery-search/app/search.ts` — `rel_rank` in SELECT/ORDER BY
+- `src/lib/components/ProviderCard.svelte` — prototype-matched Featured label
+- `src/lib/server/modules/discovery-search/availability-ranking.integration.test.ts`
+- `src/lib/server/modules/discovery-search/app/serializers.test.ts`
+- `testing/playwright/search-availability-ranking.e2e.ts`
+
+**Assumption:** `FeaturingActivated`/`ListingLapsed` event subscribers that sync `is_featured` and remove projection rows on billing transitions land in US-BILL-04/05; W2 seed data writes `is_featured` directly on the projection, which is sufficient for ranking/label tests here.
+
+**Verification:** `npm run check`, `npm run lint`, `npm run test` green (129/129). Playwright `testing/playwright/search-availability-ranking.e2e.ts` — 5/5 passed against live-seeded stack.
+
+**Follow-ups:** None for this story.
