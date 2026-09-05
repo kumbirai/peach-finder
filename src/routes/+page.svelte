@@ -1,14 +1,25 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import EmptySearchState from '$lib/components/EmptySearchState.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import NearMeControl, { type ProximityState } from '$lib/components/NearMeControl.svelte';
 	import ProviderCard from '$lib/components/ProviderCard.svelte';
+	import RecentSearches from '$lib/components/RecentSearches.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { DISCOVERY_MANUAL_FILTER_CHIPS, toggleManualFilter } from '$lib/manual-filters';
+	import {
+		buildRecentSearchLabel,
+		clearRecentSearches,
+		isSaveableSearchState,
+		loadRecentSearches,
+		removeRecentSearch,
+		saveRecentSearch,
+		type RecentSearchEntry
+	} from '$lib/recent-searches';
 	import {
 		removeIntentFromState,
 		structuredQueryToParams,
@@ -42,6 +53,46 @@
 	} = $props();
 
 	let searching = $state(false);
+	let recentSearches = $state<RecentSearchEntry[]>([]);
+
+	const pageSearchState = $derived.by((): SearchUrlState => ({
+		q: data.q,
+		verified: data.verified,
+		available: data.available,
+		langs: data.langs,
+		tags: data.tags,
+		minRating: data.minRating,
+		priceMin: data.priceMin,
+		priceMax: data.priceMax,
+		near: data.near,
+		lat: data.lat,
+		lng: data.lng,
+		areaSlug: data.areaSlug
+	}));
+
+	function syncRecentSearchesFromPage() {
+		if (!browser) return;
+		const state = pageSearchState;
+		const intents = data.appliedIntents;
+		if (isSaveableSearchState(state)) {
+			recentSearches = saveRecentSearch(state, buildRecentSearchLabel(state, intents));
+			return;
+		}
+		recentSearches = loadRecentSearches();
+	}
+
+	$effect(() => {
+		syncRecentSearchesFromPage();
+	});
+
+	function handleRemoveRecentSearch(id: string) {
+		recentSearches = removeRecentSearch(id);
+	}
+
+	function handleClearRecentSearches() {
+		clearRecentSearches();
+		recentSearches = [];
+	}
 
 	const availableCards = $derived(
 		data.cards.filter((card) => card.availability.state === 'available')
@@ -152,6 +203,7 @@
 	);
 
 	onMount(() => {
+		syncRecentSearchesFromPage();
 		const timer = window.setInterval(() => {
 			const params = new URLSearchParams(window.location.search);
 			const hasFilters =
@@ -217,6 +269,14 @@
 			onToggleManualFilter={toggleManualFilterChip}
 		/>
 	</div>
+
+	{#if isDefaultHomepage && recentSearches.length > 0}
+		<RecentSearches
+			entries={recentSearches}
+			onRemove={handleRemoveRecentSearch}
+			onClearAll={handleClearRecentSearches}
+		/>
+	{/if}
 
 	{#if searching}
 		<div class="grid">

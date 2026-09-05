@@ -26,9 +26,9 @@ FR-SRCH-12.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-09 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor
+
+**Approach:** FR-SRCH-12 / SR-PRIV-04 require recent searches to live in first-party, per-device storage only — not on the discovery-search server path (the LLD's determinism law forbids per-user search state in Postgres). Implemented `src/lib/recent-searches.ts` (localStorage key `pf_recent_searches`, max 8 entries, deduped by URL fingerprint) and `RecentSearches.svelte` on the discover homepage (`src/routes/+page.svelte`): entries appear when the surface is the default homepage, one tap re-runs the saved query + filters via URL params, and per-entry / clear-all controls remove storage. No new API routes, events, or migrations — backend checklist item is satisfied as N/A with rationale above.
+
+**Files touched:**
+- `src/lib/recent-searches.ts`, `src/lib/recent-searches.test.ts`
+- `src/lib/components/RecentSearches.svelte`
+- `src/routes/+page.svelte`
+- `testing/playwright/search-recent-searches.e2e.ts`
+
+**Assumption:** The interactive prototype has no dedicated recent-search panel; the UI follows existing discover-surface tokens (full-pill controls, Terracotta focus ring, warm shadow, ≥44px targets) and sits below the sticky search bar on the default homepage only.
+
+**Verification:** `npm run check` and `npm run lint` clean. `npm run test -- src/lib/recent-searches.test.ts src/lib/search-url.test.ts src/lib/server/modules/discovery-search` — 41/41 passed. Playwright `testing/playwright/search-recent-searches.e2e.ts` — 3/3 passed against live-seeded stack. Full `npm run test` reports 2 pre-existing integration timeouts in unrelated identity/trust modules (Docker-dependent); not introduced by this story.
+
+**Follow-ups:** None for this story.
