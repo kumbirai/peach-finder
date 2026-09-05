@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { parseOptionalFiniteNumber } from '$lib/search-url';
+import { parseOptionalCoord, parseOptionalFiniteNumber } from '$lib/search-url';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { runSearch, parseQuery } from '$lib/server/modules/discovery-search';
@@ -18,7 +18,23 @@ function readSearchParams(url: URL) {
 	const priceMin = parseOptionalFiniteNumber(url.searchParams.get('priceMin'));
 	const priceMax = parseOptionalFiniteNumber(url.searchParams.get('priceMax'));
 	const near = url.searchParams.get('near') === '1';
-	return { q, verified, available, langs, tags, minRating, priceMin, priceMax, near };
+	const lat = parseOptionalCoord(url.searchParams.get('lat'));
+	const lng = parseOptionalCoord(url.searchParams.get('lng'));
+	const areaSlug = url.searchParams.get('area')?.trim() || null;
+	return {
+		q,
+		verified,
+		available,
+		langs,
+		tags,
+		minRating,
+		priceMin,
+		priceMax,
+		near,
+		lat,
+		lng,
+		areaSlug
+	};
 }
 
 function hasStructuredFilters(params: ReturnType<typeof readSearchParams>): boolean {
@@ -30,7 +46,10 @@ function hasStructuredFilters(params: ReturnType<typeof readSearchParams>): bool
 		params.minRating != null ||
 		params.priceMin != null ||
 		params.priceMax != null ||
-		params.near
+		params.near ||
+		params.lat != null ||
+		params.lng != null ||
+		params.areaSlug != null
 	);
 }
 
@@ -71,8 +90,20 @@ export async function load({ url, locals, setHeaders }) {
 	const canonical = canonicalizeNaturalLanguageQuery(url, lexicon);
 	if (canonical) redirect(302, canonical);
 
-	const { q, verified, available, langs, tags, minRating, priceMin, priceMax, near } =
-		readSearchParams(url);
+	const {
+		q,
+		verified,
+		available,
+		langs,
+		tags,
+		minRating,
+		priceMin,
+		priceMax,
+		near,
+		lat,
+		lng,
+		areaSlug
+	} = readSearchParams(url);
 
 	const result = await runSearch(
 		db,
@@ -86,6 +117,9 @@ export async function load({ url, locals, setHeaders }) {
 			...(priceMin != null ? { priceMin } : {}),
 			...(priceMax != null ? { priceMax } : {}),
 			...(near ? { near: true } : {}),
+			...(lat != null ? { lat } : {}),
+			...(lng != null ? { lng } : {}),
+			...(areaSlug ? { areaSlug } : {}),
 			lexicon
 		},
 		locals.auth
@@ -94,6 +128,7 @@ export async function load({ url, locals, setHeaders }) {
 	return {
 		cards: result.cards,
 		appliedIntents: result.appliedIntents,
+		proximityLabel: result.proximityLabel,
 		q,
 		verified,
 		available,
@@ -102,6 +137,9 @@ export async function load({ url, locals, setHeaders }) {
 		minRating,
 		priceMin,
 		priceMax,
-		near
+		near,
+		lat,
+		lng,
+		areaSlug
 	};
 }

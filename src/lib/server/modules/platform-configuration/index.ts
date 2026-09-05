@@ -257,6 +257,23 @@ export async function getActiveAreaById(
 	return rows[0] ?? null;
 }
 
+export async function getActiveAreaBySlug(
+	db: Database,
+	slug: string
+): Promise<{ id: string; name: string; centroidLat: number; centroidLng: number } | null> {
+	const rows = await db
+		.select({
+			id: areas.id,
+			name: areas.name,
+			centroidLat: areas.centroidLat,
+			centroidLng: areas.centroidLng
+		})
+		.from(areas)
+		.where(and(eq(areas.slug, slug), eq(areas.isActive, true)))
+		.limit(1);
+	return rows[0] ?? null;
+}
+
 export async function createArea(
 	db: Database,
 	input: {

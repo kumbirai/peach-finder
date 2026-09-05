@@ -52,7 +52,10 @@
 			minRating,
 			priceMin: null,
 			priceMax,
-			near: false
+			near: false,
+			lat: null,
+			lng: null,
+			areaSlug: null
 		})}
 		{@const intentKey = manualFilterIntentKey(chip)}
 		<Chip

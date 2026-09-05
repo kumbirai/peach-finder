@@ -29,9 +29,9 @@ FR-SRCH-06, FR-PROF-04, FR-PRIV-02, SR-INT-06.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,28 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-DISC-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor
+
+**Approach:** Backend search already computed haversine `distance_km` when `lat`/`lng` were passed transiently. This story added `resolveSearchCoords` (device coords or `area` slug → centroid via `platform-configuration.getActiveAreaBySlug`), `proximityLabel` in search results, and wired the discover homepage with `NearMeControl` (geolocation prompt, inline manual area entry on denial using area suggestions, location row per prototype). Distance displays on `ProviderCard` via `formatDistanceKm`. Coordinates are request-scoped only — never written to storage (FR-PRIV-02).
+
+**Files touched:**
+- `src/lib/server/modules/platform-configuration/index.ts` — `getActiveAreaBySlug`
+- `src/lib/server/modules/discovery-search/app/resolve-search-coords.ts`, `search.ts`
+- `src/routes/+page.server.ts`, `src/routes/api/discovery/search/+server.ts`
+- `src/lib/search-url.ts` (+ test), `src/lib/format-distance.ts` (+ test)
+- `src/lib/components/NearMeControl.svelte`, `src/routes/+page.svelte`, `src/lib/components/ProviderCard.svelte`
+- `src/lib/server/modules/discovery-search/near-me-search.integration.test.ts`
+- `testing/playwright/search-near-me.e2e.ts`
+
+**Assumption:** Manual area fallback passes the suggest-term slug (`area` URL param) rather than free-text geocoding — consistent with SR-INT-06 (owned gazetteer, no paid geocoding API on the hot path).
+
+**Verification:** `npm run check` and `npm run lint` clean. Unit + integration tests green (128/128). Playwright `testing/playwright/search-near-me.e2e.ts` — 4/4 passed against live-seeded stack (Postgres via docker compose). E2e uses `scrollIntoViewIfNeeded` before clicking the Near me control (sticky header overlap) and init-script geolocation grant/deny hooks for deterministic browser permission simulation.
+
+**Session 2026-09-05 (lint pass):** Removed unused `near`/`lat`/`lng`/`areaSlug` props from `NearMeControl` — proximity UI state is driven solely by server-resolved `proximityLabel` (prevents false active state for unresolved area slugs and satisfies `svelte/no-unused-props`).
+
+**Session 2026-09-05 (review pass 2):** Hid unresolved `near` intent chip when `proximityLabel` is null; orphan-proximity Clear uses server-derived `clearProximityHref` link (SvelteKit reliably strips stale query params). Distinguished geolocation-unavailable vs denied manual-fallback copy. Playwright TC-DISC-05d/e regressions added.
+
+**Follow-ups:** None for this story.

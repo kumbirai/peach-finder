@@ -16,7 +16,10 @@ const emptyState = (): SearchUrlState => ({
 	minRating: null,
 	priceMin: null,
 	priceMax: null,
-	near: false
+	near: false,
+	lat: null,
+	lng: null,
+	areaSlug: null
 });
 
 describe('manual-filters', () => {

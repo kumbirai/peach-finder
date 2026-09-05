@@ -4,6 +4,7 @@ import type { AuthContext } from '../../../shared/auth-context';
 import { getConfig } from '../../platform-configuration';
 import { dedupeIntents, parseQuery } from '../domain/parse-query';
 import type { StructuredQuery } from '../domain/structured-query';
+import { resolveSearchCoords } from './resolve-search-coords';
 import {
 	toSearchCard,
 	toSuggestions,
@@ -23,6 +24,7 @@ export type SearchInput = {
 	priceMax?: number;
 	lat?: number;
 	lng?: number;
+	areaSlug?: string;
 	near?: boolean;
 	limit?: number;
 	cursor?: string;
@@ -33,6 +35,7 @@ export type SearchResult = {
 	cards: SearchCard[];
 	nextCursor: string | null;
 	appliedIntents: Array<{ key: string; label: string; source: string }>;
+	proximityLabel: string | null;
 };
 
 function buildStructuredQuery(input: SearchInput): StructuredQuery {
@@ -49,7 +52,7 @@ function buildStructuredQuery(input: SearchInput): StructuredQuery {
 				: {}),
 			...(input.priceMin !== undefined ? { priceMin: input.priceMin } : {}),
 			...(input.priceMax !== undefined ? { priceMax: input.priceMax } : {}),
-			...(input.near || (input.lat && input.lng) ? { nearMe: true } : {})
+			...(input.near || (input.lat && input.lng) || input.areaSlug ? { nearMe: true } : {})
 		},
 		{
 			highlyRatedMinAverage: getConfig('provider-reviews.highly_rated_min_average'),
@@ -66,12 +69,17 @@ export async function runSearch(
 	viewer: AuthContext
 ): Promise<SearchResult> {
 	const sq = buildStructuredQuery(input);
+	const coords = await resolveSearchCoords(db, {
+		...(input.lat != null ? { lat: input.lat } : {}),
+		...(input.lng != null ? { lng: input.lng } : {}),
+		...(input.areaSlug ? { areaSlug: input.areaSlug } : {})
+	});
 	const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
 	const viewerId = viewer.userId;
 	const langCodes = sq.languageCodes;
 	const tagIds = sq.serviceTagIds;
-	const lat = input.lat ?? null;
-	const lng = input.lng ?? null;
+	const lat = coords.lat;
+	const lng = coords.lng;
 	const skipLang = langCodes.length === 0;
 	const skipTags = tagIds.length === 0;
 	const langClause = skipLang
@@ -165,10 +173,14 @@ export async function runSearch(
 	const page = hasMore ? resultRows.slice(0, limit) : resultRows;
 	const cards = page.map((row) => toSearchCard(row, viewer));
 
+	const proximityLabel =
+		lat != null && lng != null ? (coords.areaName ? `Near ${coords.areaName}` : 'Near you') : null;
+
 	return {
 		cards,
 		nextCursor: null,
-		appliedIntents: sq.appliedIntents
+		appliedIntents: sq.appliedIntents,
+		proximityLabel
 	};
 }
 

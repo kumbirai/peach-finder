@@ -3,6 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import NearMeControl, { type ProximityState } from '$lib/components/NearMeControl.svelte';
 	import ProviderCard from '$lib/components/ProviderCard.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
@@ -32,6 +33,10 @@
 			priceMin: number | null;
 			priceMax: number | null;
 			near: boolean;
+			lat: number | null;
+			lng: number | null;
+			areaSlug: string | null;
+			proximityLabel: string | null;
 		};
 	} = $props();
 
@@ -41,6 +46,24 @@
 		data.cards.filter((card) => card.availability.state === 'available')
 	);
 	const restCards = $derived(data.cards.filter((card) => card.availability.state !== 'available'));
+	const visibleAppliedIntents = $derived(
+		data.proximityLabel
+			? data.appliedIntents
+			: data.appliedIntents.filter((intent) => intent.key !== 'near')
+	);
+	const orphanProximity = $derived(
+		!data.proximityLabel &&
+			(data.near || data.lat != null || data.lng != null || data.areaSlug != null)
+	);
+	const clearProximityHref = $derived(
+		hrefForState({
+			...currentUrlState(),
+			near: false,
+			lat: null,
+			lng: null,
+			areaSlug: null
+		})
+	);
 	const isDefaultHomepage = $derived(
 		!data.q &&
 			!data.verified &&
@@ -51,6 +74,9 @@
 			data.priceMin == null &&
 			data.priceMax == null &&
 			!data.near &&
+			data.lat == null &&
+			data.lng == null &&
+			!data.areaSlug &&
 			data.appliedIntents.length === 0
 	);
 
@@ -64,8 +90,20 @@
 			minRating: data.minRating,
 			priceMin: data.priceMin,
 			priceMax: data.priceMax,
-			near: data.near
+			near: data.near,
+			lat: data.lat,
+			lng: data.lng,
+			areaSlug: data.areaSlug
 		};
+	}
+
+	async function applyProximity(state: ProximityState) {
+		const next = currentUrlState();
+		next.near = state.near;
+		next.lat = state.lat;
+		next.lng = state.lng;
+		next.areaSlug = state.areaSlug;
+		await goto(hrefForState(next), { invalidateAll: true, replaceState: true });
 	}
 
 	async function submitSearch(q: string) {
@@ -100,7 +138,7 @@
 	);
 	const intentHrefs = $derived(
 		Object.fromEntries(
-			data.appliedIntents.map((intent) => [
+			visibleAppliedIntents.map((intent) => [
 				intent.key,
 				hrefForState(removeIntentFromState(currentUrlState(), intent.key))
 			])
@@ -119,7 +157,10 @@
 				params.has('minRating') ||
 				params.has('priceMin') ||
 				params.has('priceMax') ||
-				params.get('near') === '1';
+				params.get('near') === '1' ||
+				params.has('lat') ||
+				params.has('lng') ||
+				params.has('area');
 			if (!hasFilters) void invalidateAll();
 		}, DISCOVERY_REFRESH_MS);
 		return () => window.clearInterval(timer);
@@ -150,13 +191,20 @@
 			<SearchBar value={data.q} onSearch={submitSearch} />
 		{/key}
 
+		<NearMeControl
+			proximityLabel={data.proximityLabel}
+			{orphanProximity}
+			{clearProximityHref}
+			onProximityChange={applyProximity}
+		/>
+
 		<SearchFilters
 			verified={data.verified}
 			available={data.available}
 			langs={data.langs}
 			minRating={data.minRating}
 			priceMax={data.priceMax}
-			appliedIntents={data.appliedIntents}
+			appliedIntents={visibleAppliedIntents}
 			{availableHref}
 			{intentHrefs}
 			onToggleAvailable={toggleAvailableFilter}

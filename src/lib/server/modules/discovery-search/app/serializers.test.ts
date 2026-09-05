@@ -41,4 +41,27 @@ describe('toSearchCard', () => {
 		);
 		expect(card.rating).toEqual({ state: 'new' });
 	});
+
+	it('TC-DISC-05: includes distance to provider area when coords are present', () => {
+		const card = toSearchCard(
+			{
+				providerProfileId: 'profile-1',
+				displayName: 'Amara T.',
+				photoPrimaryUrl: null,
+				availabilityState: 'available',
+				availabilitySetAt: new Date('2026-09-04T18:00:00Z'),
+				ratingAverage: '4.9',
+				ratingCount: 128,
+				badgeIdentityVerified: true,
+				badgeActiveThisWeek: true,
+				isFeatured: true,
+				priceMinCents: 35_000,
+				areaName: 'Rosebank',
+				distanceKm: 2.1
+			},
+			anonymousAuth('127.0.0.1')
+		);
+		expect(card.distanceKm).toBe(2.1);
+		expect(card.areaName).toBe('Rosebank');
+	});
 });

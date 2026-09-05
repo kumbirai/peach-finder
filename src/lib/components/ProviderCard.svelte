@@ -2,12 +2,16 @@
 	import AvailabilityPill from '$lib/components/AvailabilityPill.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import Card from '$lib/components/Card.svelte';
+	import { formatDistanceKm } from '$lib/format-distance';
 	import type { SearchCard } from '$lib/types/discovery';
 
 	let { card }: { card: SearchCard } = $props();
 
 	const ratingLabel = $derived(
 		'state' in card.rating ? 'New' : `${card.rating.average.toFixed(1)} (${card.rating.count})`
+	);
+	const distanceLabel = $derived(
+		card.distanceKm != null ? formatDistanceKm(card.distanceKm) : null
 	);
 </script>
 
@@ -40,6 +44,9 @@
 		<p class="meta">
 			<span class="stars" aria-label="Rating {ratingLabel}">&#9733; {ratingLabel}</span>
 			<span>{card.areaName}</span>
+			{#if distanceLabel}
+				<span class="distance" aria-label="{distanceLabel} away">{distanceLabel}</span>
+			{/if}
 			{#if card.priceFromCents}
 				<span>From R{(card.priceFromCents / 100).toFixed(0)}</span>
 			{/if}
@@ -83,6 +90,10 @@
 	}
 	.stars {
 		color: var(--color-peach-deep);
+	}
+	.distance {
+		color: var(--color-pine);
+		font-weight: 600;
 	}
 	.featured {
 		display: inline-flex;

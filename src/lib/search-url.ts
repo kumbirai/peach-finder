@@ -10,7 +10,17 @@ export type SearchUrlState = {
 	priceMin: number | null;
 	priceMax: number | null;
 	near: boolean;
+	lat: number | null;
+	lng: number | null;
+	areaSlug: string | null;
 };
+
+export function parseOptionalCoord(raw: string | null): number | null {
+	const value = parseOptionalFiniteNumber(raw);
+	if (value == null) return null;
+	if (value < -180 || value > 180) return null;
+	return value;
+}
 
 export function parseOptionalFiniteNumber(raw: string | null): number | null {
 	if (!raw) return null;
@@ -29,6 +39,9 @@ export function structuredQueryToParams(state: SearchUrlState): URLSearchParams 
 	if (state.priceMin != null) params.set('priceMin', String(state.priceMin));
 	if (state.priceMax != null) params.set('priceMax', String(state.priceMax));
 	if (state.near) params.set('near', '1');
+	if (state.lat != null) params.set('lat', String(state.lat));
+	if (state.lng != null) params.set('lng', String(state.lng));
+	if (state.areaSlug) params.set('area', state.areaSlug);
 	return params;
 }
 
@@ -47,6 +60,9 @@ export function removeIntentFromState(state: SearchUrlState, intentKey: string):
 			break;
 		case 'near':
 			next.near = false;
+			next.lat = null;
+			next.lng = null;
+			next.areaSlug = null;
 			break;
 		case 'rating':
 			next.minRating = null;
@@ -79,7 +95,10 @@ export function hasStructuredFilters(state: SearchUrlState): boolean {
 		state.minRating != null ||
 		state.priceMin != null ||
 		state.priceMax != null ||
-		state.near
+		state.near ||
+		state.lat != null ||
+		state.lng != null ||
+		state.areaSlug != null
 	);
 }
 
