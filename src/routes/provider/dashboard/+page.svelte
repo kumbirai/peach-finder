@@ -1,14 +1,17 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 
 	let {
-		data
+		data,
+		form
 	}: {
 		data: {
 			profile: { displayName: string; profileId: string } | null;
 			publishState: string | null;
+			unpublishConfirm: boolean;
 			inbox: Array<{
 				threadId: string;
 				counterpartName: string;
@@ -21,6 +24,7 @@
 				reviewsReceived: number;
 			} | null;
 		};
+		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
 	} = $props();
 </script>
 
@@ -39,12 +43,53 @@
 	{#if data.profile && data.analytics}
 		<section class="section" aria-labelledby="setup-heading">
 			<h2 id="setup-heading" class="title">
-				{data.publishState === 'published' ? 'Your live profile' : 'Profile setup'}
+				{#if data.publishState === 'published'}
+					Your live profile
+				{:else if data.publishState === 'unpublished'}
+					Your profile is hidden
+				{:else}
+					Profile setup
+				{/if}
 			</h2>
 			<Card>
 				{#if data.publishState === 'published'}
 					<p class="body">Changes you save go live immediately — no review step.</p>
-					<Button variant="primary" href="/provider/profile/edit">Edit profile</Button>
+					<div class="action-row">
+						<Button variant="primary" href="/provider/profile/edit">Edit profile</Button>
+						{#if data.unpublishConfirm}
+							<form method="POST" action="?/unpublish" use:enhance class="unpublish-form">
+								<p class="body confirm-copy" role="status">
+									Hiding your profile removes it from search immediately. All your photos, services,
+									and reviews stay saved — you can republish any time with no re-approval.
+								</p>
+								<div class="action-row">
+									<Button variant="secondary" href="/provider/dashboard">Cancel</Button>
+									<Button variant="primary" type="submit">Yes, hide my profile</Button>
+								</div>
+							</form>
+						{:else}
+							<Button variant="secondary" href="/provider/dashboard?unpublishConfirm=1"
+								>Hide profile</Button
+							>
+						{/if}
+					</div>
+				{:else if data.publishState === 'unpublished'}
+					<p class="body">
+						Your profile is hidden from seekers. Everything you built is still here — republish when
+						you are ready, with no review step.
+					</p>
+					{#if form?.issues?.length}
+						<p class="error label" role="alert">{form.issues[0]?.message}</p>
+					{/if}
+					{#if form?.message}
+						<p class="error label" role="alert">{form.message}</p>
+					{/if}
+					<div class="action-row">
+						<form method="POST" action="?/republish" use:enhance>
+							<Button variant="primary" type="submit">Republish profile</Button>
+						</form>
+						<Button variant="secondary" href="/provider/profile/edit">Edit profile</Button>
+					</div>
 				{:else}
 					<p class="body">Finish your profile so seekers can find and contact you.</p>
 					<Button variant="primary" href="/provider/onboarding">Continue setup</Button>
@@ -113,6 +158,27 @@
 	.section {
 		display: grid;
 		gap: var(--space-md);
+	}
+	.action-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
+		margin-top: var(--space-md);
+		align-items: center;
+	}
+	.unpublish-form {
+		display: grid;
+		gap: var(--space-md);
+		width: 100%;
+		margin-top: var(--space-md);
+	}
+	.confirm-copy {
+		margin: 0;
+		color: var(--color-stone);
+	}
+	.error {
+		margin: 0 0 var(--space-sm);
+		color: var(--color-peach-deep);
 	}
 	.inbox-list {
 		list-style: none;

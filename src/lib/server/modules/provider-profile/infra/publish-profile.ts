@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { upsertSearchProjection } from '../../discovery-search/index';
 import { ensureBuildingListing, startTrialOnPublish } from '../../listing-billing/index';
@@ -56,7 +56,6 @@ export async function publishProfileForOwner(
 		});
 	}
 
-	const firstPublishedAt = profile.firstPublishedAt ?? now;
 	let alreadyPublished = false;
 
 	await db.transaction(async (tx) => {
@@ -85,25 +84,31 @@ export async function publishProfileForOwner(
 			return;
 		}
 
+		const publishFirstAt = locked.first_published_at ? new Date(locked.first_published_at) : now;
+
 		const updated = await tx
 			.update(providerProfiles)
 			.set({
 				publishState: 'published',
 				unpublishReason: null,
-				firstPublishedAt,
+				firstPublishedAt: publishFirstAt,
 				updatedAt: now
 			})
-			.where(and(eq(providerProfiles.id, profileId), eq(providerProfiles.publishState, 'draft')))
+			.where(
+				and(
+					eq(providerProfiles.id, profileId),
+					inArray(providerProfiles.publishState, ['draft', 'unpublished'])
+				)
+			)
 			.returning({ id: providerProfiles.id });
 
 		if (updated.length === 0) {
-			alreadyPublished = true;
 			return;
 		}
 
 		await ensureBuildingListing(tx, profileId, now);
 		await startTrialOnPublish(tx, profileId, correlationId, now);
-		await upsertSearchProjection(tx, profileId, firstPublishedAt);
+		await upsertSearchProjection(tx, profileId, publishFirstAt);
 
 		const event: DomainEvent<
 			'ProviderPublished',

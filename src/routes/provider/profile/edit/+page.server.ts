@@ -15,7 +15,7 @@ export async function load({ locals }) {
 	if (!profile) {
 		redirect(303, '/provider/register');
 	}
-	if (profile.publishState !== 'published') {
+	if (profile.publishState === 'draft') {
 		redirect(303, '/provider/onboarding');
 	}
 

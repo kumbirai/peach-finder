@@ -26,9 +26,9 @@ FR-PROF-09.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PONB-06 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-05 — feat/initial-implementation — Cursor Composer (US-PONB-06)
+
+- **Unpublish:** `POST /api/provider/profile/unpublish` and dashboard `?/unpublish` action call `unpublishProfileForOwnerDb` with `reason:'owner'`, row `FOR UPDATE`, synchronous `removeSearchProjection`, and `ProviderUnpublished{providerProfileId, reason}` outbox event per event-catalog §2.
+- **Republish:** Fixed `publishProfileForOwner` T3 transition — `draft` **or** `unpublished` → `published` (clears `unpublish_reason`, preserves `first_published_at`, idempotent trial/listing). Republish uses the same `POST /api/provider/profile/publish` path and dashboard `?/republish` form action.
+- **UI:** `/provider/dashboard` — published providers get a two-step “Hide profile” confirmation (FR-UX-05); unpublished providers see “Your profile is hidden” with Republish + Edit. `/provider/profile/edit` now allows `unpublished` (only `draft` redirects to onboarding).
+- **Tests:** `unpublish-republish.integration.test.ts` (TC-PONB-06a + idempotent unpublish), E2E `e2e/provider-unpublish-republish.e2e.ts` (live-stack-seeded, axe on confirm step).
+- **Assumption:** Billing-lapse republish (T7) remains W5 scope; owner-initiated republish reuses T3 publish path only.
