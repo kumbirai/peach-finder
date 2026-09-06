@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Chip from '$lib/components/Chip.svelte';
+	import LegalDocumentLinks from '$lib/components/LegalDocumentLinks.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import OnboardingStepper from '$lib/components/onboarding/OnboardingStepper.svelte';
 	import PhotoUploader from '$lib/components/onboarding/PhotoUploader.svelte';
@@ -386,6 +387,10 @@
 			{/if}
 		</div>
 	</div>
+
+	<div class="legal-footer" data-testid="onboarding-legal-links">
+		<LegalDocumentLinks />
+	</div>
 </main>
 
 <style>
@@ -583,5 +588,9 @@
 	.proposal-note {
 		margin: var(--space-sm) 0 0;
 		color: var(--color-pine);
+	}
+	.legal-footer {
+		padding-top: var(--space-lg);
+		border-top: 1px solid var(--color-divider);
 	}
 </style>

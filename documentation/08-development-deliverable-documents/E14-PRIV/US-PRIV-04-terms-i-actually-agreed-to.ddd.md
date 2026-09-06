@@ -27,9 +27,9 @@ FR-PRIV-07.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,20 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PRIV-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-06 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Implemented FR-PRIV-07 terms acceptance capture and legal-document surfacing for US-PRIV-04:
+
+- `identity-and-access`: migration `0028_us_priv_04_terms_acceptance.sql` adds `terms_acceptance` table recording each user's accepted `privacy-policy` and `terms-of-service` version at registration; `recordTermsAcceptance` runs inside seeker (`registerSeeker`) and provider (`registerProvider`) transactions when `acceptedTerms` is true; validation rejects registration when false (existing LLD contract field).
+- `exportFor` now returns the user's terms-acceptance rows for SR-DATA-07 subject-access exports.
+- Frontend: plain-language `/privacy` and `/terms` pages; shared `LegalDocumentLinks` / `LegalConsentText` components; links added to site footer, seeker sign-up, provider registration, and provider onboarding.
+- Sign-up and provider registration use HTML5 `required` on the acceptance checkbox plus server-side validation; sign-up form now surfaces server validation issues.
+
+**Deviations:** Legal page body copy is placeholder plain-language text (per DDD scope note — substance is a legal-content matter, not engineering). Google OAuth new-user registration does not yet capture terms acceptance; email/password and provider OTP paths are covered. Record as follow-up if OAuth sign-up volume warrants an interstitial.
+
+**Verification:** `npm run lint`; `npm run test:integration -- terms-acceptance.integration.test.ts` (TC-PRIV-04b + acceptance recording); `npm run test -- legal-documents.test.ts`; `CI=1 npm run test:e2e -- terms-acceptance.e2e.ts` (TC-PRIV-04a/b + axe on legal pages). `npm run check` still reports pre-existing errors in unrelated modules (`trust-and-safety`, `account-lookup`, admin-login-challenge).
+
+**Follow-ups:** OAuth registration terms gate; legal-content review by counsel before production launch.

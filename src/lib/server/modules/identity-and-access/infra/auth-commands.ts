@@ -12,6 +12,7 @@ import { storeDevVerificationToken, storeDevPasswordResetToken } from './dev-ver
 import { validateDisplayName, validateEmail, validatePassword } from '../domain/password-policy';
 import { PASSWORD_RESET_TTL_MS } from '../domain/session-policy';
 import { writeAudit } from '../../../shared/audit';
+import { recordTermsAcceptance } from './terms-acceptance';
 import {
 	revokeAllSessionsForUser,
 	revokeOtherSessionsForUser,
@@ -95,6 +96,8 @@ export async function registerSeeker(
 			purpose: 'register',
 			expiresAt: new Date(now.getTime() + EMAIL_VERIFY_TTL_MS)
 		});
+
+		await recordTermsAcceptance(tx, userId, now);
 
 		const event: DomainEvent<'UserRegistered', { userId: string; registrationIntent: string }> = {
 			eventId: newId<'OutboxEventId'>(),

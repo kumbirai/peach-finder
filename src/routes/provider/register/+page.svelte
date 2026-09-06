@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
+	import LegalConsentText from '$lib/components/LegalConsentText.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import { enhance } from '$app/forms';
 
@@ -132,7 +133,7 @@
 			/>
 			<label class="terms">
 				<input type="checkbox" name="acceptedTerms" bind:checked={acceptedTerms} required />
-				<span class="label">I accept the Terms of Service and Privacy Policy</span>
+				<LegalConsentText />
 			</label>
 			{#if form?.issues}
 				<ul class="issues" role="alert">

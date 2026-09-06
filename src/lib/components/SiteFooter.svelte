@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LegalDocumentLinks from '$lib/components/LegalDocumentLinks.svelte';
 	import { SAFETY_FOOTER_LABEL, SAFETY_PAGE_PATH } from '$lib/trust-badges';
 </script>
 
@@ -7,6 +8,7 @@
 		<a class="footer-link" href={SAFETY_PAGE_PATH} data-testid="footer-safety-link">
 			{SAFETY_FOOTER_LABEL}
 		</a>
+		<LegalDocumentLinks />
 	</nav>
 </footer>
 
@@ -22,7 +24,10 @@
 		max-width: 56rem;
 		margin: 0 auto;
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: center;
+		align-items: center;
+		gap: var(--space-sm);
 	}
 	.footer-link {
 		font-family: var(--font-label-family);
@@ -40,5 +45,8 @@
 		outline: 2px solid var(--color-peach-deep);
 		outline-offset: 2px;
 		border-radius: var(--radius-pill);
+	}
+	.footer-link:hover {
+		text-decoration: underline;
 	}
 </style>

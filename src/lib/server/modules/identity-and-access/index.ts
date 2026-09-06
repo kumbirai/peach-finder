@@ -13,7 +13,8 @@ import type { CapabilitiesDto } from './app/capabilities-types';
 import { hashSessionToken, newSessionToken, SEEKER_IDLE_MS } from './infra/session-commands';
 import { ADMIN_SESSION_IDLE_MS } from './domain/session-policy';
 
-export { exportFor } from './export-stub';
+export { LEGAL_DOCUMENT_VERSIONS } from './domain/legal-documents';
+export { exportFor } from './infra/export-for';
 export { buildSignInUrl, gatedActionHref } from './app/sign-in-url';
 export { resolveProfileActionHrefs, type ProfileActionHrefs } from './app/profile-action-hrefs';
 export type { CapabilitiesDto } from './app/capabilities-types';

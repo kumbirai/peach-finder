@@ -137,6 +137,25 @@ export const adminTotp = identitySchema.table('admin_totp', {
 	backupCodesHash: text('backup_codes_hash').array().notNull()
 });
 
+export const termsAcceptance = identitySchema.table(
+	'terms_acceptance',
+	{
+		id: uuid('id').primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		documentSlug: text('document_slug').notNull(),
+		documentVersion: text('document_version').notNull(),
+		acceptedAt: timestamp('accepted_at', { withTimezone: true, mode: 'date' })
+			.notNull()
+			.defaultNow()
+	},
+	(table) => [
+		uniqueIndex('terms_acceptance_user_doc_uq').on(table.userId, table.documentSlug),
+		index('terms_acceptance_user_idx').on(table.userId)
+	]
+);
+
 export const sessions = identitySchema.table(
 	'session',
 	{

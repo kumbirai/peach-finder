@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
+	import LegalConsentText from '$lib/components/LegalConsentText.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import { enhance } from '$app/forms';
 
@@ -75,6 +76,13 @@
 	{#if form?.message}
 		<p class="error label" role="alert">{form.message}</p>
 	{/if}
+	{#if form?.issues}
+		<ul class="issues" role="alert">
+			{#each form.issues as issue (issue.path)}
+				<li class="label">{issue.message}</li>
+			{/each}
+		</ul>
+	{/if}
 
 	<form
 		class="form"
@@ -96,8 +104,8 @@
 		/>
 		{#if mode === 'sign-up'}
 			<label class="terms">
-				<input type="checkbox" name="acceptedTerms" bind:checked={acceptedTerms} />
-				<span class="label">I accept the Terms of Service and Privacy Policy</span>
+				<input type="checkbox" name="acceptedTerms" bind:checked={acceptedTerms} required />
+				<LegalConsentText />
 			</label>
 		{/if}
 		<input type="hidden" name="returnTo" value={data.returnTo} />
@@ -172,6 +180,11 @@
 	.error {
 		color: var(--color-peach-deep);
 		margin: 0;
+	}
+	.issues {
+		margin: 0;
+		padding-left: var(--space-md);
+		color: var(--color-peach-deep);
 	}
 	.toggle {
 		text-align: center;

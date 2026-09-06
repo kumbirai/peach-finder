@@ -13,6 +13,7 @@ import { validateDisplayName, validateEmail, validatePassword } from '../domain/
 import { normalizePhoneE164, validatePhone } from '../domain/phone-policy';
 import { generateOtpCode, OTP_MAX_ATTEMPTS, OTP_TTL_MS } from '../domain/otp-policy';
 import { hashPassword as hashOtpCode, verifyPassword as verifyOtpCode } from './password-hash';
+import { recordTermsAcceptance } from './terms-acceptance';
 
 export type RegisterProviderInput = {
 	email: string;
@@ -96,6 +97,8 @@ export async function registerProvider(
 			purpose: 'register',
 			expiresAt: new Date(now.getTime() + OTP_TTL_MS)
 		});
+
+		await recordTermsAcceptance(tx, userId, now);
 
 		const event: DomainEvent<'UserRegistered', { userId: string; registrationIntent: string }> = {
 			eventId: newId(),
