@@ -984,6 +984,14 @@ async function seedDualRoleUser(
 		.onConflictDoNothing();
 
 	await db
+		.insert(providerServiceTags)
+		.values({
+			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
+			serviceTagId: tag.id
+		})
+		.onConflictDoNothing();
+
+	await db
 		.insert(listings)
 		.values({
 			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,

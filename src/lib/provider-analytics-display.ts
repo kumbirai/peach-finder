@@ -4,3 +4,8 @@ export function sparklineValueFromTrendLabel(displayValue: string): number {
 	if (Number.isFinite(parsed)) return parsed;
 	return 2;
 }
+
+/** FR-ANLY-04 — client mirror of server demand-tag ownership labels (Never-Color-Alone). */
+export function demandTagOwnershipLabel(isMine: boolean): string {
+	return isMine ? 'Your tag' : 'Not on your profile';
+}

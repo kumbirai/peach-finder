@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import { METRIC_DEFINITIONS, type DashboardRangeDays } from '../domain/metric-definitions';
+import { highlightOwnServiceTags } from '../domain/demand-signal';
 import {
 	buildComparison,
 	buildTrendPoints,
@@ -103,13 +104,30 @@ function serializeMetricRaw(raw: CachedMetricRaw): DashboardMetricView {
 	};
 }
 
-function serializeCachedPayload(raw: CachedPayloadRaw): Omit<ProviderDashboardView, 'definitions'> {
+function reapplyDemandTagOwnership(
+	services: MostSearchedServiceView[],
+	providerTagIds: ReadonlySet<string>
+): MostSearchedServiceView[] {
+	return highlightOwnServiceTags(
+		services.map((row) => ({
+			tagId: row.tagId,
+			tag: row.tag,
+			demandRank: row.demandRank
+		})),
+		providerTagIds
+	);
+}
+
+function serializeCachedPayload(
+	raw: CachedPayloadRaw,
+	providerTagIds: ReadonlySet<string>
+): Omit<ProviderDashboardView, 'definitions'> {
 	return {
 		rangeDays: raw.rangeDays,
 		profileViews: serializeMetricRaw(raw.profileViews),
 		searchAppearances: serializeMetricRaw(raw.searchAppearances),
 		contactRequests: serializeMetricRaw(raw.contactRequests),
-		mostSearchedServices: raw.mostSearchedServices
+		mostSearchedServices: reapplyDemandTagOwnership(raw.mostSearchedServices, providerTagIds)
 	};
 }
 
@@ -135,9 +153,8 @@ async function readCache(
 		  AND range_days = ${rangeDays}
 		LIMIT 1
 	`);
-	const row = ((
-		result as unknown as { rows?: Array<{ computed_at: Date; payload: unknown }> }
-	).rows ?? result)[0] as { computed_at: Date; payload: unknown } | undefined;
+	const row = ((result as unknown as { rows?: Array<{ computed_at: Date; payload: unknown }> })
+		.rows ?? result)[0] as { computed_at: Date; payload: unknown } | undefined;
 	if (!row) return null;
 	if (now.getTime() - new Date(row.computed_at).getTime() > CACHE_TTL_MS) {
 		return null;
@@ -180,7 +197,7 @@ export async function computeDashboardMetrics(
 	const cached = await readCache(db, providerProfileId, rangeDays, now);
 	if (cached) {
 		return {
-			...serializeCachedPayload(cached),
+			...serializeCachedPayload(cached, providerTagIds),
 			definitions: METRIC_DEFINITIONS
 		};
 	}
@@ -198,13 +215,7 @@ export async function computeDashboardMetrics(
 
 	const payload: CachedPayloadRaw = {
 		rangeDays,
-		profileViews: buildMetricRaw(
-			currentRows,
-			'profile_views',
-			currentStart,
-			currentEnd,
-			priorRows
-		),
+		profileViews: buildMetricRaw(currentRows, 'profile_views', currentStart, currentEnd, priorRows),
 		searchAppearances: buildMetricRaw(
 			currentRows,
 			'search_appearances',
@@ -225,7 +236,7 @@ export async function computeDashboardMetrics(
 	await writeCache(db, providerProfileId, rangeDays, payload, now);
 
 	return {
-		...serializeCachedPayload(payload),
+		...serializeCachedPayload(payload, providerTagIds),
 		definitions: METRIC_DEFINITIONS
 	};
 }
@@ -257,10 +268,12 @@ async function queryMostSearchedServices(
 		}
 	).rows ?? result) as Array<{ tag_id: string; tag_name: string | null; demand: number }>;
 
-	return rows.map((row, index) => ({
-		tagId: row.tag_id,
-		tag: row.tag_name ?? 'Unknown service',
-		demandRank: index + 1,
-		isMine: providerTagIds.has(row.tag_id)
-	}));
+	return highlightOwnServiceTags(
+		rows.map((row, index) => ({
+			tagId: row.tag_id,
+			tag: row.tag_name ?? 'Unknown service',
+			demandRank: index + 1
+		})),
+		providerTagIds
+	);
 }

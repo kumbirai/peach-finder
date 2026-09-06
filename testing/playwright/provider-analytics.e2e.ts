@@ -128,6 +128,48 @@ test.describe('US-ANLY-01 my four numbers (live stack)', () => {
 	});
 });
 
+test.describe('US-ANLY-03 demand signal I can act on (live stack)', () => {
+	test('TC-ANLY-03a: trending tags shown with owned tags visually distinguished', async ({
+		page
+	}) => {
+		const seedRes = await page.request.post('/api/dev/analytics-seed?scenario=demand-signal');
+		expect(seedRes.ok(), await seedRes.text()).toBeTruthy();
+		await signInAsSeedProvider(page);
+
+		const apiRes = await page.request.get('/api/analytics/dashboard?range=30');
+		expect(apiRes.ok(), await apiRes.text()).toBeTruthy();
+		const body = (await apiRes.json()) as {
+			data: {
+				mostSearchedServices: Array<{ tag: string; isMine: boolean; demandRank: number }>;
+			};
+		};
+
+		expect(body.data.mostSearchedServices[0]?.tag).toMatch(/deep tissue/i);
+		expect(body.data.mostSearchedServices[0]?.isMine).toBe(false);
+		const swedish = body.data.mostSearchedServices.find((row) => /swedish/i.test(row.tag));
+		expect(swedish?.isMine).toBe(true);
+
+		await expect(page.getByTestId('analytics-demand-signals')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('analytics-most-searched-service')).toContainText(/deep tissue/i);
+		await expect(page.getByTestId('analytics-most-searched-ownership')).toHaveText(
+			'Not on your profile'
+		);
+		await expect(
+			page.getByTestId('analytics-demand-tag-01900000-0000-7000-8000-000000000202')
+		).toContainText('Your tag');
+		await expect(
+			page.getByTestId('analytics-demand-tag-01900000-0000-7000-8000-000000000201')
+		).toContainText('Not on your profile');
+
+		const axe = await new AxeBuilder({ page })
+			.include('[data-testid="analytics-demand-signals"]')
+			.analyze();
+		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
+			[]
+		);
+	});
+});
+
 test.describe('US-ANLY-02 aggregate always, identifiable never (live stack)', () => {
 	test('TC-ANLY-02a: analytics API and dashboard UI expose no per-viewer identification', async ({
 		page

@@ -27,9 +27,9 @@ FR-ANLY-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ANLY-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach:** Completed FR-ANLY-04 demand-signal highlighting on the existing `provider-analytics` dashboard path: `domain/demand-signal.ts` (`highlightOwnServiceTags`, `demandTagOwnershipLabel`) intersects platform-wide `search_filter_applied` top-N ranks with the viewing provider's tags via `provider-profile.listServiceTagIdsForProfileDb` (no cross-schema join for ownership). `infra/dashboard-read.ts` uses the domain helper when serializing `mostSearchedServices`. `ProviderAnalyticsSection.svelte` adds a "Demand signals you can act on" panel with text ownership labels (Never-Color-Alone: pine + "Your tag" vs terracotta + "Not on your profile") and rank list. Fixed dual-role seed to insert `provider_service_tag` (Swedish only) so `isMine` is accurate. Dev seed endpoint `/api/dev/analytics-seed?scenario=demand-signal` seeds ranked filter events for Playwright. Tests: unit (`demand-signal.test.ts`, `provider-analytics-display.test.ts`), integration (`TC-ANLY-03a`), Playwright (`provider-analytics.e2e.ts` US-ANLY-03 describe).
+
+**Deviation:** None.
+
+**Follow-ups:** US-ANLY-04 chart event annotations; US-PRIV-03d raw-event purge integration test at 90-day boundary.

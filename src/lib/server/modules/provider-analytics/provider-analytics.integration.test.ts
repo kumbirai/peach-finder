@@ -243,3 +243,127 @@ describe('US-ANLY-01 provider analytics integration', () => {
 		});
 	});
 });
+
+describe('US-ANLY-03 demand signal I can act on', () => {
+	it('TC-ANLY-03a: most-searched services highlight provider-owned tags', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const swedishTagId = '01900000-0000-7000-8000-000000000202';
+			const deepTissueTagId = '01900000-0000-7000-8000-000000000201';
+			const sportsTagId = '01900000-0000-7000-8000-000000000203';
+			const occurredAt = new Date('2026-09-04T10:00:00.000Z');
+			const now = new Date('2026-09-06T12:00:00.000Z');
+
+			for (let i = 0; i < 12; i += 1) {
+				await db.execute(sql`
+					INSERT INTO provider_analytics.raw_event (
+						id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+					) VALUES (
+						gen_random_uuid(), 'search_filter_applied', NULL, NULL,
+						${occurredAt.toISOString()}::timestamptz,
+						${JSON.stringify({ serviceTagIds: [deepTissueTagId] })}::jsonb
+					)
+				`);
+			}
+			for (let i = 0; i < 6; i += 1) {
+				await db.execute(sql`
+					INSERT INTO provider_analytics.raw_event (
+						id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+					) VALUES (
+						gen_random_uuid(), 'search_filter_applied', NULL, NULL,
+						${occurredAt.toISOString()}::timestamptz,
+						${JSON.stringify({ serviceTagIds: [sportsTagId] })}::jsonb
+					)
+				`);
+			}
+			for (let i = 0; i < 3; i += 1) {
+				await db.execute(sql`
+					INSERT INTO provider_analytics.raw_event (
+						id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+					) VALUES (
+						gen_random_uuid(), 'search_filter_applied', NULL, NULL,
+						${occurredAt.toISOString()}::timestamptz,
+						${JSON.stringify({ serviceTagIds: [swedishTagId] })}::jsonb
+					)
+				`);
+			}
+
+			const dashboard = await getDashboardForOwner(
+				db,
+				asId<'UserId'>('01900000-0000-7000-8000-000000000098'),
+				30,
+				now
+			);
+
+			expect(dashboard?.mostSearchedServices[0]?.tag).toBe('Deep tissue');
+			expect(dashboard?.mostSearchedServices[0]?.isMine).toBe(false);
+			const swedish = dashboard?.mostSearchedServices.find((row) => row.tag === 'Swedish');
+			expect(swedish?.isMine).toBe(true);
+			expect(swedish?.demandRank).toBe(3);
+			const sports = dashboard?.mostSearchedServices.find((row) => row.tag === 'Sports massage');
+			expect(sports?.isMine).toBe(false);
+		});
+	});
+
+	it('TC-ANLY-03a: cached demand tags re-apply ownership when provider tags change', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const ownerId = asId<'UserId'>('01900000-0000-7000-8000-000000000098');
+			const swedishTagId = '01900000-0000-7000-8000-000000000202';
+			const deepTissueTagId = '01900000-0000-7000-8000-000000000201';
+			const occurredAt = new Date('2026-09-04T10:00:00.000Z');
+			const now = new Date('2026-09-06T12:00:00.000Z');
+
+			for (let i = 0; i < 5; i += 1) {
+				await db.execute(sql`
+					INSERT INTO provider_analytics.raw_event (
+						id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+					) VALUES (
+						gen_random_uuid(), 'search_filter_applied', NULL, NULL,
+						${occurredAt.toISOString()}::timestamptz,
+						${JSON.stringify({ serviceTagIds: [deepTissueTagId] })}::jsonb
+					)
+				`);
+			}
+			for (let i = 0; i < 3; i += 1) {
+				await db.execute(sql`
+					INSERT INTO provider_analytics.raw_event (
+						id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+					) VALUES (
+						gen_random_uuid(), 'search_filter_applied', NULL, NULL,
+						${occurredAt.toISOString()}::timestamptz,
+						${JSON.stringify({ serviceTagIds: [swedishTagId] })}::jsonb
+					)
+				`);
+			}
+
+			const first = await getDashboardForOwner(db, ownerId, 30, now);
+			expect(first?.mostSearchedServices.find((row) => row.tag === 'Swedish')?.isMine).toBe(true);
+
+			await db.execute(sql`
+				DELETE FROM provider_profile.provider_service_tag
+				WHERE provider_profile_id = ${profileId}::uuid
+				  AND service_tag_id = ${swedishTagId}::uuid
+			`);
+			await db.execute(sql`
+				INSERT INTO provider_profile.provider_service_tag (provider_profile_id, service_tag_id)
+				VALUES (${profileId}::uuid, ${deepTissueTagId}::uuid)
+				ON CONFLICT DO NOTHING
+			`);
+
+			const second = await getDashboardForOwner(db, ownerId, 30, now);
+			expect(second?.mostSearchedServices.find((row) => row.tag === 'Swedish')?.isMine).toBe(false);
+			expect(second?.mostSearchedServices.find((row) => row.tag === 'Deep tissue')?.isMine).toBe(
+				true
+			);
+		});
+	});
+});

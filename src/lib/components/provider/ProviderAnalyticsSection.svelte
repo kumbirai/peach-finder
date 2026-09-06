@@ -4,7 +4,10 @@
 		DashboardMetricView,
 		ProviderDashboardView
 	} from '$lib/server/modules/provider-analytics';
-	import { sparklineValueFromTrendLabel } from '$lib/provider-analytics-display';
+	import {
+		demandTagOwnershipLabel,
+		sparklineValueFromTrendLabel
+	} from '$lib/provider-analytics-display';
 
 	let {
 		analytics,
@@ -120,29 +123,49 @@
 					class="stat-value text"
 					data-testid="analytics-most-searched-service"
 					class:mine={topService.isMine}
+					class:not-mine={!topService.isMine}
 				>
 					{topService.tag}
+				</p>
+				<p
+					class="comparison label"
+					class:mine={topService.isMine}
+					data-testid="analytics-most-searched-ownership"
+				>
+					{demandTagOwnershipLabel(topService.isMine)}
 				</p>
 			{:else}
 				<p class="stat-value text" data-testid="analytics-most-searched-service">—</p>
 			{/if}
-			{#if topService && !topService.isMine}
-				<p class="comparison label">You do not offer this tag yet.</p>
-			{:else if topService?.isMine}
-				<p class="comparison label">One of your offered tags.</p>
-			{/if}
 		</Card>
 	</div>
 
-	{#if analytics.mostSearchedServices.length > 1}
-		<ul class="tag-list" aria-label="Top searched services">
-			{#each analytics.mostSearchedServices.slice(1) as service (service.tagId)}
-				<li class="tag-item" class:mine={service.isMine}>
-					<span>{service.tag}</span>
-					<span class="rank label">#{service.demandRank}</span>
-				</li>
-			{/each}
-		</ul>
+	{#if analytics.mostSearchedServices.length > 0}
+		<div class="demand-signals" data-testid="analytics-demand-signals">
+			<h3 class="demand-heading label">Demand signals you can act on</h3>
+			<p class="body demand-copy">
+				Platform-wide most-searched services. Tags you already offer are highlighted so you can spot
+				gaps.
+			</p>
+			<ul class="tag-list" aria-label="Top searched services">
+				{#each analytics.mostSearchedServices as service (service.tagId)}
+					<li
+						class="tag-item"
+						class:mine={service.isMine}
+						class:not-mine={!service.isMine}
+						data-testid={`analytics-demand-tag-${service.tagId}`}
+					>
+						<div class="tag-main">
+							<span class="tag-name">{service.tag}</span>
+							<span class="ownership label" data-testid="analytics-demand-ownership">
+								{demandTagOwnershipLabel(service.isMine)}
+							</span>
+						</div>
+						<span class="rank label">#{service.demandRank}</span>
+					</li>
+				{/each}
+			</ul>
+		</div>
 	{/if}
 </section>
 
@@ -231,7 +254,28 @@
 	.stat-value.mine {
 		color: var(--color-pine);
 	}
+	.stat-value.not-mine {
+		color: var(--color-peach-deep);
+	}
 	.comparison {
+		margin: var(--space-xs) 0 var(--space-sm);
+		color: var(--color-stone);
+	}
+	.comparison.mine {
+		color: var(--color-pine);
+	}
+	.demand-signals {
+		border: 1px solid var(--color-divider);
+		border-radius: var(--radius-card);
+		padding: var(--space-md);
+		background: var(--color-paper);
+		box-shadow: var(--shadow-rest);
+	}
+	.demand-heading {
+		margin: 0;
+		color: var(--color-ink);
+	}
+	.demand-copy {
 		margin: var(--space-xs) 0 var(--space-sm);
 		color: var(--color-stone);
 	}
@@ -245,17 +289,37 @@
 	.tag-item {
 		display: flex;
 		justify-content: space-between;
+		align-items: flex-start;
 		gap: var(--space-sm);
-		padding: var(--space-xs) 0;
+		padding: var(--space-sm) 0;
 		border-bottom: 1px solid var(--color-divider);
 		color: var(--color-stone);
 	}
-	.tag-item.mine {
-		color: var(--color-pine);
+	.tag-item:last-child {
+		border-bottom: 0;
+		padding-bottom: 0;
+	}
+	.tag-main {
+		display: grid;
+		gap: 2px;
+	}
+	.tag-name {
 		font-weight: 600;
+		color: var(--color-peach-deep);
+	}
+	.tag-item.mine .tag-name,
+	.tag-item.mine .ownership {
+		color: var(--color-pine);
+	}
+	.tag-item.not-mine .tag-name {
+		color: var(--color-peach-deep);
+	}
+	.ownership {
+		color: var(--color-stone);
 	}
 	.rank {
 		color: var(--color-stone);
+		flex-shrink: 0;
 	}
 	@media (min-width: 768px) {
 		.stat-row {

@@ -4,9 +4,36 @@ import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import { SEED_DUAL_ROLE_PROFILE_ID } from '../../../../../scripts/seed-core';
 
+const TAG_DEEP_TISSUE = '01900000-0000-7000-8000-000000000201';
+const TAG_SWEDISH = '01900000-0000-7000-8000-000000000202';
+const TAG_SPORTS = '01900000-0000-7000-8000-000000000203';
+
+async function seedDemandFilterEvents(
+	db: ReturnType<typeof getDb>,
+	occurredAt: Date,
+	tagCounts: Array<{ tagId: string; count: number }>
+): Promise<void> {
+	for (const { tagId, count } of tagCounts) {
+		for (let i = 0; i < count; i += 1) {
+			await db.execute(sql`
+				INSERT INTO provider_analytics.raw_event (
+					id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+				) VALUES (
+					gen_random_uuid(),
+					'search_filter_applied',
+					NULL,
+					NULL,
+					${occurredAt.toISOString()}::timestamptz,
+					${JSON.stringify({ serviceTagIds: [tagId] })}::jsonb
+				)
+			`);
+		}
+	}
+}
+
 export const _requiredRole: Role = 'anonymous';
 
-/** Dev-only: seed analytics rollups for US-ANLY-01/02 Playwright. */
+/** Dev-only: seed analytics rollups for US-ANLY-01/02/03 Playwright. */
 export const POST: RequestHandler = async ({ url }) => {
 	if (process.env.ALLOW_DEV_HELPERS !== '1') {
 		return new Response('Not found', { status: 404 });
@@ -54,17 +81,21 @@ export const POST: RequestHandler = async ({ url }) => {
 	}
 
 	await db.execute(sql`
-		INSERT INTO provider_analytics.raw_event (
-			id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
-		) VALUES (
-			gen_random_uuid(),
-			'search_filter_applied',
-			NULL,
-			NULL,
-			${new Date('2026-09-04T10:00:00.000Z').toISOString()}::timestamptz,
-			'{"serviceTagIds":["01900000-0000-7000-8000-000000000201"]}'::jsonb
-		)
+		DELETE FROM provider_analytics.raw_event
+		WHERE event_type = 'search_filter_applied'
 	`);
+
+	const demandOccurredAt = new Date('2026-09-04T10:00:00.000Z');
+	if (scenario === 'demand-signal') {
+		// Dual-role provider offers Swedish only; Deep tissue tops demand (TC-ANLY-03a).
+		await seedDemandFilterEvents(db, demandOccurredAt, [
+			{ tagId: TAG_DEEP_TISSUE, count: 12 },
+			{ tagId: TAG_SPORTS, count: 6 },
+			{ tagId: TAG_SWEDISH, count: 3 }
+		]);
+	} else {
+		await seedDemandFilterEvents(db, demandOccurredAt, [{ tagId: TAG_DEEP_TISSUE, count: 5 }]);
+	}
 
 	return json({
 		data: {
