@@ -11,6 +11,7 @@ import type { DomainEvent } from '../../../shared/events';
 import { newId, type MessageId, type ThreadId, type UserId } from '../../../shared/ids';
 import { markProcessed } from '../../../shared/outbox';
 import { isNotifBlockedBetween } from './block-cache';
+import { allOptOutChannelsDisabled, isChannelEnabled } from './preference-commands';
 import { notificationBatchWindow, notificationLog } from './schema';
 
 type MessageSentPayload = {
@@ -43,6 +44,10 @@ export async function handleMessageSent(
 	if (!recipientId) return;
 
 	if (await isNotifBlockedBetween(db, senderId as UserId, recipientId)) {
+		return;
+	}
+
+	if (await allOptOutChannelsDisabled(db, recipientId, 'new_message')) {
 		return;
 	}
 
@@ -88,22 +93,25 @@ export async function handleMessageSent(
 		}
 
 		const inAppId = newId();
-		await tx.insert(notificationLog).values({
-			id: inAppId,
-			userId: recipientId,
-			category: 'new_message',
-			channel: 'in_app',
-			status: 'sent',
-			title: `New message from ${senderName}`,
-			body: 'Tap to read and reply.',
-			deepLinkPath,
-			relatedEntityType: 'thread',
-			relatedEntityId: threadId,
-			readAt: null,
-			dispatchedAt: now,
-			createdAt: now,
-			correlationId: event.correlationId
-		});
+		const inAppEnabled = await isChannelEnabled(tx, recipientId, 'new_message', 'in_app');
+		if (inAppEnabled) {
+			await tx.insert(notificationLog).values({
+				id: inAppId,
+				userId: recipientId,
+				category: 'new_message',
+				channel: 'in_app',
+				status: 'sent',
+				title: `New message from ${senderName}`,
+				body: 'Tap to read and reply.',
+				deepLinkPath,
+				relatedEntityType: 'thread',
+				relatedEntityId: threadId,
+				readAt: null,
+				dispatchedAt: now,
+				createdAt: now,
+				correlationId: event.correlationId
+			});
+		}
 
 		await tx.insert(notificationBatchWindow).values({
 			userId: recipientId,
@@ -113,7 +121,7 @@ export async function handleMessageSent(
 			flushAfter,
 			messageCount: 1,
 			lastMessageId: messageId,
-			inAppNotificationId: inAppId,
+			inAppNotificationId: inAppEnabled ? inAppId : null,
 			status: 'open'
 		});
 	});
@@ -144,7 +152,14 @@ export async function flushDueNotificationBatchWindows(db: Database, now: Date):
 					.where(eq(notificationLog.id, window.inAppNotificationId));
 			}
 
+			const emailEnabled = await isChannelEnabled(
+				tx,
+				window.userId as UserId,
+				'new_message',
+				'email'
+			);
 			const stillUnread =
+				emailEnabled &&
 				window.lastMessageId &&
 				(await areMessagesStillUnreadByRecipient(
 					tx,

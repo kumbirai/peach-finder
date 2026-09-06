@@ -4,6 +4,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import BlockedPeopleList from '$lib/components/BlockedPeopleList.svelte';
+	import NotificationPreferences from '$lib/components/NotificationPreferences.svelte';
 	import { enhance } from '$app/forms';
 
 	let {
@@ -21,6 +22,20 @@
 				identityBadgeNotice: { suppressed: boolean; message: string | null };
 			} | null;
 			blockedPeople: Array<{ blockedId: string; displayName: string; blockedAt: string }>;
+			notificationPreferences: {
+				categories: Array<{
+					id: string;
+					label: string;
+					description: string;
+					essential: boolean;
+					channels: Array<{
+						id: string;
+						label: string;
+						enabled: boolean;
+						mutable: boolean;
+					}>;
+				}>;
+			} | null;
 			deleteConfirm: boolean;
 		};
 		form?: {
@@ -173,6 +188,10 @@
 			<h2 id="blocked-heading" class="title">Blocked people</h2>
 			<BlockedPeopleList blocks={data.blockedPeople} />
 		</section>
+
+		{#if data.notificationPreferences}
+			<NotificationPreferences preferences={data.notificationPreferences} />
+		{/if}
 
 		<section class="section danger-zone" aria-labelledby="delete-heading">
 			<h2 id="delete-heading" class="title">Delete account</h2>

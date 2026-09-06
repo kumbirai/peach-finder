@@ -1,8 +1,10 @@
 import type { Transaction } from '../../../db';
 import { newId, type UserId } from '../../../shared/ids';
+import type { NotificationChannel } from '../domain/categories';
+import { filterEnabledChannels } from './preference-commands';
 import { notificationLog } from './schema';
 
-export type NotificationChannel = 'in_app' | 'email';
+export type { NotificationChannel };
 
 export type RecordNotificationInput = {
 	userId: UserId;
@@ -21,7 +23,8 @@ export async function recordNotification(
 	tx: Transaction,
 	input: RecordNotificationInput
 ): Promise<void> {
-	for (const channel of input.channels) {
+	const channels = await filterEnabledChannels(tx, input.userId, input.category, input.channels);
+	for (const channel of channels) {
 		await tx.insert(notificationLog).values({
 			id: newId(),
 			userId: input.userId,

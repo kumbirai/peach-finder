@@ -7,6 +7,12 @@ import {
 	dispatchUndispatchedAvailabilityExpiryWarnings,
 	type InAppNotificationDto
 } from './infra/notification-commands';
+import {
+	getNotificationPreferences,
+	updateNotificationPreferences,
+	type NotificationPreferencesDto,
+	type PreferenceUpdate
+} from './infra/preference-commands';
 import { handleMessageSent, flushDueNotificationBatchWindows } from './infra/message-sent-handler';
 import { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
 import {
@@ -48,11 +54,21 @@ export {
 	dispatchTrialEndingReminders,
 	dispatchGraceDunningReminder,
 	dispatchUndispatchedNotificationSubscribers,
-	type InAppNotificationDto
+	getNotificationPreferences,
+	updateNotificationPreferences,
+	type InAppNotificationDto,
+	type NotificationPreferencesDto,
+	type PreferenceUpdate
 };
 
-export async function exportFor(userId: UserId): Promise<{ unreadInApp: InAppNotificationDto[] }> {
+export async function exportFor(
+	userId: UserId
+): Promise<{ unreadInApp: InAppNotificationDto[]; preferences: NotificationPreferencesDto }> {
 	const { getDb } = await import('../../db');
-	const unreadInApp = await listUnreadInAppNotifications(getDb(), userId, 5);
-	return { unreadInApp };
+	const db = getDb();
+	const [unreadInApp, preferences] = await Promise.all([
+		listUnreadInAppNotifications(db, userId, 5),
+		getNotificationPreferences(db, userId)
+	]);
+	return { unreadInApp, preferences };
 }

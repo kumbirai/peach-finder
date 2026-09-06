@@ -1,6 +1,6 @@
 ---
 title: DDD — US-NOTIF-02 — My channels, my choice — except what protects me
-updated: 2026-09-04
+updated: 2026-09-06
 ---
 
 # US-NOTIF-02 — My channels, my choice — except what protects me
@@ -26,9 +26,9 @@ FR-NOTIF-02.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,31 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-NOTIF-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+### Approach
+
+Implemented FR-NOTIF-02 channel preferences in `user-notifications`:
+
+- Migration `0026_us_notif_02_notification_preference.sql` adds `notification_preference` table.
+- Domain catalog in `domain/categories.ts` defines opt-out-able vs essential categories (billing/security/moderation always deliver).
+- `infra/preference-commands.ts` implements `getNotificationPreferences`, `updateNotificationPreferences`, and dispatch gating helpers.
+- `recordNotification`, `handleMessageSent`, and `handleAvailabilityExpiryWarned` honor per-channel opt-outs; essential categories bypass preference reads structurally.
+- API: `GET/PUT /api/notifications/preferences` with ownership-scoped validation (422 on essential-category toggle attempts).
+- Profile page (`/profile`) adds `NotificationPreferences.svelte` using the design-system toggle pattern (Terracotta focus ring, 44px targets, reduced-motion).
+
+### Tests
+
+- `domain/categories.test.ts` — essential/opt-out partition.
+- `channel-preferences.integration.test.ts` — TC-NOTIF-02a/02b + essential toggle rejection.
+- `NotificationPreferences.tokens.test.ts` — focus ring + reduced-motion gate.
+- `testing/playwright/notifications-channel-preferences.e2e.ts` — live-stack UI + API preference flows.
+
+### Assumptions / deferrals
+
+- **Push adapter still deferred** (US-NOTIF-01 note): push appears in preferences UI/API and opt-out rows persist, but dispatch still records `in_app` + `email` only until VAPID send lands.
+- **Prototype has no dedicated notifications screen** — preferences live on the authenticated Profile page alongside account settings, matching FR-NOTIF-02 "settings" placement and existing profile IA.
+- **`exportFor` now includes preferences** per platform-configuration LLD §9 facade contract.

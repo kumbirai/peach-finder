@@ -12,12 +12,19 @@ import {
 import { loadOwnerProfile, ownsProfileDb } from '$lib/server/modules/provider-profile';
 import { applyIdentityAttributesChangedSync } from '$lib/server/shared/identity-change-sync';
 import { listBlocks } from '$lib/server/modules/trust-and-safety';
+import { getNotificationPreferences } from '$lib/server/modules/user-notifications';
 
 export const _requiredRole: Role = 'anonymous';
 
 export async function load({ locals, url }) {
 	if (!locals.auth.userId || locals.auth.role === 'anonymous') {
-		return { account: null, providerProfile: null, blockedPeople: [], deleteConfirm: false };
+		return {
+			account: null,
+			providerProfile: null,
+			blockedPeople: [],
+			notificationPreferences: null,
+			deleteConfirm: false
+		};
 	}
 
 	const db = getDb();
@@ -27,10 +34,12 @@ export async function load({ locals, url }) {
 		: null;
 	const blocksResult = await listBlocks(db, locals.auth.userId);
 	const blockedPeople = blocksResult.ok ? blocksResult.value : [];
+	const notificationPreferences = await getNotificationPreferences(db, locals.auth.userId);
 	return {
 		account,
 		providerProfile,
 		blockedPeople,
+		notificationPreferences,
 		deleteConfirm: url.searchParams.get('deleteConfirm') === '1'
 	};
 }

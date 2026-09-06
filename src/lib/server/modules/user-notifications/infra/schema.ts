@@ -1,6 +1,26 @@
-import { pgSchema, text, timestamp, uuid, integer, primaryKey, index } from 'drizzle-orm/pg-core';
+import {
+	pgSchema,
+	text,
+	timestamp,
+	uuid,
+	integer,
+	boolean,
+	primaryKey,
+	index
+} from 'drizzle-orm/pg-core';
 
 export const userNotificationsSchema = pgSchema('user_notifications');
+
+export const notificationPreference = userNotificationsSchema.table(
+	'notification_preference',
+	{
+		userId: uuid('user_id').notNull(),
+		category: text('category').notNull(),
+		channel: text('channel').notNull(),
+		enabled: boolean('enabled').notNull().default(true)
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.category, table.channel] })]
+);
 
 export const notificationLog = userNotificationsSchema.table('notification_log', {
 	id: uuid('id').primaryKey(),

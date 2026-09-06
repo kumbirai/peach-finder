@@ -9,6 +9,7 @@ import {
 	markDispatched,
 	markProcessed
 } from '../../../shared/outbox';
+import { isChannelEnabled } from './preference-commands';
 import { notificationLog } from './schema';
 
 export type InAppNotificationDto = {
@@ -39,6 +40,10 @@ export async function handleAvailabilityExpiryWarned(
 
 		const expiryLabel = formatExpiryTime(event.payload.expiresAt);
 		const now = new Date(event.occurredAt);
+
+		if (!(await isChannelEnabled(tx, ownerId, 'availability_expiry_warning', 'in_app'))) {
+			return;
+		}
 
 		await tx.insert(notificationLog).values({
 			id: newId(),
