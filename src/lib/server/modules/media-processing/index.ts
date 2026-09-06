@@ -48,3 +48,4 @@ export {
 	storeIdentityDoc,
 	verifyIdentityDocPresign
 } from './infra/identity-doc-presign';
+export { validateIdentityDocPhotos } from './infra/identity-doc-validate';

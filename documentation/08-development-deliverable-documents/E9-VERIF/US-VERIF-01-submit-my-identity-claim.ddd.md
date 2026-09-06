@@ -29,9 +29,9 @@ FR-TRUST-02, FR-TRUST-03, FR-PRIV-05, SR-MEDIA-01.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VERIF-01 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+**Approach:** Provider identity-claim flow is delivered in `trust-and-safety` (`submitVerificationClaim`, `resubmitVerificationClaim`, `getOwnVerificationStatus`) with identity-doc intake via `media-processing.storeIdentityDoc`. Routes: `POST /api/media/identity-docs`, `POST /api/trust/verification`, `POST /api/trust/verification/resubmit`, `GET /api/trust/verification/me`. UI: `/provider/verify` plus a dashboard verification section (`Get verified` / status banner). Open pending case returns `VERIFICATION_ALREADY_PENDING` (409); `verification_submit` rate limit enforced per LLD.
+
+**Tests:** Integration `verification-submit.integration.test.ts` (TC-VERIF-01a–c, duplicate-pending guard, resubmit, rate limit). Playwright `testing/playwright/identity-verification.e2e.ts` extended with US-VERIF-01 journeys. `scripts/seed-verification.ts` now republishes fixture profiles, clears dual-role verification cases, and resets `verification_submit` rate-limit rows for repeatable E2E.
+
+**Deviations:** Submission creates a `verification_case` row only — no domain event on submit (queue visibility is via DB read; admin notification is US-VERIF-02/US-ADMIN-02). Banner pending/rejected copy uses ink body text with terracotta icon for WCAG 4.5:1 contrast (4.45:1 on peach-on-blush failed axe).

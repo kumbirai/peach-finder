@@ -30,6 +30,13 @@ export {
 	type IdentityQueueStats
 } from './infra/identity-queue-queries';
 export {
+	submitVerificationClaim,
+	resubmitVerificationClaim,
+	type VerificationCaseDto
+} from './app/submit-verification-claim';
+export { getOwnVerificationStatus } from './infra/verification-status-read';
+export type { VerificationOwnerStatus, VerificationOwnerView } from './domain/verification-status';
+export {
 	approveVerification,
 	rejectVerification,
 	verificationCaseReferencesPhoto,

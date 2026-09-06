@@ -5,7 +5,9 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
 	import AvailabilityRenewalBanner from '$lib/components/provider/AvailabilityRenewalBanner.svelte';
+	import VerificationStatusBanner from '$lib/components/provider/VerificationStatusBanner.svelte';
 	import ThreadListItem from '$lib/components/ThreadListItem.svelte';
+	import type { VerificationOwnerStatus } from '$lib/server/modules/trust-and-safety/domain/verification-status';
 
 	let {
 		data,
@@ -50,6 +52,10 @@
 				id: string;
 				title: string;
 				body: string;
+			} | null;
+			verification: {
+				status: VerificationOwnerStatus;
+				rejectionReason: string | null;
 			} | null;
 		};
 		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
@@ -140,6 +146,41 @@
 				{/if}
 			</Card>
 		</section>
+
+		{#if data.verification}
+			<section
+				class="section"
+				aria-labelledby="verify-heading"
+				data-testid="dashboard-verification"
+			>
+				<h2 id="verify-heading" class="title">Get identity verified</h2>
+				<Card>
+					<div class="verify-row">
+						<div>
+							<p class="body verify-copy">
+								Submit a government-ID photo and a selfie. An admin reviews it, usually within 2–3
+								business days. Your profile stays live the whole time either way.
+							</p>
+							{#if data.verification.status !== 'never_submitted'}
+								<VerificationStatusBanner
+									status={data.verification.status}
+									rejectionReason={data.verification.rejectionReason}
+								/>
+							{/if}
+						</div>
+						{#if data.verification.status === 'never_submitted' || data.verification.status === 'rejected'}
+							<div data-testid="get-verified-cta">
+								<Button variant="secondary" href="/provider/verify">
+									{data.verification.status === 'rejected' ? 'Resubmit' : 'Get verified'}
+								</Button>
+							</div>
+						{:else if data.verification.status === 'pending'}
+							<Button variant="secondary" href="/provider/verify">View status</Button>
+						{/if}
+					</div>
+				</Card>
+			</section>
+		{/if}
 
 		<section class="section" aria-labelledby="inbox-heading">
 			<h2 id="inbox-heading" class="title">Messages from seekers</h2>
@@ -245,6 +286,18 @@
 		margin: 0;
 		color: var(--color-peach-deep);
 	}
+	.verify-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-md);
+		align-items: flex-start;
+		justify-content: space-between;
+	}
+	.verify-copy {
+		margin: 0 0 var(--space-md);
+		color: var(--color-stone);
+		max-width: 52ch;
+	}
 	.visually-hidden {
 		position: absolute;
 		width: 1px;
@@ -259,6 +312,14 @@
 	@media (min-width: 768px) {
 		.stat-row {
 			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+	@media (max-width: 480px) {
+		.verify-row {
+			flex-direction: column;
+		}
+		.verify-row :global(.btn) {
+			width: 100%;
 		}
 	}
 </style>

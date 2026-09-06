@@ -51,8 +51,16 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 				status: 409,
 				body: {
 					error: {
-						code: ERROR_CODES.CONFLICT,
-						message: friendlyOr(error.reason, 'That change could not be saved.'),
+						code:
+							error.reason === 'VERIFICATION_ALREADY_PENDING'
+								? ERROR_CODES.VERIFICATION_ALREADY_PENDING
+								: ERROR_CODES.CONFLICT,
+						message: friendlyOr(
+							error.reason,
+							error.reason === 'VERIFICATION_ALREADY_PENDING'
+								? 'You already have a verification submission under review.'
+								: 'That change could not be saved.'
+						),
 						fields: null
 					}
 				}

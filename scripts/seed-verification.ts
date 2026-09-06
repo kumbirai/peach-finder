@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Database } from '../src/lib/server/db';
 import { seedCore } from './seed-core';
 import { seedPlatform, loadConfigCache } from '../src/lib/server/modules/platform-configuration';
@@ -9,6 +9,7 @@ import {
 	badgeState,
 	verificationCases
 } from '../src/lib/server/modules/trust-and-safety/infra/schema';
+import { providerProfiles } from '../src/lib/server/modules/provider-profile/infra/schema';
 import type { PhotoId, UserId } from '../src/lib/server/shared/ids';
 import {
 	SEED_VERIF_NEW_ID_PHOTO_ID,
@@ -22,6 +23,7 @@ import {
 	SEED_VERIF_PENDING_OLD_OWNER_ID,
 	SEED_VERIF_PENDING_OLD_PROFILE_ID
 } from './seed-verification-constants';
+import { SEED_DUAL_ROLE_PROFILE_ID } from './seed-core';
 
 export {
 	SEED_VERIF_PENDING_OLD_CASE_ID,
@@ -114,6 +116,31 @@ export async function seedVerification(db: Database): Promise<void> {
 	await seedCore(db);
 
 	const now = new Date('2026-09-06T12:00:00.000Z');
+
+	for (const profileId of [
+		SEED_VERIF_PENDING_OLD_PROFILE_ID,
+		SEED_VERIF_PENDING_NEW_PROFILE_ID,
+		'01900000-0000-7000-8000-000000000102',
+		SEED_DUAL_ROLE_PROFILE_ID
+	]) {
+		await db
+			.update(providerProfiles)
+			.set({
+				publishState: 'published',
+				unpublishReason: null,
+				updatedAt: now
+			})
+			.where(eq(providerProfiles.id, profileId));
+	}
+
+	await db
+		.delete(verificationCases)
+		.where(eq(verificationCases.providerProfileId, SEED_DUAL_ROLE_PROFILE_ID));
+
+	await db.execute(sql`
+		delete from shared.rate_limit_bucket
+		where bucket_key like 'verification_submit:account:%'
+	`);
 
 	await seedPendingCase(db, {
 		caseId: SEED_VERIF_PENDING_OLD_CASE_ID,

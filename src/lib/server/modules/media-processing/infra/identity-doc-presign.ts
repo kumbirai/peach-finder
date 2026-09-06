@@ -79,13 +79,19 @@ export async function storeIdentityDoc(
 	}
 
 	const resolvedPhotoId = photoId ?? newId<'PhotoId'>();
-	const contentHash = sha256(cleaned);
+	const contentHash = sha256(Buffer.concat([cleaned, Buffer.from(ownerId, 'utf8')]));
 	const objectKey = `identity-docs/${contentHash}/${resolvedPhotoId}.jpg`;
 
 	const existingHash = await db
 		.select({ id: photos.id })
 		.from(photos)
-		.where(and(eq(photos.bucket, 'identity-docs'), eq(photos.contentHash, contentHash)))
+		.where(
+			and(
+				eq(photos.bucket, 'identity-docs'),
+				eq(photos.contentHash, contentHash),
+				eq(photos.ownerId, ownerId)
+			)
+		)
 		.limit(1);
 	if (existingHash[0]) {
 		return Ok({ photoId: existingHash[0].id as PhotoId });

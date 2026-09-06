@@ -19,6 +19,7 @@ import {
 	markAvailabilityRenewalReadForOwner,
 	markInAppNotificationsRead
 } from '$lib/server/modules/user-notifications';
+import { getOwnVerificationStatus } from '$lib/server/modules/trust-and-safety';
 
 export const _requiredRole: Role = 'provider';
 
@@ -39,7 +40,8 @@ export async function load({ locals, url }) {
 				expiresInSeconds: null
 			},
 			activeThisWeek: null,
-			renewalNotification: null
+			renewalNotification: null,
+			verification: null
 		};
 	}
 
@@ -58,15 +60,17 @@ export async function load({ locals, url }) {
 				expiresInSeconds: null
 			},
 			activeThisWeek: null,
-			renewalNotification: null
+			renewalNotification: null,
+			verification: null
 		};
 	}
 
-	const [inbox, reviewCount, transparencyResult, notifications] = await Promise.all([
+	const [inbox, reviewCount, transparencyResult, notifications, verification] = await Promise.all([
 		listProviderInbox(db, locals.auth.userId!),
 		countReviewsOnProfile(db, dashboard.profileId),
 		getAvailabilityTransparencyForOwner(db, locals.auth.userId!, new Date()),
-		listUnreadInAppNotifications(db, locals.auth.userId!, 5)
+		listUnreadInAppNotifications(db, locals.auth.userId!, 5),
+		getOwnVerificationStatus(db, dashboard.profileId)
 	]);
 
 	const availability =
@@ -100,6 +104,7 @@ export async function load({ locals, url }) {
 		availability,
 		activeThisWeek,
 		renewalNotification,
+		verification,
 		analytics: {
 			profileViews: 142,
 			searchAppearances: 89,
