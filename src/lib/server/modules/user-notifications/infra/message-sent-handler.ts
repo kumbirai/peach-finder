@@ -11,6 +11,7 @@ import type { DomainEvent } from '../../../shared/events';
 import { newId, type MessageId, type ThreadId, type UserId } from '../../../shared/ids';
 import { markProcessed } from '../../../shared/outbox';
 import { isNotifBlockedBetween } from './block-cache';
+import { newMessageCopy, threadDeepLinkPath } from '../domain/notification-routing';
 import { allOptOutChannelsDisabled, isChannelEnabled } from './preference-commands';
 import { notificationBatchWindow, notificationLog } from './schema';
 
@@ -55,7 +56,8 @@ export async function handleMessageSent(
 	const batchMinutes = getConfig('user-notifications.batch_window_minutes');
 	const flushAfter = new Date(now.getTime() + batchMinutes * 60_000);
 	const senderName = await senderDisplayName(db, senderId as UserId);
-	const deepLinkPath = `/messages/${threadId}`;
+	const deepLinkPath = threadDeepLinkPath(threadId);
+	const messageCopy = newMessageCopy(senderName);
 
 	await db.transaction(async (tx) => {
 		const inserted = await markProcessed(tx, event.eventId, 'user-notifications.new-message');
@@ -101,8 +103,8 @@ export async function handleMessageSent(
 				category: 'new_message',
 				channel: 'in_app',
 				status: 'sent',
-				title: `New message from ${senderName}`,
-				body: 'Tap to read and reply.',
+				title: messageCopy.title,
+				body: messageCopy.body,
 				deepLinkPath,
 				relatedEntityType: 'thread',
 				relatedEntityId: threadId,
@@ -154,10 +156,10 @@ export async function flushDueNotificationBatchWindows(db: Database, now: Date):
 				: '/messages';
 
 			if (count >= 2 && window.inAppNotificationId) {
-				const title = `${count} new messages from ${senderName}`;
+				const collapsedCopy = newMessageCopy(senderName, count);
 				await tx
 					.update(notificationLog)
-					.set({ title, body: 'Tap to read and reply.' })
+					.set({ title: collapsedCopy.title, body: collapsedCopy.body })
 					.where(eq(notificationLog.id, window.inAppNotificationId));
 			}
 
@@ -178,16 +180,14 @@ export async function flushDueNotificationBatchWindows(db: Database, now: Date):
 
 			if (stillUnread) {
 				const emailId = newId();
+				const emailCopy = newMessageCopy(senderName, count);
 				await tx.insert(notificationLog).values({
 					id: emailId,
 					userId: window.userId,
 					category: 'new_message',
 					channel: 'email',
 					status: 'sent',
-					title:
-						count === 1
-							? `New message from ${senderName}`
-							: `You have ${count} new messages from ${senderName}`,
+					title: emailCopy.title,
 					body: 'Open Peach Finder to read and reply.',
 					deepLinkPath: threadPath,
 					relatedEntityType: 'thread',

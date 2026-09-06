@@ -43,6 +43,8 @@
 				title: string;
 				body: string;
 				deepLinkPath: string;
+				actionLabel: string;
+				openHref: string;
 				createdAt: string;
 			}>;
 			deleteConfirm: boolean;

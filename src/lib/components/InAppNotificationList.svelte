@@ -7,6 +7,8 @@
 		title: string;
 		body: string;
 		deepLinkPath: string;
+		actionLabel: string;
+		openHref: string;
 		createdAt: string;
 	};
 
@@ -29,13 +31,18 @@
 		<ul class="notification-list" data-testid="in-app-notifications-list">
 			{#each notifications as notification (notification.id)}
 				<li>
-					<Card href={notification.deepLinkPath}>
+					<Card href={notification.openHref}>
 						<article
 							class="notification-item"
 							data-testid={`in-app-notification-${notification.id}`}
+							data-notification-category={notification.category}
+							data-deep-link-path={notification.deepLinkPath}
 						>
 							<p class="notification-title label">{notification.title}</p>
 							<p class="notification-body body">{notification.body}</p>
+							<p class="notification-action label">
+								<span class="action-label">{notification.actionLabel}</span>
+							</p>
 							<time class="notification-time" datetime={notification.createdAt}>
 								{new Date(notification.createdAt).toLocaleString()}
 							</time>
@@ -74,6 +81,7 @@
 
 	.notification-item {
 		padding: var(--space-4);
+		min-height: 44px;
 	}
 
 	.notification-title {
@@ -84,6 +92,16 @@
 	.notification-body {
 		margin: 0 0 var(--space-2);
 		color: var(--color-ink-muted);
+	}
+
+	.notification-action {
+		margin: 0 0 var(--space-2);
+		color: var(--color-peach-deep);
+		font-weight: 600;
+	}
+
+	.action-label::after {
+		content: ' →';
 	}
 
 	.notification-time {

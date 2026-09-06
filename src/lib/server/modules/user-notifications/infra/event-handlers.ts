@@ -8,6 +8,23 @@ import { reports } from '../../trust-and-safety/infra/schema';
 import type { DomainEvent } from '../../../shared/events';
 import { type ProviderProfileId, type ReviewId, type UserId } from '../../../shared/ids';
 import { markProcessed } from '../../../shared/outbox';
+import {
+	billingDeepLinkPath,
+	billingGraceCopy,
+	billingPaymentCopy,
+	billingTrialEndingCopy,
+	billingUnpublishedCopy,
+	moderationDeepLinkPath,
+	moderationOutcomeCopy,
+	profileDeepLinkPath,
+	reportReceiptCopy,
+	reportResolutionCopy,
+	reviewDeepLinkPath,
+	reviewReceivedCopy,
+	verificationDeepLinkPath,
+	verificationOutcomeCopy,
+	welcomeDeepLinkPath
+} from '../domain/notification-routing';
 import { isNotifBlockedBetween } from './block-cache';
 import { recordNotification } from './dispatch';
 import { notificationLog } from './schema';
@@ -42,8 +59,7 @@ export async function handleUserRegistered(
 				channels: ['email'],
 				title: 'Welcome to Peach Finder',
 				body: 'Your account is ready. Browse available therapists or finish setting up your provider profile.',
-				deepLinkPath:
-					event.payload.registrationIntent === 'provider' ? '/provider/onboarding' : '/',
+				deepLinkPath: welcomeDeepLinkPath(event.payload.registrationIntent),
 				relatedEntityType: 'user',
 				relatedEntityId: event.payload.userId,
 				correlationId: event.correlationId,
@@ -69,16 +85,14 @@ export async function handleVerificationDecided(
 			);
 			if (!ownerId) return;
 
-			const approved = event.payload.decision === 'approved';
+			const copy = verificationOutcomeCopy(event.payload.decision);
 			await recordNotification(tx, {
 				userId: ownerId,
 				category: 'identity_outcome',
 				channels: ['email', 'in_app'],
-				title: approved ? 'Identity verified' : 'Identity verification update',
-				body: approved
-					? 'Your identity badge is now live on your profile.'
-					: 'We could not verify your identity this time. Open your dashboard for next steps.',
-				deepLinkPath: '/provider/dashboard',
+				title: copy.title,
+				body: copy.body,
+				deepLinkPath: verificationDeepLinkPath(event.payload.decision),
 				relatedEntityType: 'verification_case',
 				relatedEntityId: event.payload.verificationCaseId,
 				correlationId: event.correlationId,
@@ -114,13 +128,14 @@ export async function handleReviewSubmitted(
 				return;
 			}
 
+			const reviewCopy = reviewReceivedCopy(event.payload.rating);
 			await recordNotification(tx, {
 				userId: ownerId,
 				category: 'review_received',
 				channels: ['email', 'in_app'],
-				title: 'New review on your profile',
-				body: `You received a ${event.payload.rating}-star review. Open your profile to read it.`,
-				deepLinkPath: `/provider/dashboard`,
+				title: reviewCopy.title,
+				body: reviewCopy.body,
+				deepLinkPath: reviewDeepLinkPath(),
 				relatedEntityType: 'review',
 				relatedEntityId: event.payload.reviewId,
 				correlationId: event.correlationId,
@@ -140,13 +155,14 @@ export async function handleReportFiled(
 	await withIdempotentDispatch(
 		{ db, event, subscriber: 'user-notifications.report-receipt' },
 		async (tx, now) => {
+			const receiptCopy = reportReceiptCopy();
 			await recordNotification(tx, {
 				userId: event.payload.reporterId as UserId,
 				category: 'report_receipt',
 				channels: ['in_app'],
-				title: 'Report received',
-				body: 'Thanks — we received your report and will review it.',
-				deepLinkPath: '/account',
+				title: receiptCopy.title,
+				body: receiptCopy.body,
+				deepLinkPath: profileDeepLinkPath(),
 				relatedEntityType: 'report',
 				relatedEntityId: event.payload.reportId,
 				correlationId: event.correlationId,
@@ -172,15 +188,14 @@ export async function handleReportResolved(
 			if (!reporterId) return;
 
 			const acted = event.payload.resolution === 'acted';
+			const resolutionCopy = reportResolutionCopy(acted);
 			await recordNotification(tx, {
 				userId: reporterId,
 				category: 'report_resolution',
 				channels: ['in_app'],
-				title: acted ? 'Report reviewed' : 'Report closed',
-				body: acted
-					? 'We reviewed your report and took action.'
-					: 'We reviewed your report and closed it without further action.',
-				deepLinkPath: '/account',
+				title: resolutionCopy.title,
+				body: resolutionCopy.body,
+				deepLinkPath: profileDeepLinkPath(),
 				relatedEntityType: 'report',
 				relatedEntityId: event.payload.reportId,
 				correlationId: event.correlationId,
@@ -188,47 +203,6 @@ export async function handleReportResolved(
 			});
 		}
 	);
-}
-
-function moderationCopy(action: string, reason?: string): { title: string; body: string } {
-	const reasonSuffix = reason ? ` Reason: ${reason}` : '';
-	switch (action) {
-		case 'suspend':
-			return {
-				title: 'Account suspended',
-				body: `Your account has been suspended.${reasonSuffix}`
-			};
-		case 'unpublish':
-			return {
-				title: 'Profile unpublished',
-				body: `Your profile was unpublished by our team.${reasonSuffix}`
-			};
-		case 'remove_photo':
-			return {
-				title: 'Photo removed',
-				body: `A photo was removed from your profile.${reasonSuffix}`
-			};
-		case 'remove_review':
-			return {
-				title: 'Review removed',
-				body: `A review on your profile was removed.${reasonSuffix}`
-			};
-		case 'reinstate':
-			return {
-				title: 'Account reinstated',
-				body: 'Your account access has been restored.'
-			};
-		case 'revoke_badge':
-			return {
-				title: 'Identity badge removed',
-				body: `Your identity verified badge was removed.${reasonSuffix}`
-			};
-		default:
-			return {
-				title: 'Moderation update',
-				body: `A moderation action was taken on your account.${reasonSuffix}`
-			};
-	}
 }
 
 export async function handleModerationActionTaken(
@@ -267,14 +241,14 @@ export async function handleModerationActionTaken(
 			}
 			if (!userId) return;
 
-			const copy = moderationCopy(event.payload.action, event.payload.reason);
+			const copy = moderationOutcomeCopy(event.payload.action, event.payload.reason);
 			await recordNotification(tx, {
 				userId,
 				category: 'moderation_outcome',
 				channels: ['email', 'in_app'],
 				title: copy.title,
 				body: copy.body,
-				deepLinkPath: '/provider/dashboard',
+				deepLinkPath: moderationDeepLinkPath(event.payload.action),
 				relatedEntityType: event.payload.targetType,
 				relatedEntityId: event.payload.targetId,
 				correlationId: event.correlationId,
@@ -325,14 +299,15 @@ export async function handlePaymentSucceeded(
 		async (tx, now) => {
 			const profileId = await profileIdForSubscription(tx, event.payload.subscriptionId);
 			if (!profileId) return;
+			const paymentCopy = billingPaymentCopy(true);
 			await notifyBillingOwner(
 				tx,
 				profileId,
 				'billing_payment',
 				['email', 'in_app'],
-				'Payment received',
-				'Your listing payment was successful. Thank you.',
-				'/provider/billing',
+				paymentCopy.title,
+				paymentCopy.body,
+				billingDeepLinkPath(),
 				'subscription',
 				event.payload.subscriptionId,
 				event.correlationId,
@@ -351,14 +326,15 @@ export async function handlePaymentFailed(
 		async (tx, now) => {
 			const profileId = await profileIdForSubscription(tx, event.payload.subscriptionId);
 			if (!profileId) return;
+			const paymentCopy = billingPaymentCopy(false);
 			await notifyBillingOwner(
 				tx,
 				profileId,
 				'billing_payment',
 				['email', 'in_app'],
-				'Payment failed',
-				'We could not process your listing payment. Update your payment method to stay published.',
-				'/provider/billing',
+				paymentCopy.title,
+				paymentCopy.body,
+				billingDeepLinkPath(),
 				'subscription',
 				event.payload.subscriptionId,
 				event.correlationId,
@@ -378,14 +354,15 @@ export async function handleGraceEntered(
 			const profileId = await profileIdForSubscription(tx, event.payload.subscriptionId);
 			if (!profileId) return;
 			const graceLabel = new Date(event.payload.graceEndsAt).toLocaleDateString();
+			const graceCopy = billingGraceCopy(graceLabel);
 			await notifyBillingOwner(
 				tx,
 				profileId,
 				'billing_grace',
 				['email', 'in_app'],
-				'Grace period started',
-				`Your listing is in a grace period until ${graceLabel}. Update billing to avoid being unpublished.`,
-				'/provider/billing',
+				graceCopy.title,
+				graceCopy.body,
+				billingDeepLinkPath(),
 				'subscription',
 				event.payload.subscriptionId,
 				event.correlationId,
@@ -402,14 +379,15 @@ export async function handleListingLapsed(
 	await withIdempotentDispatch(
 		{ db, event, subscriber: 'user-notifications.lapsed-notice' },
 		async (tx, now) => {
+			const unpublishedCopy = billingUnpublishedCopy();
 			await notifyBillingOwner(
 				tx,
 				event.payload.providerProfileId,
 				'billing_unpublished',
 				['email', 'in_app'],
-				'Listing unpublished',
-				'Your profile was unpublished after the grace period ended. Pay anytime to republish instantly.',
-				'/provider/billing',
+				unpublishedCopy.title,
+				unpublishedCopy.body,
+				billingDeepLinkPath(),
 				'subscription',
 				event.payload.subscriptionId,
 				event.correlationId,
@@ -466,14 +444,15 @@ export async function dispatchTrialEndingReminders(db: Database, now: Date): Pro
 		if (existing.length > 0) continue;
 
 		const endsLabel = row.trialEndsAt.toLocaleDateString();
+		const trialCopy = billingTrialEndingCopy(endsLabel);
 		await db.transaction(async (tx) => {
 			await recordNotification(tx, {
 				userId: ownerId,
 				category: 'billing_trial_ending',
 				channels: ['email', 'in_app'],
-				title: 'Free trial ending soon',
-				body: `Your free listing trial ends on ${endsLabel}. Add a payment method to stay published.`,
-				deepLinkPath: '/provider/billing',
+				title: trialCopy.title,
+				body: trialCopy.body,
+				deepLinkPath: billingDeepLinkPath(),
 				relatedEntityType: 'subscription',
 				relatedEntityId: row.providerProfileId,
 				correlationId,
@@ -496,15 +475,16 @@ export async function dispatchGraceDunningReminder(
 	}
 ): Promise<void> {
 	const graceLabel = input.graceEndsAt.toLocaleDateString();
+	const graceCopy = billingGraceCopy(graceLabel, input.dayInGrace);
 	await db.transaction(async (tx) => {
 		await notifyBillingOwner(
 			tx,
 			input.providerProfileId,
 			'billing_grace',
 			['email', 'in_app'],
-			'Grace period reminder',
-			`Day ${input.dayInGrace} of your billing grace period — add payment by ${graceLabel} to keep your profile visible in search.`,
-			'/provider/billing',
+			graceCopy.title,
+			graceCopy.body,
+			billingDeepLinkPath(),
 			'subscription',
 			input.providerProfileId,
 			`${input.correlationId}-dunning-${input.dayInGrace}`,

@@ -9,6 +9,12 @@ import {
 	markDispatched,
 	markProcessed
 } from '../../../shared/outbox';
+import {
+	availabilityExpiryCopy,
+	availabilityRenewalDeepLinkPath,
+	profileDeepLinkPath
+} from '../domain/notification-routing';
+import { actionLabelForNotification } from './in-app-open';
 import { isChannelEnabled } from './preference-commands';
 import { notificationLog } from './schema';
 
@@ -18,6 +24,8 @@ export type InAppNotificationDto = {
 	title: string;
 	body: string;
 	deepLinkPath: string;
+	actionLabel: string;
+	openHref: string;
 	readAt: string | null;
 	createdAt: string;
 };
@@ -40,6 +48,7 @@ export async function handleAvailabilityExpiryWarned(
 
 		const expiryLabel = formatExpiryTime(event.payload.expiresAt);
 		const now = new Date(event.occurredAt);
+		const expiryCopy = availabilityExpiryCopy(expiryLabel);
 
 		if (!(await isChannelEnabled(tx, ownerId, 'availability_expiry_warning', 'in_app'))) {
 			return;
@@ -51,9 +60,9 @@ export async function handleAvailabilityExpiryWarned(
 			category: 'availability_expiry_warning',
 			channel: 'in_app',
 			status: 'sent',
-			title: 'Your availability expires soon',
-			body: `Your "Available now" status expires at ${expiryLabel}. Tap Still available to stay visible to seekers.`,
-			deepLinkPath: '/provider/dashboard?renewAvailability=1',
+			title: expiryCopy.title,
+			body: expiryCopy.body,
+			deepLinkPath: availabilityRenewalDeepLinkPath(),
 			relatedEntityType: 'availability',
 			relatedEntityId: null,
 			readAt: null,
@@ -90,15 +99,20 @@ export async function listUnreadInAppNotifications(
 		.orderBy(desc(notificationLog.createdAt))
 		.limit(limit);
 
-	return rows.map((row) => ({
-		id: row.id,
-		category: row.category,
-		title: row.title ?? '',
-		body: row.body ?? '',
-		deepLinkPath: row.deepLinkPath ?? '/provider/dashboard',
-		readAt: row.readAt?.toISOString() ?? null,
-		createdAt: row.createdAt.toISOString()
-	}));
+	return rows.map((row) => {
+		const deepLinkPath = row.deepLinkPath ?? profileDeepLinkPath();
+		return {
+			id: row.id,
+			category: row.category,
+			title: row.title ?? '',
+			body: row.body ?? '',
+			deepLinkPath,
+			actionLabel: actionLabelForNotification(row.category, deepLinkPath),
+			openHref: `/api/notifications/in-app/${row.id}/open`,
+			readAt: row.readAt?.toISOString() ?? null,
+			createdAt: row.createdAt.toISOString()
+		};
+	});
 }
 
 export async function markInAppNotificationsRead(
