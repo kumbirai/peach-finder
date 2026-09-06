@@ -60,6 +60,12 @@ export {
 	revokeBadge,
 	type ModerationCommandResult
 } from './infra/moderation-commands';
+export {
+	getAccountTrustSummary,
+	type AccountReportHistoryItem,
+	type AccountModerationHistoryItem,
+	type AccountTrustSummary
+} from './infra/account-lookup-queries';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

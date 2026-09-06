@@ -27,9 +27,9 @@ FR-ADM-07.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ADMIN-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-ADM-07 read-only account lookup end-to-end. `identity-and-access` gained `searchAccounts` and `getAccountSummary` (name/email/phone search, admin-visible contact fields). `trust-and-safety` gained `getAccountTrustSummary` (open report count, report and moderation history for a user/profile). `listing-billing` gained `getSubscription` and `getActiveListingCount` against the simplified `listing_billing.listing` table. Admin delivery: `GET /admin/api/identity/accounts?q=`, `GET /admin/api/billing/subscription/:providerProfileId`, and `/admin/accounts` page composing all facades server-side with SSR search results. No impersonation routes or session minting — negative requirement documented in UI copy and guarded by `impersonation-guard.test.ts`. Tests: integration suites in the three supporting modules, `testing/playwright/admin-account-lookup.e2e.ts` (TC-ADMIN-05a/b, axe).
+
+**Deviation:** Report history aggregates reports filed by the user and reports received against the user's provider profile only (not photo/review/thread targets in V1); sufficient for admin lookup without cross-module thread/photo joins. Billing read uses the wave's `listing` table shape rather than the full `subscription` schema from the LLD (not yet migrated).
+
+**Follow-ups:** US-ADMIN-08 ops KPI dashboard can call `getActiveListingCount`; extend report history to photo/review/thread targets if admins need full cross-target visibility.

@@ -26,6 +26,12 @@ export {
 	getSelfAccountSummary
 } from './infra/display-identity';
 export {
+	searchAccounts,
+	getAccountSummary,
+	type AccountSearchHit,
+	type AccountSummary
+} from './infra/account-lookup';
+export {
 	registerSeeker,
 	loginPassword,
 	verifyEmailToken,

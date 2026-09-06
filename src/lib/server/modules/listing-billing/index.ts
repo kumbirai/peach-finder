@@ -6,6 +6,12 @@ import { ensureBuildingListing } from './infra/ensure-building-listing';
 import { startTrialOnPublish } from './infra/start-trial-on-publish';
 
 export { startTrialOnPublish, ensureBuildingListing };
+export {
+	getSubscription,
+	getActiveListingCount,
+	listingStateLabel,
+	type SubscriptionSummary
+} from './infra/subscription-read';
 
 export async function cancelListingForOwner(
 	tx: Transaction,
