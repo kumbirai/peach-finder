@@ -47,18 +47,12 @@ export function buildComparison(currentCount: number, priorCount: number): Metri
 			direction: 'flat'
 		};
 	}
-	if (priorCount === 0 && currentCount > 0) {
+	// Privacy floor: percentages derived from sub-floor counts would leak 1–4 (FR-ANLY-03).
+	if (currentCount < 5 || priorCount < 5) {
 		return {
 			priorTotal: formatCount(priorCount),
-			changeLabel: 'Up from prior period',
-			direction: 'up'
-		};
-	}
-	if (currentCount === 0 && priorCount > 0) {
-		return {
-			priorTotal: formatCount(priorCount),
-			changeLabel: 'Down from prior period',
-			direction: 'down'
+			changeLabel: currentCount > priorCount ? 'Up from prior period' : 'Down from prior period',
+			direction: currentCount > priorCount ? 'up' : 'down'
 		};
 	}
 	const pct = Math.round(((currentCount - priorCount) / priorCount) * 100);

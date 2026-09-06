@@ -13,6 +13,7 @@ import {
 	getDashboardForOwner,
 	runHourlyAnalyticsRollup
 } from './index';
+import { assertAggregateOnlyPayload } from './domain/analytics-privacy-contract';
 import { getCaptureFailureCount, incrementCaptureFailures } from './infra/capture-metrics';
 
 describe('US-ANLY-01 provider analytics integration', () => {
@@ -147,6 +148,35 @@ describe('US-ANLY-01 provider analytics integration', () => {
 		});
 	});
 
+	it('TC-ANLY-02a: dashboard API payload is aggregate-only with no viewer identification', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			await db.execute(sql`
+				INSERT INTO provider_analytics.hourly_rollup (
+					provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+				) VALUES (
+					${profileId}::uuid, ${new Date('2026-09-05T10:00:00.000Z').toISOString()}::timestamptz, 12, 8, 2
+				)
+			`);
+
+			const dashboard = await getDashboardForOwner(
+				db,
+				asId<'UserId'>('01900000-0000-7000-8000-000000000098'),
+				30,
+				new Date('2026-09-06T12:00:00.000Z')
+			);
+
+			expect(dashboard).not.toBeNull();
+			assertAggregateOnlyPayload(dashboard);
+			const serialized = JSON.stringify(dashboard);
+			expect(serialized).not.toMatch(/viewer_key|viewerKey|seekerId|seeker_id/);
+		});
+	});
+
 	it('TC-ANLY-02b: dashboard floors small counts at read time', async () => {
 		await withTestDatabase(async (db) => {
 			await seedPlatform(db);
@@ -171,6 +201,7 @@ describe('US-ANLY-01 provider analytics integration', () => {
 
 			expect(dashboard?.profileViews.currentTotal).toBe(formatCount(3));
 			expect(dashboard?.profileViews.currentTotal).toBe('< 5');
+			expect(dashboard?.profileViews.priorPeriodComparison.changeLabel).not.toMatch(/%/);
 		});
 	});
 

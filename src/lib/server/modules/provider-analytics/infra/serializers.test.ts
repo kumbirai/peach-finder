@@ -10,9 +10,19 @@ describe('provider-analytics serializers', () => {
 		expect(formatCount(42)).toBe('42');
 	});
 
-	it('builds prior-period comparison labels from true counts', () => {
+	it('builds prior-period comparison labels from true counts when both are at or above the floor', () => {
 		expect(buildComparison(10, 10).direction).toBe('flat');
+		expect(buildComparison(10, 5).changeLabel).toBe('Up 100% vs prior period');
 		expect(buildComparison(10, 5).direction).toBe('up');
-		expect(buildComparison(2, 8).direction).toBe('down');
+		expect(buildComparison(8, 10).changeLabel).toBe('Down 20% vs prior period');
+		expect(buildComparison(8, 10).direction).toBe('down');
+	});
+
+	it('TC-ANLY-02b: omits percentage labels when either count is below the privacy floor', () => {
+		expect(buildComparison(3, 1).changeLabel).toBe('Up from prior period');
+		expect(buildComparison(3, 1).priorTotal).toBe('< 5');
+		expect(buildComparison(4, 2).changeLabel).toBe('Up from prior period');
+		expect(buildComparison(2, 8).changeLabel).toBe('Down from prior period');
+		expect(buildComparison(1, 0).changeLabel).toBe('Up from prior period');
 	});
 });
