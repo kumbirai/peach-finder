@@ -6,6 +6,7 @@ import { SESSION_COOKIE, setSessionCookie } from './session-cookie';
 function mockCookies(): Cookies {
 	return {
 		get: vi.fn(),
+		getAll: vi.fn(() => []),
 		set: vi.fn(),
 		delete: vi.fn(),
 		serialize: vi.fn()

@@ -13,6 +13,7 @@ function mockCookies(): Cookies & { jar: Map<string, string> } {
 	return {
 		jar,
 		get: (name: string) => jar.get(name),
+		getAll: () => [...jar.entries()].map(([name, value]) => ({ name, value })),
 		set: (name: string, value: string) => {
 			jar.set(name, value);
 		},

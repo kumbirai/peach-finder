@@ -1,4 +1,5 @@
 import { and, eq, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { Database } from '../../../db';
 import type { UserId } from '../../../shared/ids';
 import { asId } from '../../../shared/ids';
@@ -31,7 +32,7 @@ export function escapeLikePattern(raw: string): string {
 	return raw.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
-function ilikeContains(column: typeof users.displayName, raw: string): SQL {
+function ilikeContains(column: AnyPgColumn, raw: string): SQL {
 	const pattern = `%${escapeLikePattern(raw)}%`;
 	return sql`${column} ILIKE ${pattern} ESCAPE '\\'`;
 }

@@ -54,8 +54,9 @@ export function readAdminLoginChallenge(cookies: Cookies, now: Date): AdminLogin
 	const token = cookies.get(ADMIN_CHALLENGE_COOKIE);
 	if (!token) return null;
 	const [encoded, signature] = token.split('.');
+	if (!encoded || !signature) return null;
 	const expected = sign(encoded);
-	if (!encoded || !signature || !hashMatches(expected, signature)) return null;
+	if (!hashMatches(expected, signature)) return null;
 	try {
 		const parsed = JSON.parse(
 			Buffer.from(encoded, 'base64url').toString('utf8')

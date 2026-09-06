@@ -196,11 +196,13 @@ describe('US-BILL-02 free period anti-abuse integration', () => {
 			expect(await wasPhoneUsedBefore(db, hashPhone(sharedPhone), firstVerifiedAt!)).toBe(false);
 
 			await createDraftProfile(db, firstOwnerId, areaId);
-			await handlePhoneVerifiedForTrialEligibility(
-				db,
-				firstOwnerId,
-				hashPhone(sharedPhone),
-				firstVerifiedAt!
+			await db.transaction((tx) =>
+				handlePhoneVerifiedForTrialEligibility(
+					tx,
+					firstOwnerId,
+					hashPhone(sharedPhone),
+					firstVerifiedAt!
+				)
 			);
 			await deleteProviderAccount(db, firstOwnerId, verifyAt);
 

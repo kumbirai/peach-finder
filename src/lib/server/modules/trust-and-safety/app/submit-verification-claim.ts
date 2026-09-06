@@ -37,7 +37,7 @@ function isUniqueViolation(error: unknown): boolean {
 function guardSubmission(
 	status: VerificationOwnerStatus,
 	mode: 'submit' | 'resubmit'
-): Result<void, UseCaseError> | null {
+): Result<never, UseCaseError> | null {
 	if (status === 'approved') {
 		return Err({ kind: 'conflict', reason: 'Your identity is already verified.' });
 	}
