@@ -32,6 +32,11 @@ export {
 	type AccountSummary
 } from './infra/account-lookup';
 export {
+	getRegistrationStats,
+	type DateRange,
+	type RegistrationStats
+} from './infra/registration-stats';
+export {
 	registerSeeker,
 	loginPassword,
 	verifyEmailToken,

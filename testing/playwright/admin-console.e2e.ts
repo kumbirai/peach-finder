@@ -71,6 +71,7 @@ test.describe('US-ADMIN-01 hardened admin console', () => {
 		await expect(nav.getByRole('link', { name: 'Accounts' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Platform config' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Audit log' })).toBeVisible();
+		await expect(page.getByTestId('admin-ops-dashboard')).toBeVisible();
 	});
 
 	test('has no critical or serious axe violations on admin login', async ({ page }) => {

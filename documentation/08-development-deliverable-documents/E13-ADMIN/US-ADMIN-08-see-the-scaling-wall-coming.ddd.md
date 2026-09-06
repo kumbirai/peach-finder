@@ -26,9 +26,9 @@ FR-ADM-09, SR-OBS-07.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ADMIN-08 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-ADM-09 ops KPI dashboard as a thin admin delivery surface. Added `identity-and-access.getRegistrationStats(range)` (the only missing facade query from moderation-admin LLD §4). Composed read model in `src/lib/server/admin/ops-kpi.ts` calling `trust-and-safety.getIdentityQueueStats`, `getReportsQueueStats`, `getRegistrationStats`, and `listing-billing.getActiveListingCount`. Exposed `GET /admin/api/ops/kpis?range=` (default `7d`) and SSR dashboard at `/admin` with four KPI tiles matching prototype tokens (dense admin-only grid, Fraunces values, warm shadow tiles). No new domain logic, persistence, or events — read-only aggregation per HLD §6.1.
+
+**Tests:** `registration-stats.integration.test.ts`, `ops-kpi.integration.test.ts`, `ops-kpi-format.test.ts`, `testing/playwright/admin-ops-dashboard.e2e.ts` (TC-ADMIN-08a, TC-ADMIN-VIS-02, axe).
+
+**Deviations:** None.
+
+**Follow-ups:** None for W4 admin epic.
