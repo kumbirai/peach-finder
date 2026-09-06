@@ -28,9 +28,9 @@ FR-ADM-05, FR-TRUST-05, FR-ADM-08, SR-DATA-05.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ADMIN-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented the full FR-ADM-05 moderation command set in `trust-and-safety` (`removePhoto`, `removeReview`, `unpublishProfile`, `suspendAccount`, `reinstateAccount`, `revokeBadge`) with schema-enforced reasons, idempotent `processed_admin_action` dedup, in-transaction audit entries, and `ModerationActionTaken` / `BadgeRevoked` outbox events. Suspension/reinstatement call `identity-and-access.applySuspension` / `applyReinstatement` synchronously in the moderation transaction. Event subscribers wired in the worker for `provider-profile`, `provider-reviews`, `media-processing`, `discovery-search`, and `user-notifications`. Admin delivery: six `POST /admin/api/trust/moderation/*` routes, `/admin/moderation` action panel, and reports-queue action picker extended to all action kinds. Tests: `moderation-commands.integration.test.ts`, `domain/moderation-actions.test.ts`, `testing/playwright/admin-moderation-actions.e2e.ts`.
+
+**Deviation:** `actOnReport` invokes standalone moderation commands then resolves the report in a follow-up transaction (moderation commits first). Profile unpublish side effects are event-driven via `provider-profile.moderation-effect` rather than the synchronous `unpublishProfileForOwner` path US-ADMIN-03 used for the unpublish-only act shortcut.
+
+**Follow-ups:** US-ADMIN-07 audit viewer; extend `e2e-review-lifecycle` once review submit flow lands in provider-reviews commands.

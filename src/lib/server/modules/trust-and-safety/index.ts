@@ -51,6 +51,15 @@ export {
 	type ReportResolutionResult,
 	type ModerationActionKind
 } from './infra/report-resolution-commands';
+export {
+	removePhoto,
+	removeReview,
+	unpublishProfile,
+	suspendAccount,
+	reinstateAccount,
+	revokeBadge,
+	type ModerationCommandResult
+} from './infra/moderation-commands';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

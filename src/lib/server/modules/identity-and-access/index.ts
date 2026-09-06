@@ -77,6 +77,7 @@ export {
 } from './infra/dev-verification';
 import { deleteAccount, anonymizePendingUsers } from './infra/account-deletion';
 export { deleteAccount, anonymizePendingUsers };
+export { applySuspension, applyReinstatement } from './infra/suspension-commands';
 export { updateDisplayName } from './infra/account-commands';
 import { getUserCapabilities } from './infra/session-commands';
 export { ADMIN_SESSION_IDLE_MS } from './domain/session-policy';

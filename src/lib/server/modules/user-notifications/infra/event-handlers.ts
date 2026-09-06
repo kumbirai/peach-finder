@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { getProfileOwnerIdDb } from '../../provider-profile';
+import { getPhotoOwner } from '../../media-processing';
 import { reviews } from '../../provider-reviews/infra/schema';
 import { listings } from '../../listing-billing/infra/schema';
 import { reports } from '../../trust-and-safety/infra/schema';
@@ -217,6 +218,11 @@ function moderationCopy(action: string, reason?: string): { title: string; body:
 				title: 'Account reinstated',
 				body: 'Your account access has been restored.'
 			};
+		case 'revoke_badge':
+			return {
+				title: 'Identity badge removed',
+				body: `Your identity verified badge was removed.${reasonSuffix}`
+			};
 		default:
 			return {
 				title: 'Moderation update',
@@ -246,6 +252,18 @@ export async function handleModerationActionTaken(
 				userId = await getProfileOwnerIdDb(tx, event.payload.targetId as ProviderProfileId);
 			} else if (event.payload.targetType === 'user') {
 				userId = event.payload.targetId as UserId;
+			} else if (event.payload.targetType === 'photo') {
+				userId = await getPhotoOwner(tx, event.payload.targetId as never);
+			} else if (event.payload.targetType === 'review') {
+				const rows = await tx
+					.select({ providerProfileId: reviews.providerProfileId })
+					.from(reviews)
+					.where(eq(reviews.id, event.payload.targetId))
+					.limit(1);
+				const profileId = rows[0]?.providerProfileId;
+				if (profileId) {
+					userId = await getProfileOwnerIdDb(tx, profileId as ProviderProfileId);
+				}
 			}
 			if (!userId) return;
 

@@ -11,9 +11,18 @@ import {
 	handleUserBlocked as handleMessagingUserBlocked,
 	handleUserUnblocked as handleMessagingUserUnblocked
 } from '../lib/server/modules/direct-messaging';
-import { handleMediaProcessed, handleMediaRemoved } from '../lib/server/modules/provider-profile';
+import {
+	handleMediaProcessed,
+	handleMediaRemoved,
+	handleProviderProfileModeration
+} from '../lib/server/modules/provider-profile';
 import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
-import { upsertSearchProjection } from '../lib/server/modules/discovery-search';
+import { handleReviewsModeration } from '../lib/server/modules/provider-reviews';
+import { handleMediaModeration } from '../lib/server/modules/media-processing';
+import {
+	handleModerationProjectionRemove,
+	upsertSearchProjection
+} from '../lib/server/modules/discovery-search';
 import {
 	refreshSearchDisplayName,
 	refreshSearchProjection,
@@ -224,6 +233,30 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			event.eventName === 'ModerationActionTaken'
 		) {
 			await handleModerationActionTaken(db, event as never);
+		}
+		if (
+			subscriber === 'provider-profile.moderation-effect' &&
+			event.eventName === 'ModerationActionTaken'
+		) {
+			await handleProviderProfileModeration(db, event as never);
+		}
+		if (
+			subscriber === 'provider-reviews.moderation-effect' &&
+			event.eventName === 'ModerationActionTaken'
+		) {
+			await handleReviewsModeration(db, event as never);
+		}
+		if (
+			subscriber === 'media-processing.moderation-effect' &&
+			event.eventName === 'ModerationActionTaken'
+		) {
+			await handleMediaModeration(db, event as never);
+		}
+		if (
+			subscriber === 'discovery-search.projection-remove' &&
+			event.eventName === 'ModerationActionTaken'
+		) {
+			await handleModerationProjectionRemove(db, event as never);
 		}
 		if (subscriber === 'user-notifications.billing' && event.eventName === 'PaymentSucceeded') {
 			await handlePaymentSucceeded(db, event as never);

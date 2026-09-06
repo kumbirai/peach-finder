@@ -1,92 +1,31 @@
 import { eq } from 'drizzle-orm';
-import type { Database, Transaction } from '../../../db';
+import type { Database } from '../../../db';
 import { writeAudit } from '../../../shared/audit';
-import { asInstant } from '../../../shared/clock';
-import type { DomainEvent } from '../../../shared/events';
-import {
-	newId,
-	type ModerationActionId,
-	type ProviderProfileId,
-	type ReportId,
-	type UserId
-} from '../../../shared/ids';
-import { publish } from '../../../shared/outbox';
+import type { ModerationActionId, ProviderProfileId, ReportId, UserId } from '../../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
-import { unpublishProfileForOwner, getOwnedProfileIdDb } from '../../provider-profile';
-import { getProfileOwnerIdDb } from '../../provider-profile';
+import { getOwnedProfileIdDb, getProfileOwnerIdDb } from '../../provider-profile';
+import type { ModerationActionKind } from '../domain/moderation-actions';
+import {
+	removePhoto,
+	removeReview,
+	reinstateAccount,
+	revokeBadge,
+	suspendAccount,
+	unpublishProfile
+} from './moderation-commands';
 import {
 	buildAdminIdempotencyKey,
 	readProcessedAdminAction,
 	recordProcessedAdminAction
 } from './processed-admin-action';
 import { findOpenReport } from './reports-queue-queries';
-import { moderationActions, reports } from './schema';
+import { publishReportResolved } from './report-events';
+import { reports } from './schema';
 
-export type ModerationActionKind = 'unpublish';
+export type { ModerationActionKind } from '../domain/moderation-actions';
 
 function validationIssue(path: string, message: string): UseCaseError {
 	return { kind: 'validation_failed', issues: [{ path, message }] };
-}
-
-async function publishModerationActionTaken(
-	tx: Transaction,
-	input: {
-		moderationActionId: ModerationActionId;
-		targetType: string;
-		targetId: string;
-		action: string;
-		reason: string;
-		correlationId: string;
-		now: Date;
-	}
-): Promise<void> {
-	const event: DomainEvent<
-		'ModerationActionTaken',
-		{
-			moderationActionId: string;
-			targetType: string;
-			targetId: string;
-			action: string;
-			reason?: string;
-		}
-	> = {
-		eventId: newId<'OutboxEventId'>(),
-		eventName: 'ModerationActionTaken',
-		version: 1,
-		occurredAt: asInstant(input.now.toISOString()),
-		correlationId: input.correlationId,
-		payload: {
-			moderationActionId: input.moderationActionId,
-			targetType: input.targetType,
-			targetId: input.targetId,
-			action: input.action,
-			reason: input.reason
-		}
-	};
-	await publish(tx, event);
-}
-
-async function publishReportResolved(
-	tx: Transaction,
-	input: {
-		reportId: ReportId;
-		resolution: 'dismissed' | 'acted';
-		correlationId: string;
-		now: Date;
-	}
-): Promise<void> {
-	const event: DomainEvent<'ReportResolved', { reportId: string; resolution: string }> = {
-		eventId: newId<'OutboxEventId'>(),
-		eventName: 'ReportResolved',
-		version: 1,
-		occurredAt: asInstant(input.now.toISOString()),
-		correlationId: input.correlationId,
-		payload: {
-			reportId: input.reportId,
-			resolution: input.resolution
-		}
-	};
-	await publish(tx, event);
 }
 
 export type ReportResolutionResult = {
@@ -206,6 +145,103 @@ async function resolveProviderProfileForReport(
 	});
 }
 
+async function resolveUserForReport(
+	db: Database,
+	open: typeof reports.$inferSelect
+): Promise<Result<UserId, UseCaseError>> {
+	const profileResult = await resolveProviderProfileForReport(db, open);
+	if (!profileResult.ok) return profileResult;
+	const ownerId = await getProfileOwnerIdDb(db, profileResult.value);
+	if (!ownerId) return Err({ kind: 'not_found', resource: 'user' });
+	return Ok(ownerId);
+}
+
+async function runModerationForReport(
+	db: Database,
+	input: {
+		reportId: ReportId;
+		adminId: UserId;
+		action: ModerationActionKind;
+		reason: string;
+		open: typeof reports.$inferSelect;
+		idempotencyKey: string | null;
+		correlationId: string;
+		now: Date;
+	}
+): Promise<Result<ModerationActionId, UseCaseError>> {
+	const base = {
+		adminId: input.adminId,
+		reason: input.reason,
+		reportId: input.reportId,
+		idempotencyKey: input.idempotencyKey,
+		correlationId: input.correlationId,
+		now: input.now
+	};
+
+	switch (input.action) {
+		case 'remove_photo':
+			if (input.open.targetType !== 'photo') {
+				return Err(validationIssue('action', 'Remove photo only applies to photo reports.'));
+			}
+			return mapModerationResult(
+				await removePhoto(db, { ...base, photoId: input.open.targetId as never })
+			);
+		case 'remove_review': {
+			if (input.open.targetType !== 'review') {
+				return Err(validationIssue('action', 'Remove review only applies to review reports.'));
+			}
+			const metadata = input.open.metadata as { part?: string };
+			const reviewInput = {
+				...base,
+				reviewId: input.open.targetId as never
+			};
+			if (metadata.part === 'reply') {
+				return mapModerationResult(await removeReview(db, { ...reviewInput, part: 'reply' }));
+			}
+			return mapModerationResult(await removeReview(db, reviewInput));
+		}
+		case 'unpublish': {
+			const profileResult = await resolveProviderProfileForReport(db, input.open);
+			if (!profileResult.ok) return profileResult;
+			return mapModerationResult(
+				await unpublishProfile(db, {
+					...base,
+					providerProfileId: profileResult.value
+				})
+			);
+		}
+		case 'suspend': {
+			const userResult = await resolveUserForReport(db, input.open);
+			if (!userResult.ok) return userResult;
+			return mapModerationResult(await suspendAccount(db, { ...base, userId: userResult.value }));
+		}
+		case 'revoke_badge': {
+			const profileResult = await resolveProviderProfileForReport(db, input.open);
+			if (!profileResult.ok) return profileResult;
+			return mapModerationResult(
+				await revokeBadge(db, {
+					...base,
+					providerProfileId: profileResult.value
+				})
+			);
+		}
+		case 'reinstate': {
+			const userResult = await resolveUserForReport(db, input.open);
+			if (!userResult.ok) return userResult;
+			return mapModerationResult(await reinstateAccount(db, { ...base, userId: userResult.value }));
+		}
+		default:
+			return Err(validationIssue('action', 'Unsupported moderation action.'));
+	}
+}
+
+function mapModerationResult(
+	result: Result<{ moderationActionId: ModerationActionId }, UseCaseError>
+): Result<ModerationActionId, UseCaseError> {
+	if (!result.ok) return result;
+	return Ok(result.value.moderationActionId);
+}
+
 export async function actOnReport(
 	db: Database,
 	input: {
@@ -221,10 +257,6 @@ export async function actOnReport(
 	const trimmed = input.reason.trim();
 	if (!trimmed) {
 		return Err(validationIssue('reason', 'Enter a reason for this moderation action.'));
-	}
-
-	if (input.action !== 'unpublish') {
-		return Err(validationIssue('action', 'Only unpublish is available in this release.'));
 	}
 
 	const idempotencyKey = buildAdminIdempotencyKey(
@@ -244,31 +276,21 @@ export async function actOnReport(
 		return Err({ kind: 'not_found', resource: 'report' });
 	}
 
-	const profileResult = await resolveProviderProfileForReport(db, open);
-	if (!profileResult.ok) return profileResult;
-	const providerProfileId = profileResult.value;
-
-	const moderationActionId = newId<'ModerationActionId'>();
+	const moderationResult = await runModerationForReport(db, {
+		reportId: input.reportId,
+		adminId: input.adminId,
+		action: input.action,
+		reason: trimmed,
+		open,
+		idempotencyKey: input.idempotencyKey,
+		correlationId: input.correlationId,
+		now: input.now
+	});
+	if (!moderationResult.ok) return moderationResult;
 
 	await db.transaction(async (tx) => {
 		const duplicate = await readProcessedAdminAction(tx, idempotencyKey);
 		if (duplicate) return;
-
-		const ownerId = await getProfileOwnerIdDb(tx, providerProfileId);
-		if (!ownerId) throw new Error('provider owner missing');
-
-		await unpublishProfileForOwner(tx, ownerId, 'admin', input.correlationId, input.now);
-
-		await tx.insert(moderationActions).values({
-			id: moderationActionId,
-			adminId: input.adminId,
-			action: 'unpublish',
-			targetType: 'provider_profile',
-			targetId: providerProfileId,
-			reason: trimmed,
-			reportId: input.reportId,
-			createdAt: input.now
-		});
 
 		await tx
 			.update(reports)
@@ -287,7 +309,7 @@ export async function actOnReport(
 			targetType: 'report',
 			targetId: input.reportId,
 			reason: trimmed,
-			metadata: { moderationAction: 'unpublish', providerProfileId },
+			metadata: { moderationAction: input.action, moderationActionId: moderationResult.value },
 			correlationId: input.correlationId
 		});
 
@@ -298,17 +320,7 @@ export async function actOnReport(
 			now: input.now
 		});
 
-		await publishModerationActionTaken(tx, {
-			moderationActionId,
-			targetType: 'provider_profile',
-			targetId: providerProfileId,
-			action: 'unpublish',
-			reason: trimmed,
-			correlationId: input.correlationId,
-			now: input.now
-		});
-
-		await recordProcessedAdminAction(tx, idempotencyKey, moderationActionId, input.now);
+		await recordProcessedAdminAction(tx, idempotencyKey, moderationResult.value, input.now);
 	});
 
 	return Ok({ reportId: input.reportId, resolution: 'acted' });

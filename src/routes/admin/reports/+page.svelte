@@ -9,8 +9,18 @@
 
 	let dismissOpenFor = $state<string | null>(null);
 	let dismissNote = $state('');
-	let actOpenFor = $state<string | null>(null);
+	let actOpenFor = $state<string | null>(data.actReportId);
 	let actReason = $state('');
+	let actAction = $state('unpublish');
+
+	const actionLabels: Record<string, string> = {
+		remove_photo: 'Remove photo',
+		remove_review: 'Remove review',
+		unpublish: 'Unpublish profile',
+		suspend: 'Suspend account',
+		reinstate: 'Reinstate account',
+		revoke_badge: 'Revoke identity badge'
+	};
 
 	function statsLabel(hours: number | null): string {
 		if (hours === null) return 'no open reports';
@@ -152,9 +162,9 @@
 							</div>
 						</form>
 					{:else if actOpenFor === item.reportId}
-						<p class="verify-copy admin-inline-note">
-							Unpublishes the reported provider profile. The provider may edit and republish
-							themselves — republish is not admin-gated.
+						<p class="verify-copy admin-inline-note" data-testid="moderation-action-note">
+							Opens the moderation-action picker — remove photo, remove review, unpublish, suspend,
+							revoke badge — each requires a recorded reason.
 						</p>
 						<form
 							class="act-reason admin-inline-field"
@@ -165,10 +175,23 @@
 									await update();
 									actOpenFor = null;
 									actReason = '';
+									actAction = 'unpublish';
 								};
 							}}
 						>
 							<input type="hidden" name="reportId" value={item.reportId} />
+							<label class="field-label" for={`action-${item.reportId}`}>Action</label>
+							<select
+								id={`action-${item.reportId}`}
+								name="action"
+								class="field-select"
+								bind:value={actAction}
+								data-testid="moderation-action-picker"
+							>
+								{#each data.moderationActions as moderationAction (moderationAction)}
+									<option value={moderationAction}>{actionLabels[moderationAction]}</option>
+								{/each}
+							</select>
 							<Input
 								id={`act-${item.reportId}`}
 								name="reason"
@@ -177,13 +200,16 @@
 								bind:value={actReason}
 							/>
 							<div class="queue-row__actions">
-								<Button type="submit" variant="secondary">Confirm unpublish</Button>
+								<Button type="submit" variant="secondary"
+									>Confirm {actionLabels[actAction] ?? 'action'}</Button
+								>
 								<Button
 									type="button"
 									variant="ghost"
 									onclick={() => {
 										actOpenFor = null;
 										actReason = '';
+										actAction = 'unpublish';
 									}}
 								>
 									Cancel
@@ -202,14 +228,7 @@
 							>
 								Dismiss
 							</Button>
-							<Button
-								variant="ghost"
-								onclick={() => {
-									actOpenFor = item.reportId;
-									actReason = '';
-									dismissOpenFor = null;
-								}}
-							>
+							<Button variant="ghost" href={`/admin/reports?act=${item.reportId}`}>
 								Take action
 							</Button>
 						</div>
@@ -421,6 +440,30 @@
 
 	.admin-inline-field {
 		margin-top: var(--space-sm);
+	}
+
+	.field-label {
+		display: block;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: var(--color-stone);
+		margin-bottom: var(--space-xs);
+	}
+
+	.field-select {
+		width: 100%;
+		border-radius: 14px;
+		border: 1px solid var(--color-divider);
+		padding: 12px 16px;
+		min-height: 44px;
+		font: inherit;
+		background: var(--color-paper);
+		margin-bottom: var(--space-sm);
+	}
+
+	.field-select:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
 	}
 
 	.verify-copy {

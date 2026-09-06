@@ -30,6 +30,8 @@ export function parseProviderProfileId(raw: string): Result<ProviderProfileId, U
 	}
 }
 
+export { handleModerationActionTaken as handleReviewsModeration } from './infra/moderation-subscriptions';
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

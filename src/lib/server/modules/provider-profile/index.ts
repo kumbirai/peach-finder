@@ -110,9 +110,7 @@ export async function getPublicProfile(
 	options: GetPublicProfileOptions = {}
 ): Promise<Result<PublicProfile, UseCaseError>> {
 	const loadOptions =
-		options.requirePublished === undefined
-			? {}
-			: { requirePublished: options.requirePublished };
+		options.requirePublished === undefined ? {} : { requirePublished: options.requirePublished };
 	const view = await loadProfileView(db, providerProfileId, loadOptions);
 	if (!view) return Err({ kind: 'not_found', resource: 'provider_profile' });
 
@@ -137,8 +135,10 @@ export async function listPublishedProfileIds(db: Database): Promise<ProviderPro
 export {
 	unpublishProfileForOwner,
 	unpublishProfileForOwnerDb,
+	unpublishProviderProfile,
 	type UnpublishReason
 } from './infra/unpublish-profile';
+export { handleModerationActionTaken as handleProviderProfileModeration } from './infra/moderation-subscriptions';
 export { publishProfileForOwner } from './infra/publish-profile';
 export { createDraftProfile } from './infra/create-draft-profile';
 export { loadOwnerProfile, type OwnerProfileDto } from './infra/read-owner-profile';

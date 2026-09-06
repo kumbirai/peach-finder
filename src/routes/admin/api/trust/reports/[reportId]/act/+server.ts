@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getDb } from '$lib/server/db';
 import { actOnReport } from '$lib/server/modules/trust-and-safety';
+import { MODERATION_ACTION_KINDS } from '$lib/server/modules/trust-and-safety/domain/moderation-actions';
 import type { Role } from '$lib/server/shared/auth-context';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
 import { asId } from '$lib/server/shared/ids';
@@ -9,7 +10,7 @@ import { asId } from '$lib/server/shared/ids';
 export const _requiredRole: Role = 'admin';
 
 const bodySchema = z.object({
-	action: z.literal('unpublish'),
+	action: z.enum(MODERATION_ACTION_KINDS),
 	reason: z.string().trim().min(1).max(2000)
 });
 

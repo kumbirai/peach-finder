@@ -37,6 +37,7 @@ export async function getPhotoVariantUrls(db: Database, photoId: PhotoId) {
 	return listVariantUrlsForPhoto(db, photoId);
 }
 
+export { handleModerationActionTaken as handleMediaModeration } from './infra/moderation-subscriptions';
 export { readLocalMediaFile } from './infra/storage';
 export {
 	IDENTITY_DOC_PRESIGN_TTL_MS,
