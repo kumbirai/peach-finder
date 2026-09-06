@@ -20,6 +20,7 @@ import {
 	markInAppNotificationsRead
 } from '$lib/server/modules/user-notifications';
 import { getOwnVerificationStatus } from '$lib/server/modules/trust-and-safety';
+import { getBillingStatusForOwner } from '$lib/server/modules/listing-billing';
 
 export const _requiredRole: Role = 'provider';
 
@@ -41,7 +42,9 @@ export async function load({ locals, url }) {
 			},
 			activeThisWeek: null,
 			renewalNotification: null,
-			verification: null
+			verification: null,
+			billing: null,
+			trialEndingNotification: null
 		};
 	}
 
@@ -61,17 +64,21 @@ export async function load({ locals, url }) {
 			},
 			activeThisWeek: null,
 			renewalNotification: null,
-			verification: null
+			verification: null,
+			billing: null,
+			trialEndingNotification: null
 		};
 	}
 
-	const [inbox, reviewCount, transparencyResult, notifications, verification] = await Promise.all([
-		listProviderInbox(db, locals.auth.userId!),
-		countReviewsOnProfile(db, dashboard.profileId),
-		getAvailabilityTransparencyForOwner(db, locals.auth.userId!, new Date()),
-		listUnreadInAppNotifications(db, locals.auth.userId!, 5),
-		getOwnVerificationStatus(db, dashboard.profileId)
-	]);
+	const [inbox, reviewCount, transparencyResult, notifications, verification, billing] =
+		await Promise.all([
+			listProviderInbox(db, locals.auth.userId!),
+			countReviewsOnProfile(db, dashboard.profileId),
+			getAvailabilityTransparencyForOwner(db, locals.auth.userId!, new Date()),
+			listUnreadInAppNotifications(db, locals.auth.userId!, 5),
+			getOwnVerificationStatus(db, dashboard.profileId),
+			getBillingStatusForOwner(db, locals.auth.userId!)
+		]);
 
 	const availability =
 		transparencyResult.ok && ownerProfile.publishState === 'published'
@@ -93,6 +100,9 @@ export async function load({ locals, url }) {
 			? (notifications.find((n) => n.category === 'availability_expiry_warning') ?? null)
 			: null;
 
+	const trialEndingNotification =
+		notifications.find((n) => n.category === 'billing_trial_ending') ?? null;
+
 	return {
 		profile: dashboard,
 		publishState: ownerProfile.publishState,
@@ -104,7 +114,9 @@ export async function load({ locals, url }) {
 		availability,
 		activeThisWeek,
 		renewalNotification,
+		trialEndingNotification,
 		verification,
+		billing: billing?.dashboard ?? null,
 		analytics: {
 			profileViews: 142,
 			searchAppearances: 89,

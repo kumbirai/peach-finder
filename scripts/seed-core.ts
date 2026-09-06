@@ -35,6 +35,9 @@ import {
 const PLACEHOLDER_CARD = '/placeholder-photo.svg';
 const PLACEHOLDER_GALLERY = '/placeholder-photo.svg';
 
+/** Fixed trial end for seeded free-listed providers (within E2E trial-ending reminder window). */
+export const SEED_TRIAL_ENDS_AT = new Date('2026-09-09T10:00:00Z');
+
 /** Thandi's last activity for US-VIEW-02 coarse-presence fixtures (paired with integration-test anchor). */
 export const SEED_VIEW02_THANDI_ACTIVITY_AT = new Date('2026-09-03T12:00:00.000Z');
 
@@ -442,6 +445,7 @@ export async function seedCore(db: Database): Promise<void> {
 		.onConflictDoNothing();
 
 	const publishedAt = new Date('2026-08-01T10:00:00Z');
+	const trialEndsAt = SEED_TRIAL_ENDS_AT;
 
 	for (const p of PROVIDERS) {
 		const areaId = areaBySlug.get(p.areaSlug);
@@ -613,6 +617,8 @@ export async function seedCore(db: Database): Promise<void> {
 			.values({
 				providerProfileId: p.profileId,
 				state: 'free_listed',
+				trialStartedAt: publishedAt,
+				trialEndsAt,
 				updatedAt: new Date()
 			})
 			.onConflictDoNothing();
@@ -982,6 +988,8 @@ async function seedDualRoleUser(
 		.values({
 			providerProfileId: SEED_DUAL_ROLE_PROFILE_ID,
 			state: 'free_listed',
+			trialStartedAt: publishedAt,
+			trialEndsAt: SEED_TRIAL_ENDS_AT,
 			updatedAt: publishedAt
 		})
 		.onConflictDoNothing();
@@ -1112,7 +1120,12 @@ async function seedDualRoleUser(
 
 	await db
 		.update(listings)
-		.set({ state: 'free_listed', updatedAt: publishedAt })
+		.set({
+			state: 'free_listed',
+			trialStartedAt: publishedAt,
+			trialEndsAt: SEED_TRIAL_ENDS_AT,
+			updatedAt: publishedAt
+		})
 		.where(eq(listings.providerProfileId, SEED_DUAL_ROLE_PROFILE_ID));
 
 	await db

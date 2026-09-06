@@ -5,6 +5,8 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import AvailabilityToggle from '$lib/components/provider/AvailabilityToggle.svelte';
 	import AvailabilityRenewalBanner from '$lib/components/provider/AvailabilityRenewalBanner.svelte';
+	import ListingBillingStatus from '$lib/components/provider/ListingBillingStatus.svelte';
+	import TrialEndingBanner from '$lib/components/provider/TrialEndingBanner.svelte';
 	import VerificationStatusBanner from '$lib/components/provider/VerificationStatusBanner.svelte';
 	import ThreadListItem from '$lib/components/ThreadListItem.svelte';
 	import type { VerificationOwnerStatus } from '$lib/server/modules/trust-and-safety/domain/verification-status';
@@ -57,6 +59,17 @@
 				status: VerificationOwnerStatus;
 				rejectionReason: string | null;
 			} | null;
+			billing: {
+				headline: string;
+				trialEndsAt: string;
+				endDateLabel: string | null;
+				whatHappensNext: string;
+			} | null;
+			trialEndingNotification: {
+				id: string;
+				title: string;
+				body: string;
+			} | null;
 		};
 		form?: { message?: string; issues?: Array<{ path: string; message: string }> };
 	} = $props();
@@ -75,6 +88,14 @@
 	</p>
 
 	{#if data.profile && data.analytics}
+		{#if data.trialEndingNotification}
+			<TrialEndingBanner notification={data.trialEndingNotification} />
+		{/if}
+
+		{#if data.billing}
+			<ListingBillingStatus billing={data.billing} />
+		{/if}
+
 		{#if data.publishState === 'published'}
 			<section class="section" aria-labelledby="availability-heading">
 				<h2 id="availability-heading" class="visually-hidden">Your availability</h2>
