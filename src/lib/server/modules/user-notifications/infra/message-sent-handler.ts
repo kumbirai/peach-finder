@@ -61,34 +61,34 @@ export async function handleMessageSent(
 		const inserted = await markProcessed(tx, event.eventId, 'user-notifications.new-message');
 		if (!inserted) return;
 
-		const existing = await tx
-			.select()
-			.from(notificationBatchWindow)
-			.where(
-				and(
-					eq(notificationBatchWindow.userId, recipientId),
-					eq(notificationBatchWindow.category, 'new_message'),
-					eq(notificationBatchWindow.sourceKey, senderId),
-					eq(notificationBatchWindow.status, 'open')
-				)
-			)
-			.limit(1);
+		const windowKey = and(
+			eq(notificationBatchWindow.userId, recipientId),
+			eq(notificationBatchWindow.category, 'new_message'),
+			eq(notificationBatchWindow.sourceKey, senderId)
+		);
+		const [window] = await tx.select().from(notificationBatchWindow).where(windowKey).limit(1);
 
-		const openWindow = existing[0];
-		if (openWindow) {
-			await tx
-				.update(notificationBatchWindow)
-				.set({
-					messageCount: openWindow.messageCount + 1,
-					lastMessageId: messageId
-				})
-				.where(
-					and(
-						eq(notificationBatchWindow.userId, recipientId),
-						eq(notificationBatchWindow.category, 'new_message'),
-						eq(notificationBatchWindow.sourceKey, senderId)
-					)
-				);
+		if (window?.status === 'open') {
+			if (now > window.flushAfter) {
+				await tx.update(notificationBatchWindow).set({ status: 'flushed' }).where(windowKey);
+			} else {
+				if (now < window.openedAt) {
+					const backlogGapMs = window.openedAt.getTime() - now.getTime();
+					if (backlogGapMs > batchMinutes * 60_000) {
+						return;
+					}
+				}
+				await tx
+					.update(notificationBatchWindow)
+					.set({
+						messageCount: window.messageCount + 1,
+						lastMessageId: messageId,
+						openedAt: now < window.openedAt ? now : window.openedAt
+					})
+					.where(windowKey);
+				return;
+			}
+		} else if (window?.status === 'flushed' && now <= window.flushAfter) {
 			return;
 		}
 
@@ -113,16 +113,25 @@ export async function handleMessageSent(
 			});
 		}
 
-		await tx.insert(notificationBatchWindow).values({
-			userId: recipientId,
-			category: 'new_message',
-			sourceKey: senderId,
+		const windowValues = {
 			openedAt: now,
 			flushAfter,
 			messageCount: 1,
 			lastMessageId: messageId,
 			inAppNotificationId: inAppEnabled ? inAppId : null,
-			status: 'open'
+			status: 'open' as const
+		};
+
+		if (window) {
+			await tx.update(notificationBatchWindow).set(windowValues).where(windowKey);
+			return;
+		}
+
+		await tx.insert(notificationBatchWindow).values({
+			userId: recipientId,
+			category: 'new_message',
+			sourceKey: senderId,
+			...windowValues
 		});
 	});
 }
@@ -204,6 +213,18 @@ export async function flushDueNotificationBatchWindows(db: Database, now: Date):
 		flushed += 1;
 	}
 	return flushed;
+}
+
+/** Dev/test helper: make all open batch windows due, then flush. */
+export async function forceFlushOpenNotificationBatchWindows(
+	db: Database,
+	now: Date
+): Promise<number> {
+	await db
+		.update(notificationBatchWindow)
+		.set({ flushAfter: now })
+		.where(eq(notificationBatchWindow.status, 'open'));
+	return flushDueNotificationBatchWindows(db, now);
 }
 
 async function threadPathForMessage(db: Database, messageId: MessageId): Promise<string> {

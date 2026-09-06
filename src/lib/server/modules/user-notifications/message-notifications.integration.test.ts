@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { withTestDatabase } from '../../db/test-harness';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
 import { seedCore, SEED_CORE_PRIMARY_PROFILE_ID } from '../../../../../scripts/seed-core';
@@ -9,6 +9,7 @@ import { handleMessageSent, flushDueNotificationBatchWindows } from './index';
 import { mirrorNotifBlock } from './infra/block-cache';
 import { notificationBatchWindow, notificationLog } from './infra/schema';
 import { users } from '../identity-and-access/infra/schema';
+import { reviews } from '../provider-reviews/infra/schema';
 import { asInstant } from '../../shared/clock';
 import type { DomainEvent } from '../../shared/events';
 import { newId } from '../../shared/ids';
@@ -44,7 +45,7 @@ function messageSentEvent(
 	};
 }
 
-describe('US-MSG-04 message notifications integration', () => {
+describe('US-NOTIF-03 never a spam cannon integration', () => {
 	it('TC-NOTIF-03a: burst messages collapse to one in-app notification per sender', async () => {
 		await withTestDatabase(async (db) => {
 			await seedPlatform(db);
@@ -82,7 +83,7 @@ describe('US-MSG-04 message notifications integration', () => {
 					threadId: first.value.threadId,
 					senderId: seekerId,
 					body: `Message ${i}`,
-					now: new Date(`2026-09-05T12:0${i}:00Z`),
+					now: new Date(`2026-09-05T12:0${i - 1}:00Z`),
 					correlationId: `corr-burst-${i}`
 				});
 				if (!sent.ok) throw new Error('burst send failed');
@@ -94,7 +95,7 @@ describe('US-MSG-04 message notifications integration', () => {
 							messageId: sent.value.messageId,
 							senderId: seekerId
 						},
-						`2026-09-05T12:0${i}:00Z`
+						`2026-09-05T12:0${i - 1}:00Z`
 					) as never
 				);
 			}
@@ -194,6 +195,261 @@ describe('US-MSG-04 message notifications integration', () => {
 				.where(eq(notificationBatchWindow.userId, providerOwnerId));
 			expect(windows).toHaveLength(1);
 			expect(windows[0]?.messageCount).toBe(1);
+		});
+	});
+
+	it('TC-NOTIF-03a: burst flush updates in-app copy to collapsed form', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const seekerId = asId<'UserId'>('01900000-0000-7000-8000-00000000a406');
+			const providerOwnerId = asId<'UserId'>('01900000-0000-7000-8000-000000000001');
+			await seedSeeker(db, seekerId, 'Flush Seeker');
+			const profileId = asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID);
+
+			const first = await sendOrHoldMessage(db, {
+				seekerId,
+				providerProfileId: profileId,
+				body: 'Burst 1',
+				now: new Date('2026-09-05T12:00:00Z'),
+				correlationId: 'corr-flush-1'
+			});
+			if (!first.ok || first.value.kind !== 'sent') throw new Error('first send failed');
+
+			await handleMessageSent(
+				db,
+				messageSentEvent(
+					{
+						threadId: first.value.threadId,
+						messageId: first.value.messageId,
+						senderId: seekerId
+					},
+					'2026-09-05T12:00:00Z'
+				) as never
+			);
+
+			for (let i = 2; i <= 3; i++) {
+				const sent = await sendMessageInThread(db, {
+					threadId: first.value.threadId,
+					senderId: seekerId,
+					body: `Burst ${i}`,
+					now: new Date(`2026-09-05T12:0${i}:00Z`),
+					correlationId: `corr-flush-${i}`
+				});
+				if (!sent.ok) throw new Error('burst send failed');
+				await handleMessageSent(
+					db,
+					messageSentEvent(
+						{
+							threadId: first.value.threadId,
+							messageId: sent.value.messageId,
+							senderId: seekerId
+						},
+						`2026-09-05T12:0${i}:00Z`
+					) as never
+				);
+			}
+
+			await db
+				.update(notificationBatchWindow)
+				.set({ flushAfter: new Date('2026-09-05T12:00:00Z') })
+				.where(eq(notificationBatchWindow.userId, providerOwnerId));
+
+			await flushDueNotificationBatchWindows(db, new Date('2026-09-05T12:10:00Z'));
+
+			const inAppRows = await db
+				.select()
+				.from(notificationLog)
+				.where(
+					and(eq(notificationLog.userId, providerOwnerId), eq(notificationLog.channel, 'in_app'))
+				);
+			expect(inAppRows).toHaveLength(1);
+			expect(inAppRows[0]?.title).toBe('3 new messages from Flush Seeker');
+		});
+	});
+
+	it('TC-NOTIF-03a: opens a fresh batch window after a prior flush', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const seekerId = asId<'UserId'>('01900000-0000-7000-8000-00000000a408');
+			const providerOwnerId = asId<'UserId'>('01900000-0000-7000-8000-000000000001');
+			await seedSeeker(db, seekerId, 'Second Burst Seeker');
+			const profileId = asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID);
+
+			const first = await sendOrHoldMessage(db, {
+				seekerId,
+				providerProfileId: profileId,
+				body: 'First burst',
+				now: new Date('2026-09-05T12:00:00Z'),
+				correlationId: 'corr-second-burst-1'
+			});
+			if (!first.ok || first.value.kind !== 'sent') throw new Error('first send failed');
+
+			await handleMessageSent(
+				db,
+				messageSentEvent(
+					{
+						threadId: first.value.threadId,
+						messageId: first.value.messageId,
+						senderId: seekerId
+					},
+					'2026-09-05T12:00:00Z'
+				) as never
+			);
+
+			await db
+				.update(notificationBatchWindow)
+				.set({ flushAfter: new Date('2026-09-05T12:00:00Z') })
+				.where(eq(notificationBatchWindow.userId, providerOwnerId));
+			await flushDueNotificationBatchWindows(db, new Date('2026-09-05T12:10:00Z'));
+
+			const second = await sendMessageInThread(db, {
+				threadId: first.value.threadId,
+				senderId: seekerId,
+				body: 'After flush',
+				now: new Date('2026-09-05T13:00:00Z'),
+				correlationId: 'corr-second-burst-2'
+			});
+			if (!second.ok) throw new Error('second send failed');
+
+			await handleMessageSent(
+				db,
+				messageSentEvent(
+					{
+						threadId: first.value.threadId,
+						messageId: second.value.messageId,
+						senderId: seekerId
+					},
+					'2026-09-05T13:00:00Z'
+				) as never
+			);
+
+			const window = await db
+				.select()
+				.from(notificationBatchWindow)
+				.where(eq(notificationBatchWindow.userId, providerOwnerId));
+			expect(window).toHaveLength(1);
+			expect(window[0]?.status).toBe('open');
+			expect(window[0]?.messageCount).toBe(1);
+
+			const inAppRows = await db
+				.select()
+				.from(notificationLog)
+				.where(
+					and(eq(notificationLog.userId, providerOwnerId), eq(notificationLog.channel, 'in_app'))
+				);
+			expect(inAppRows).toHaveLength(2);
+		});
+	});
+
+	it('ignores stale MessageSent backlog outside the open batch window', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const seekerId = asId<'UserId'>('01900000-0000-7000-8000-00000000a409');
+			const providerOwnerId = asId<'UserId'>('01900000-0000-7000-8000-000000000001');
+			await seedSeeker(db, seekerId, 'Stale Backlog Seeker');
+			const profileId = asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID);
+
+			const first = await sendOrHoldMessage(db, {
+				seekerId,
+				providerProfileId: profileId,
+				body: 'Current burst',
+				now: new Date('2026-09-05T12:00:00Z'),
+				correlationId: 'corr-stale-current'
+			});
+			if (!first.ok || first.value.kind !== 'sent') throw new Error('first send failed');
+
+			await handleMessageSent(
+				db,
+				messageSentEvent(
+					{
+						threadId: first.value.threadId,
+						messageId: first.value.messageId,
+						senderId: seekerId
+					},
+					'2026-09-05T12:00:00Z'
+				) as never
+			);
+
+			await handleMessageSent(
+				db,
+				messageSentEvent(
+					{
+						threadId: first.value.threadId,
+						messageId: newId(),
+						senderId: seekerId
+					},
+					'2026-09-05T11:00:00Z'
+				) as never
+			);
+
+			const window = await db
+				.select()
+				.from(notificationBatchWindow)
+				.where(eq(notificationBatchWindow.userId, providerOwnerId));
+			expect(window[0]?.messageCount).toBe(1);
+
+			const inAppRows = await db
+				.select()
+				.from(notificationLog)
+				.where(
+					and(eq(notificationLog.userId, providerOwnerId), eq(notificationLog.channel, 'in_app'))
+				);
+			expect(inAppRows).toHaveLength(1);
+		});
+	});
+
+	it('TC-NOTIF-03b: review_received block silence produces zero notifications', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const seekerId = asId<'UserId'>('01900000-0000-7000-8000-00000000a407');
+			const providerOwnerId = asId<'UserId'>('01900000-0000-7000-8000-000000000001');
+			await seedSeeker(db, seekerId, 'Review Blocked Seeker');
+			await mirrorNotifBlock(db, providerOwnerId, seekerId, new Date());
+
+			const reviewId = newId<'ReviewId'>();
+			await db.insert(reviews).values({
+				id: reviewId,
+				providerProfileId: asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID),
+				reviewerId: seekerId,
+				rating: 5,
+				body: 'Blocked review attempt',
+				createdAt: new Date('2026-09-05T12:00:00Z')
+			});
+
+			const { handleReviewSubmitted } = await import('./infra/event-handlers');
+			await handleReviewSubmitted(
+				db,
+				{
+					eventId: newId<'OutboxEventId'>(),
+					eventName: 'ReviewSubmitted',
+					version: 1,
+					occurredAt: asInstant('2026-09-05T12:00:00Z'),
+					correlationId: 'corr-review-blocked',
+					payload: {
+						reviewId,
+						providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
+						rating: 5
+					}
+				} as never
+			);
+
+			const rows = await db
+				.select()
+				.from(notificationLog)
+				.where(eq(notificationLog.userId, providerOwnerId));
+			expect(rows).toHaveLength(0);
 		});
 	});
 

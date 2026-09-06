@@ -1,3 +1,4 @@
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import {
 	asDomainEvent,
@@ -6,6 +7,7 @@ import {
 	subscribersFor,
 	type UndispatchedOutboxRow
 } from '../../../shared/outbox';
+import { outbox, processedEvents } from '../../../shared/schema';
 import { handleAvailabilityExpiryWarned } from './notification-commands';
 import { handleMessageSent } from './message-sent-handler';
 import { handleUserBlocked, handleUserUnblocked } from './subscriptions';
@@ -83,11 +85,76 @@ async function dispatchNotificationSubscriber(
 	}
 }
 
+const NEW_MESSAGE_SUBSCRIBER = 'user-notifications.new-message';
+
+/** Dev/test helper: mark historical MessageSent rows processed without fan-out. */
+export async function catchUpMessageSentNotificationLedger(db: Database): Promise<number> {
+	const rows = await db
+		.select({ eventId: outbox.eventId })
+		.from(outbox)
+		.leftJoin(
+			processedEvents,
+			and(
+				eq(processedEvents.eventId, outbox.eventId),
+				eq(processedEvents.subscriber, NEW_MESSAGE_SUBSCRIBER)
+			)
+		)
+		.where(and(eq(outbox.eventName, 'MessageSent'), isNull(processedEvents.eventId)));
+
+	if (rows.length === 0) return 0;
+
+	const inserted = await db
+		.insert(processedEvents)
+		.values(
+			rows.map((row) => ({
+				eventId: row.eventId,
+				subscriber: NEW_MESSAGE_SUBSCRIBER,
+				processedAt: new Date()
+			}))
+		)
+		.onConflictDoNothing()
+		.returning({ eventId: processedEvents.eventId });
+
+	return inserted.length;
+}
+
+async function dispatchRecentMessageSentNotifications(db: Database, limit = 30): Promise<number> {
+	const rows = await db
+		.select({
+			eventId: outbox.eventId,
+			eventName: outbox.eventName,
+			version: outbox.version,
+			occurredAt: outbox.occurredAt,
+			correlationId: outbox.correlationId,
+			payload: outbox.payload,
+			publishedAt: outbox.publishedAt,
+			attemptCount: outbox.attemptCount
+		})
+		.from(outbox)
+		.leftJoin(
+			processedEvents,
+			and(
+				eq(processedEvents.eventId, outbox.eventId),
+				eq(processedEvents.subscriber, NEW_MESSAGE_SUBSCRIBER)
+			)
+		)
+		.where(and(eq(outbox.eventName, 'MessageSent'), isNull(processedEvents.eventId)))
+		.orderBy(asc(outbox.publishedAt))
+		.limit(limit);
+
+	let handled = 0;
+	for (const row of rows) {
+		await handleMessageSent(db, asDomainEvent(row as UndispatchedOutboxRow) as never);
+		handled += 1;
+	}
+	return handled;
+}
+
 export async function dispatchUndispatchedNotificationSubscribers(
 	db: Database,
 	limit = 50
 ): Promise<number> {
-	let totalHandled = 0;
+	let totalHandled = await dispatchRecentMessageSentNotifications(db, limit);
 
 	for (let round = 0; round < 10; round++) {
 		const rows = await claimUndispatched(db, limit);

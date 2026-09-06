@@ -13,7 +13,7 @@ import {
 	type NotificationPreferencesDto,
 	type PreferenceUpdate
 } from './infra/preference-commands';
-import { handleMessageSent, flushDueNotificationBatchWindows } from './infra/message-sent-handler';
+import { handleMessageSent, flushDueNotificationBatchWindows, forceFlushOpenNotificationBatchWindows } from './infra/message-sent-handler';
 import { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
 import {
 	handleUserRegistered,
@@ -29,12 +29,13 @@ import {
 	dispatchTrialEndingReminders,
 	dispatchGraceDunningReminder
 } from './infra/event-handlers';
-import { dispatchUndispatchedNotificationSubscribers } from './infra/dev-dispatch';
+import { dispatchUndispatchedNotificationSubscribers, catchUpMessageSentNotificationLedger } from './infra/dev-dispatch';
 
 export {
 	handleAvailabilityExpiryWarned,
 	handleMessageSent,
 	flushDueNotificationBatchWindows,
+	forceFlushOpenNotificationBatchWindows,
 	listUnreadInAppNotifications,
 	markAvailabilityRenewalReadForOwner,
 	markInAppNotificationsRead,
@@ -54,6 +55,7 @@ export {
 	dispatchTrialEndingReminders,
 	dispatchGraceDunningReminder,
 	dispatchUndispatchedNotificationSubscribers,
+	catchUpMessageSentNotificationLedger,
 	getNotificationPreferences,
 	updateNotificationPreferences,
 	type InAppNotificationDto,

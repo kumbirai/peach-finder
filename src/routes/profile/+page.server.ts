@@ -12,7 +12,10 @@ import {
 import { loadOwnerProfile, ownsProfileDb } from '$lib/server/modules/provider-profile';
 import { applyIdentityAttributesChangedSync } from '$lib/server/shared/identity-change-sync';
 import { listBlocks } from '$lib/server/modules/trust-and-safety';
-import { getNotificationPreferences } from '$lib/server/modules/user-notifications';
+import {
+	getNotificationPreferences,
+	listUnreadInAppNotifications
+} from '$lib/server/modules/user-notifications';
 
 export const _requiredRole: Role = 'anonymous';
 
@@ -23,6 +26,7 @@ export async function load({ locals, url }) {
 			providerProfile: null,
 			blockedPeople: [],
 			notificationPreferences: null,
+			unreadInAppNotifications: [],
 			deleteConfirm: false
 		};
 	}
@@ -34,12 +38,16 @@ export async function load({ locals, url }) {
 		: null;
 	const blocksResult = await listBlocks(db, locals.auth.userId);
 	const blockedPeople = blocksResult.ok ? blocksResult.value : [];
-	const notificationPreferences = await getNotificationPreferences(db, locals.auth.userId);
+	const [notificationPreferences, unreadInAppNotifications] = await Promise.all([
+		getNotificationPreferences(db, locals.auth.userId),
+		listUnreadInAppNotifications(db, locals.auth.userId, 20)
+	]);
 	return {
 		account,
 		providerProfile,
 		blockedPeople,
 		notificationPreferences,
+		unreadInAppNotifications,
 		deleteConfirm: url.searchParams.get('deleteConfirm') === '1'
 	};
 }

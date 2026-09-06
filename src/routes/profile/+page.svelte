@@ -5,6 +5,7 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import BlockedPeopleList from '$lib/components/BlockedPeopleList.svelte';
 	import NotificationPreferences from '$lib/components/NotificationPreferences.svelte';
+	import InAppNotificationList from '$lib/components/InAppNotificationList.svelte';
 	import { enhance } from '$app/forms';
 
 	let {
@@ -36,6 +37,14 @@
 					}>;
 				}>;
 			} | null;
+			unreadInAppNotifications: Array<{
+				id: string;
+				category: string;
+				title: string;
+				body: string;
+				deepLinkPath: string;
+				createdAt: string;
+			}>;
 			deleteConfirm: boolean;
 		};
 		form?: {
@@ -188,6 +197,8 @@
 			<h2 id="blocked-heading" class="title">Blocked people</h2>
 			<BlockedPeopleList blocks={data.blockedPeople} />
 		</section>
+
+		<InAppNotificationList notifications={data.unreadInAppNotifications} />
 
 		{#if data.notificationPreferences}
 			<NotificationPreferences preferences={data.notificationPreferences} />

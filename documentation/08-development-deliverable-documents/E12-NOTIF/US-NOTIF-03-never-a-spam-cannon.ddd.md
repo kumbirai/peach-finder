@@ -27,9 +27,9 @@ FR-NOTIF-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,21 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-NOTIF-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+### Approach
+
+US-NOTIF-03 (FR-NOTIF-03) burst batching and block silence were introduced in US-MSG-04 / US-NOTIF-01; this story formalizes ownership, completes the user-visible surface, and adds dedicated regression coverage:
+
+- **Backend (`user-notifications`):** Retained `handleMessageSent` burst windows (`notification_batch_window`), `flushDueNotificationBatchWindows` worker tick, `block_cache` + `isNotifBlockedBetween` gate on `new_message` and `review_received`, and synchronous mirror via `applyUserBlockedSync` (US-SAFE-02). Added `forceFlushOpenNotificationBatchWindows` and `POST /api/dev/notification-batch-flush` for live-stack e2e flush assertions.
+- **Frontend:** `InAppNotificationList.svelte` on `/profile` — SSR unread in-app rows (including collapsed burst copy after flush) with design-system `Card` links, reduced-motion, and axe-friendly list semantics.
+- **Tests:** `message-notifications.integration.test.ts` (TC-NOTIF-03a/b, flush collapse title, review block silence); `InAppNotificationList.tokens.test.ts`; `testing/playwright/notifications-spam-cannon.e2e.ts` (TC-NOTIF-03a/b live-stack).
+
+### Assumptions / deferrals
+
+- **Push on first message** remains deferred per US-NOTIF-01/02 — M baseline is in-app + email-on-flush; burst collapse updates the in-app row title at flush.
+- **No dedicated notifications inbox route in prototype** — unread items surface on Profile alongside channel preferences (US-NOTIF-02 IA); full deep-link chrome is US-NOTIF-04.
+- **TC-NOTIF-03b live e2e** asserts block silence via messaging rejection + unchanged in-app count; integration test additionally covers defense-in-depth when `MessageSent`/`ReviewSubmitted` handlers run with `block_cache` populated.
