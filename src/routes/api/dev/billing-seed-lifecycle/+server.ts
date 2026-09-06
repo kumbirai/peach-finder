@@ -12,7 +12,8 @@ const BodySchema = z.object({
 	state: z.enum(['free_listed', 'paid_listed', 'grace', 'unpublished']).optional(),
 	trialEndsAt: z.string().datetime().optional(),
 	graceEndsAt: z.string().datetime().optional(),
-	currentPeriodEndsAt: z.string().datetime().optional()
+	currentPeriodEndsAt: z.string().datetime().optional(),
+	paymentMethod: z.boolean().optional()
 });
 
 /** Dev-only: seed listing lifecycle state for US-BILL-04 Playwright. */
@@ -27,12 +28,21 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const updates: Partial<typeof listings.$inferInsert> = {
 		updatedAt: now,
-		state: body.success && body.data.state ? body.data.state : 'free_listed',
-		pspCustomerRef: 'CUS_dev_seed',
-		pspAuthorizationCode: 'AUTH_dev_seed',
-		cardLast4: '4242',
-		cardBrand: 'Visa'
+		state: body.success && body.data.state ? body.data.state : 'free_listed'
 	};
+
+	const includePaymentMethod = body.success ? body.data.paymentMethod !== false : true;
+	if (includePaymentMethod) {
+		updates.pspCustomerRef = 'CUS_dev_seed';
+		updates.pspAuthorizationCode = 'AUTH_dev_seed';
+		updates.cardLast4 = '4242';
+		updates.cardBrand = 'Visa';
+	} else {
+		updates.pspCustomerRef = null;
+		updates.pspAuthorizationCode = null;
+		updates.cardLast4 = null;
+		updates.cardBrand = null;
+	}
 
 	if (body.success && body.data.trialEndsAt) {
 		updates.trialEndsAt = new Date(body.data.trialEndsAt);

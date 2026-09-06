@@ -31,6 +31,7 @@ export type PaystackWebhookEvent = {
 			providerProfileId?: string;
 			ownerId?: string;
 			invoiceId?: string;
+			lineItem?: 'listing' | 'featuring';
 		};
 	};
 };

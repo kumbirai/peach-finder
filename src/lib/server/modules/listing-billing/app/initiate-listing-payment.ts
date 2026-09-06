@@ -43,7 +43,7 @@ export async function initiateListingPaymentForOwner(
 		authorizationCode: row.pspAuthorizationCode,
 		customerCode: row.pspCustomerRef,
 		amountCents,
-		metadata: { providerProfileId: profileId }
+		metadata: { providerProfileId: profileId, lineItem: 'listing' }
 	});
 
 	if (!charge.ok) return charge;

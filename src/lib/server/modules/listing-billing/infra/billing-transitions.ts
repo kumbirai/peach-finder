@@ -13,6 +13,7 @@ import {
 	resolvePaymentTransition,
 	type ListingTransition
 } from '../domain/subscription-state';
+import { forceLapseFeaturing } from './featuring-transitions';
 import { insertInvoice } from './invoice-read';
 import { listings } from './schema';
 
@@ -71,6 +72,12 @@ export async function applyListingBillingTransition(
 			if (previousState !== 'free_listed') {
 				return noOp(input.providerProfileId, previousState, events);
 			}
+			await forceLapseFeaturing(tx, {
+				providerProfileId: input.providerProfileId,
+				now: input.now,
+				correlationId: input.correlationId,
+				reason: 'listing_lapsed'
+			});
 			const endsAt = graceEndsAt(input.now, gracePeriodDays);
 			newState = 'grace';
 			updates.state = 'grace';
@@ -85,6 +92,12 @@ export async function applyListingBillingTransition(
 			if (previousState !== 'paid_listed') {
 				return noOp(input.providerProfileId, previousState, events);
 			}
+			await forceLapseFeaturing(tx, {
+				providerProfileId: input.providerProfileId,
+				now: input.now,
+				correlationId: input.correlationId,
+				reason: 'listing_lapsed'
+			});
 			const endsAt = graceEndsAt(input.now, gracePeriodDays);
 			newState = 'grace';
 			updates.state = 'grace';
@@ -100,6 +113,12 @@ export async function applyListingBillingTransition(
 			if (previousState !== 'grace') {
 				return noOp(input.providerProfileId, previousState, events);
 			}
+			await forceLapseFeaturing(tx, {
+				providerProfileId: input.providerProfileId,
+				now: input.now,
+				correlationId: input.correlationId,
+				reason: 'listing_lapsed'
+			});
 			newState = 'unpublished';
 			updates.state = 'unpublished';
 			events.push(buildListingLapsedEvent(input.providerProfileId, input.correlationId, input.now));

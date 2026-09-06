@@ -49,6 +49,24 @@ export const processedWebhooks = listingBillingSchema.table('processed_webhooks'
 		.defaultNow()
 });
 
+export const featuringAddons = listingBillingSchema.table(
+	'featuring_addon',
+	{
+		id: uuid('id').primaryKey(),
+		providerProfileId: uuid('provider_profile_id')
+			.notNull()
+			.references(() => listings.providerProfileId, { onDelete: 'cascade' }),
+		state: text('state').notNull(),
+		currentPeriodEndsAt: timestamp('current_period_ends_at', { withTimezone: true, mode: 'date' }),
+		cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
+	},
+	(table) => [
+		index('featuring_renewal_due_idx').on(table.currentPeriodEndsAt)
+	]
+);
+
 export const dunningDispatches = listingBillingSchema.table(
 	'dunning_dispatches',
 	{

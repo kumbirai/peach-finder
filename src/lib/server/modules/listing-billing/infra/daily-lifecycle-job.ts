@@ -7,12 +7,16 @@ import { applyListingBillingTransition } from './billing-transitions';
 import { dunningDispatches, listings } from './schema';
 import type { PaymentGateway } from '../app/ports';
 import { dispatchGraceDunningReminder } from '../../user-notifications';
+import { listFeaturingRenewalDue } from './featuring-read';
+import { forceLapseFeaturing } from './featuring-transitions';
 
 export type BillingLifecycleTickResult = {
 	trialToGrace: number;
 	renewalToGrace: number;
 	graceToUnpublished: number;
 	dunningDispatched: number;
+	featuringLapsed: number;
+	featuringRenewalCharged: number;
 };
 
 export async function runBillingLifecycleTick(
@@ -25,7 +29,9 @@ export async function runBillingLifecycleTick(
 		trialToGrace: 0,
 		renewalToGrace: 0,
 		graceToUnpublished: 0,
-		dunningDispatched: 0
+		dunningDispatched: 0,
+		featuringLapsed: 0,
+		featuringRenewalCharged: 0
 	};
 
 	const trialDue = await db
@@ -133,6 +139,49 @@ export async function runBillingLifecycleTick(
 				correlationId,
 				now
 			});
+		}
+	}
+
+	const featuringDue = await listFeaturingRenewalDue(db, now);
+	for (const row of featuringDue) {
+		if (row.cancelAtPeriodEnd) {
+			const applied = await db.transaction(async (tx) => {
+				const lapsed = await forceLapseFeaturing(tx, {
+					providerProfileId: row.providerProfileId,
+					now,
+					correlationId,
+					reason: 'cancelled'
+				});
+				return lapsed.applied;
+			});
+			if (applied) result.featuringLapsed += 1;
+			continue;
+		}
+
+		let charged = false;
+		if (gateway && row.pspAuthorizationCode && row.pspCustomerRef) {
+			const charge = await gateway.chargeAuthorization({
+				authorizationCode: row.pspAuthorizationCode,
+				customerCode: row.pspCustomerRef,
+				amountCents: getConfig('listing-billing.featuring_price_cents'),
+				metadata: { providerProfileId: row.providerProfileId, lineItem: 'featuring' }
+			});
+			charged = charge.ok;
+		}
+
+		if (charged) {
+			result.featuringRenewalCharged += 1;
+		} else {
+			const applied = await db.transaction(async (tx) => {
+				const lapsed = await forceLapseFeaturing(tx, {
+					providerProfileId: row.providerProfileId,
+					now,
+					correlationId,
+					reason: 'payment_failed'
+				});
+				return lapsed.applied;
+			});
+			if (applied) result.featuringLapsed += 1;
 		}
 	}
 

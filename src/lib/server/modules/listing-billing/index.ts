@@ -43,6 +43,11 @@ export {
 } from './app/self-serve-billing';
 export { getBillingHistoryForOwner } from './app/get-billing-history';
 export { initiateListingPaymentForOwner } from './app/initiate-listing-payment';
+export {
+	purchaseFeaturingForOwner,
+	completeFeaturingPurchaseForOwner,
+	cancelFeaturingRenewalForOwner
+} from './app/purchase-featuring';
 export { createPaymentGateway, getFakePaymentGateway } from './infra/payment-gateway-factory';
 
 export async function cancelListingForOwner(

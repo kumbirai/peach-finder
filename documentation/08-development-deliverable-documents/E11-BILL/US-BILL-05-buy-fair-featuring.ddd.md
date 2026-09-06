@@ -28,9 +28,9 @@ FR-MONET-05, FR-SRCH-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-BILL-05 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach:** Added `listing_billing.featuring_addon` (migration `0023_us_bill_05_featuring_addon.sql`) keyed by `provider_profile_id` to match the existing listing table shape. Purchase/cancel-renewal endpoints (`POST /api/billing/featuring`, `POST /api/billing/featuring/cancel`), featuring transitions (activate, renew, force-lapse), webhook routing via `metadata.lineItem`, daily-job featuring renewal/lapse, and `FeaturingActivated`/`FeaturingLapsed` outbox events with `discovery-search.featuring` projection updates (`is_featured` / `featured_since`). Listing transitions out of `free_listed`/`paid_listed` force-lapse active featuring in the same transaction. Provider billing UI section added on `/provider/billing`.
+
+**Deviations:** Schema uses `provider_profile_id` instead of LLD's `subscription_id` FK because this codebase models one listing row per provider with `provider_profile_id` as PK (US-BILL-01..04 convention). Fake-PSP featuring purchase completes inline (same pattern as listing pay in US-BILL-04); production Paystack path relies on signed webhooks.
+
+**Follow-ups:** None identified.

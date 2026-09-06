@@ -16,6 +16,7 @@ type PendingCharge = {
 	providerProfileId: string;
 	amountCents: number;
 	shouldSucceed: boolean;
+	lineItem: 'listing' | 'featuring';
 };
 
 const pending = new Map<string, PendingAuthorization>();
@@ -78,13 +79,14 @@ export class FakePaymentGateway implements PaymentGateway {
 		authorizationCode: string;
 		customerCode: string;
 		amountCents: number;
-		metadata: { providerProfileId: string };
+		metadata: { providerProfileId: string; lineItem?: 'listing' | 'featuring' };
 	}): Promise<Result<{ reference: string }, UseCaseError>> {
 		const reference = `fake_charge_${crypto.randomUUID()}`;
 		pendingCharges.set(reference, {
 			providerProfileId: input.metadata.providerProfileId,
 			amountCents: input.amountCents,
-			shouldSucceed: true
+			shouldSucceed: true,
+			lineItem: input.metadata.lineItem ?? 'listing'
 		});
 		return Ok({ reference });
 	}
@@ -122,7 +124,8 @@ export class FakePaymentGateway implements PaymentGateway {
 				reference,
 				amount: charge.amountCents * 100,
 				metadata: {
-					providerProfileId: charge.providerProfileId
+					providerProfileId: charge.providerProfileId,
+					lineItem: charge.lineItem
 				}
 			}
 		});

@@ -29,6 +29,13 @@
 				currentPeriodEndsLabel: string | null;
 				featuringPriceCents: number;
 				state: string;
+				featuring: {
+					active: boolean;
+					cancelAtPeriodEnd: boolean;
+					currentPeriodEndsLabel: string | null;
+					canPurchase: boolean;
+					canCancelRenewal: boolean;
+				};
 			} | null;
 			price: {
 				listing: { amountLabel: string };
@@ -60,6 +67,8 @@
 	let paymentBusy = $state(false);
 	let cancelBusy = $state(false);
 	let payBusy = $state(false);
+	let featuringBusy = $state(false);
+	let featuringCancelBusy = $state(false);
 	let actionError = $state<string | null>(null);
 	let actionMessage = $state<string | null>(null);
 
@@ -138,6 +147,47 @@
 			actionError = 'Could not complete listing payment. Check your connection and try again.';
 		} finally {
 			payBusy = false;
+		}
+	}
+
+	async function buyFeaturing() {
+		actionError = null;
+		actionMessage = null;
+		featuringBusy = true;
+		try {
+			const res = await fetch('/api/billing/featuring', { method: 'POST' });
+			const body = await res.json();
+			if (!res.ok) {
+				actionError = body?.error?.message ?? 'Could not start featuring purchase.';
+				return;
+			}
+			actionMessage = 'Featuring is active — your placement boost follows the fairness rules.';
+			await goto('/provider/billing', { invalidateAll: true });
+		} catch {
+			actionError = 'Could not complete featuring purchase. Check your connection and try again.';
+		} finally {
+			featuringBusy = false;
+		}
+	}
+
+	async function cancelFeaturingRenewal() {
+		actionError = null;
+		actionMessage = null;
+		featuringCancelBusy = true;
+		try {
+			const res = await fetch('/api/billing/featuring/cancel', { method: 'POST' });
+			const body = await res.json();
+			if (!res.ok) {
+				actionError = body?.error?.message ?? 'Could not cancel featuring renewal.';
+				return;
+			}
+			actionMessage =
+				'Featuring renewal cancelled. Your boost stays active until the end of your current featuring period.';
+			await goto('/provider/billing', { invalidateAll: true });
+		} catch {
+			actionError = 'Could not cancel featuring renewal. Check your connection and try again.';
+		} finally {
+			featuringCancelBusy = false;
 		}
 	}
 
@@ -244,6 +294,59 @@
 							{paymentBusy ? 'Opening secure page…' : 'Add payment method'}
 						</Button>
 					</div>
+				{/if}
+			</Card>
+		</section>
+
+		<section class="section" aria-labelledby="featuring-heading">
+			<h2 id="featuring-heading" class="title">Featuring add-on</h2>
+			<Card>
+				<p class="body helper">
+					Boost placement within the fairness rules — availability still outranks everything. Requires
+					an active listing.
+				</p>
+				{#if data.billing.featuring.active}
+					<p class="body payment-on-file" data-testid="billing-featuring-active">
+						<span class="payment-on-file__label">Featuring active</span>
+						{#if data.billing.featuring.currentPeriodEndsLabel}
+							Renews {data.billing.featuring.currentPeriodEndsLabel} unless cancelled.
+						{/if}
+					</p>
+				{/if}
+				<div class="action-row" data-testid="billing-featuring-actions">
+					{#if data.billing.featuring.canPurchase}
+						<Button variant="primary" disabled={featuringBusy} onclick={buyFeaturing}>
+							{featuringBusy
+								? 'Processing…'
+								: `Add featuring ${data.price?.featuring.amountLabel ?? ''}/month`}
+						</Button>
+					{:else if !data.billing.featuring.active}
+						<p class="body helper">
+							{#if !data.billing.paymentMethod.onFile}
+								Add a payment method first.
+							{:else if data.billing.state === 'grace' || data.billing.state === 'unpublished'}
+								Restore your listing before adding featuring.
+							{:else}
+								Featuring is not available for your current billing state.
+							{/if}
+						</p>
+					{/if}
+				</div>
+				{#if data.billing.featuring.canCancelRenewal}
+					<div class="action-row" data-testid="billing-cancel-featuring-renewal">
+						<Button
+							variant="secondary"
+							disabled={featuringCancelBusy}
+							onclick={cancelFeaturingRenewal}
+						>
+							{featuringCancelBusy ? 'Cancelling…' : 'Cancel featuring renewal at period end'}
+						</Button>
+					</div>
+				{:else if data.billing.featuring.active && data.billing.featuring.cancelAtPeriodEnd}
+					<p class="body" data-testid="billing-featuring-renewal-cancelled">
+						Featuring renewal is already cancelled. Your boost stays active until
+						{data.billing.featuring.currentPeriodEndsLabel ?? 'period end'}.
+					</p>
 				{/if}
 			</Card>
 		</section>

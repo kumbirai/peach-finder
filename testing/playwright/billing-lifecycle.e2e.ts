@@ -142,4 +142,49 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		});
 		expect(badSignature.status()).toBe(401);
 	});
+
+	test('TC-BILL-05a/b: featuring requires active listing and force-lapses with listing', async ({
+		page
+	}) => {
+		await signInAsSeedProvider(page);
+
+		await page.request.post('/api/dev/billing-seed-lifecycle', {
+			data: { state: 'unpublished' }
+		});
+
+		const blocked = await page.request.post('/api/billing/featuring');
+		expect(blocked.status()).toBe(412);
+
+		const paidSeed = await page.request.post('/api/dev/billing-paid-listing', { data: {} });
+		expect(paidSeed.ok(), await paidSeed.text()).toBeTruthy();
+
+		const purchase = await page.request.post('/api/billing/featuring');
+		expect(purchase.ok(), await purchase.text()).toBeTruthy();
+
+		const statusAfterPurchase = await page.request.get('/api/billing/status');
+		const statusBody = (await statusAfterPurchase.json()) as {
+			data: { featuring: { active: boolean } };
+		};
+		expect(statusBody.data.featuring.active).toBe(true);
+
+		await page.request.post('/api/dev/billing-seed-lifecycle', {
+			data: {
+				state: 'paid_listed',
+				currentPeriodEndsAt: '2026-08-01T00:00:00.000Z',
+				paymentMethod: false
+			}
+		});
+
+		const tickToGrace = await page.request.post('/api/dev/billing-lifecycle-tick', {
+			data: { now: '2026-09-05T00:00:00.000Z' }
+		});
+		expect(tickToGrace.ok(), await tickToGrace.text()).toBeTruthy();
+
+		const statusAfterGrace = await page.request.get('/api/billing/status');
+		const graceBody = (await statusAfterGrace.json()) as {
+			data: { state: string; featuring: { active: boolean } };
+		};
+		expect(graceBody.data.state).toBe('grace');
+		expect(graceBody.data.featuring.active).toBe(false);
+	});
 });

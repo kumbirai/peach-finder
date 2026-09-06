@@ -29,6 +29,8 @@ import { handleMediaModeration } from '../lib/server/modules/media-processing';
 import {
 	handleModerationProjectionRemove,
 	handleListingLapsedProjectionRemove,
+	handleFeaturingActivated,
+	handleFeaturingLapsed,
 	upsertSearchProjection
 } from '../lib/server/modules/discovery-search';
 import {
@@ -316,6 +318,16 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
 		) {
 			await handleBadgeFlagEvent(db, event as never);
+		}
+		if (subscriber === 'discovery-search.featuring' && event.eventName === 'FeaturingActivated') {
+			await db.transaction(async (tx) => {
+				await handleFeaturingActivated(tx, event as never, new Date(event.occurredAt));
+			});
+		}
+		if (subscriber === 'discovery-search.featuring' && event.eventName === 'FeaturingLapsed') {
+			await db.transaction(async (tx) => {
+				await handleFeaturingLapsed(tx, event as never, new Date(event.occurredAt));
+			});
 		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';

@@ -16,6 +16,10 @@ export type { SearchCard, Suggestion } from './app/serializers';
 export { removeSearchProjection } from './infra/projection-commands';
 export { handleModerationProjectionRemove } from './infra/moderation-subscriptions';
 export { handleListingLapsedProjectionRemove } from './infra/billing-subscriptions';
+export {
+	handleFeaturingActivated,
+	handleFeaturingLapsed
+} from './infra/featuring-subscriptions';
 export { upsertSearchProjection } from './infra/projection-upsert';
 export {
 	refreshSearchProjection,

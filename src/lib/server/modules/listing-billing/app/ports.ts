@@ -28,6 +28,6 @@ export interface PaymentGateway {
 		authorizationCode: string;
 		customerCode: string;
 		amountCents: number;
-		metadata: { providerProfileId: string };
+		metadata: { providerProfileId: string; lineItem?: 'listing' | 'featuring' };
 	}): Promise<Result<{ reference: string }, UseCaseError>>;
 }

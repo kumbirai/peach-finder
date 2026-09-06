@@ -6,7 +6,7 @@ import {
 	subscribersFor,
 	type UndispatchedOutboxRow
 } from '../../../shared/outbox';
-import { handleListingLapsedProjectionRemove } from '../../discovery-search';
+import { handleListingLapsedProjectionRemove, handleFeaturingActivated, handleFeaturingLapsed } from '../../discovery-search';
 import {
 	handleBillingListingLapsed,
 	handleRepublishAfterBillingLapse
@@ -51,6 +51,16 @@ async function dispatchRowSubscribers(db: Database, row: UndispatchedOutboxRow):
 		if (subscriber === 'user-notifications.lapsed-notice' && row.eventName === 'ListingLapsed') {
 			await handleListingLapsed(db, event);
 		}
+		if (subscriber === 'discovery-search.featuring' && row.eventName === 'FeaturingActivated') {
+			await db.transaction(async (tx) => {
+				await handleFeaturingActivated(tx, event, new Date(row.occurredAt));
+			});
+		}
+		if (subscriber === 'discovery-search.featuring' && row.eventName === 'FeaturingLapsed') {
+			await db.transaction(async (tx) => {
+				await handleFeaturingLapsed(tx, event, new Date(row.occurredAt));
+			});
+		}
 	}
 }
 
@@ -70,6 +80,7 @@ export async function dispatchUndispatchedBillingSubscribers(
 					'provider-profile.auto-unpublish',
 					'provider-profile.republish-after-lapse',
 					'discovery-search.projection-remove',
+					'discovery-search.featuring',
 					'user-notifications.billing',
 					'user-notifications.dunning',
 					'user-notifications.lapsed-notice'

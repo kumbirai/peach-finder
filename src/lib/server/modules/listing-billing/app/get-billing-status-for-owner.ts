@@ -9,7 +9,13 @@ import {
 } from '../domain/billing-status';
 import { canCancelListingRenewal } from '../domain/invoice';
 import { buildPaymentMethodSummary } from '../domain/payment-method';
+import { getListingBillingRow } from '../infra/listing-billing-write';
 import { getSubscription } from '../infra/subscription-read';
+import { getActiveFeaturing } from '../infra/featuring-read';
+import {
+	canCancelFeaturingRenewal,
+	canPurchaseFeaturing
+} from '../domain/featuring-state';
 
 export type BillingStatusDto = {
 	state: string;
@@ -20,6 +26,16 @@ export type BillingStatusDto = {
 	gracePeriodDays: number;
 	listingPriceCents: number;
 	dashboard: ProviderBillingStatusView | null;
+	featuring: FeaturingBillingDto;
+};
+
+export type FeaturingBillingDto = {
+	active: boolean;
+	cancelAtPeriodEnd: boolean;
+	currentPeriodEndsAt: string | null;
+	currentPeriodEndsLabel: string | null;
+	canPurchase: boolean;
+	canCancelRenewal: boolean;
 };
 
 export type SelfServeBillingDto = BillingStatusDto & {
@@ -29,6 +45,7 @@ export type SelfServeBillingDto = BillingStatusDto & {
 	currentPeriodEndsLabel: string | null;
 	canCancelRenewal: boolean;
 	featuringPriceCents: number;
+	featuring: FeaturingBillingDto;
 };
 
 export async function getBillingStatusForOwner(
@@ -53,8 +70,16 @@ export async function getSelfServeBillingForOwner(
 	const profileId = await getOwnedProfileIdDb(db, ownerId);
 	if (!profileId) return null;
 
-	const subscription = await getSubscription(db, profileId);
-	if (!subscription) return null;
+	const [subscription, listingRow, activeFeaturing] = await Promise.all([
+		getSubscription(db, profileId),
+		getListingBillingRow(db, profileId),
+		getActiveFeaturing(db, profileId)
+	]);
+	if (!subscription || !listingRow) return null;
+
+	const hasRenewalPaymentMethod = Boolean(
+		listingRow.pspCustomerRef && listingRow.pspAuthorizationCode
+	);
 
 	const gracePeriodDays = getConfig('listing-billing.grace_period_days');
 	const listingPriceCents = getConfig('listing-billing.listing_price_cents');
@@ -83,7 +108,7 @@ export async function getSelfServeBillingForOwner(
 		featuringPriceCents,
 		dashboard,
 		paymentMethod: buildPaymentMethodSummary({
-			pspCustomerRef: subscription.pspCustomerRef,
+			pspCustomerRef: hasRenewalPaymentMethod ? listingRow.pspCustomerRef : null,
 			cardLast4: subscription.cardLast4,
 			cardBrand: subscription.cardBrand
 		}),
@@ -96,6 +121,24 @@ export async function getSelfServeBillingForOwner(
 			state: subscription.state,
 			currentPeriodEndsAt: subscription.currentPeriodEndsAt,
 			cancelAtPeriodEnd: subscription.cancelAtPeriodEnd
-		})
+		}),
+		featuring: {
+			active: activeFeaturing !== null,
+			cancelAtPeriodEnd: activeFeaturing?.cancelAtPeriodEnd ?? false,
+			currentPeriodEndsAt: activeFeaturing?.currentPeriodEndsAt ?? null,
+			currentPeriodEndsLabel: activeFeaturing?.currentPeriodEndsAt
+				? formatBillingDate(activeFeaturing.currentPeriodEndsAt)
+				: null,
+			canPurchase: canPurchaseFeaturing({
+				listingState: subscription.state,
+				hasActiveFeaturing: activeFeaturing !== null,
+				hasPaymentMethod: hasRenewalPaymentMethod
+			}),
+			canCancelRenewal: canCancelFeaturingRenewal({
+				active: activeFeaturing !== null,
+				currentPeriodEndsAt: activeFeaturing?.currentPeriodEndsAt ?? null,
+				cancelAtPeriodEnd: activeFeaturing?.cancelAtPeriodEnd ?? false
+			})
+		}
 	};
 }
