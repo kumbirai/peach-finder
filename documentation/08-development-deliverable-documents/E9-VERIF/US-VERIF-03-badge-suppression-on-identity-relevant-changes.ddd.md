@@ -27,9 +27,9 @@ FR-TRUST-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VERIF-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+**Approach:** Badge suppression (FR-TRUST-04) was delivered in US-PONB-05: `handleIdentityAttributesChanged` in `trust-and-safety/infra/identity-change-subscription.ts` subscribes to `identity-and-access`'s `IdentityAttributesChanged` for `{display_name, phone}`; sets `badge_state.suppressed=true` without clearing `identity_verified`; opens a pending re-review case when none exists; publishes `BadgeRevoked(identity_verified, reason='suppressed_pending_rereview')`. Synchronous delivery via `applyIdentityAttributesChangedSync` on display-name save (`/profile`, `POST /api/identity/account/display-name`) refreshes discovery badge flag immediately. Owner-facing plain-language copy (`BADGE_SUPPRESSION_REASON`) surfaces on `/profile` and `/provider/profile/edit` through `loadOwnerBadgeNotice`. Public badge display uses `identity_verified AND NOT suppressed` in `loadBadgeDisplayState`. Admin re-approval clears suppression via `approveVerification` (US-VERIF-02).
+
+**Tests:** Integration `badge-suppression.integration.test.ts` (TC-VERIF-03a: phone `IdentityAttributesChanged` suppresses badge without revoking underlying verification or unpublishing profile; idempotency; non-identity fields ignored). Existing `edit-live-always.integration.test.ts` (TC-PONB-05b display-name path), `badge-read.integration.test.ts` (display rule). Playwright `testing/playwright/identity-verification.e2e.ts` US-VERIF-03 block (TC-VERIF-03a live-stack: grant badge → rename → badge hidden on profile/search, re-review case in admin queue, profile fully visible, suppression notice on profile + edit pages; axe).
+
+**Deviations:** Phone change UI/API (`POST /api/identity/account/phone`, LLD #15) remains deferred per US-ACC-03 — phone suppression is exercised in integration tests via `IdentityAttributesChanged{changedFields:['phone']}`; display-name E2E proves the live-stack path end-to-end. `seed-verification` seeds an approved-then-suppressed fixture (Thandi, profile `01900000-0000-7000-8000-000000000102`) for admin-queue scenarios.

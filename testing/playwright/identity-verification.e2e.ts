@@ -474,3 +474,86 @@ test.describe('US-VERIF-02 decision outcomes', () => {
 		expect(serious).toEqual([]);
 	});
 });
+
+test.describe('US-VERIF-03 badge suppression on identity-relevant changes', () => {
+	test('TC-VERIF-03a: verified provider name change hides badge, opens re-review, profile stays live', async ({
+		page,
+		request,
+		browser
+	}) => {
+		await signInProvider(page);
+
+		const grant = await page.request.post('/api/dev/grant-identity-badge');
+		expect(grant.ok(), await grant.text()).toBeTruthy();
+
+		const beforeProfile = await page.request.get(
+			`/api/provider/profile/${SEED_DUAL_ROLE_PROFILE_ID}`
+		);
+		expect(beforeProfile.ok()).toBeTruthy();
+		const beforeBody = (await beforeProfile.json()) as {
+			data: { badges: { identityVerified: boolean } };
+		};
+		expect(beforeBody.data.badges.identityVerified).toBe(true);
+
+		const anonContext = await browser.newContext();
+		const anonBefore = await anonContext.newPage();
+		await anonBefore.goto(`/provider/${SEED_DUAL_ROLE_PROFILE_ID}`);
+		await expect(anonBefore.getByTestId('trust-badge-verified')).toBeVisible({ timeout: 10_000 });
+
+		const renamed = `Suppressed Badge ${Date.now()}`;
+
+		await page.goto('/profile');
+		await page.getByLabel('Display name').fill(renamed);
+		await page.getByRole('button', { name: 'Save name' }).click();
+		await expect(page.getByText('Display name updated.')).toBeVisible({ timeout: 10_000 });
+
+		const afterProfile = await page.request.get(
+			`/api/provider/profile/${SEED_DUAL_ROLE_PROFILE_ID}`
+		);
+		expect(afterProfile.ok()).toBeTruthy();
+		const afterBody = (await afterProfile.json()) as {
+			data: { badges: { identityVerified: boolean }; displayName: string };
+		};
+		expect(afterBody.data.badges.identityVerified).toBe(false);
+		expect(afterBody.data.displayName).toBe(renamed);
+
+		const search = await page.request.get('/api/discovery/search?limit=50');
+		expect(search.ok()).toBeTruthy();
+		const searchBody = (await search.json()) as {
+			data: Array<{ providerProfileId: string; badges: { identityVerified: boolean } }>;
+		};
+		const card = searchBody.data.find(
+			(item) => item.providerProfileId === SEED_DUAL_ROLE_PROFILE_ID
+		);
+		expect(card?.badges.identityVerified).toBe(false);
+
+		await page.goto('/profile');
+		await expect(page.getByText(/Identity verified badge is hidden/i)).toBeVisible();
+
+		await page.goto('/provider/profile/edit');
+		await expect(page.getByText(/Identity verified badge is hidden/i)).toBeVisible();
+
+		const axeResults = await new AxeBuilder({ page }).analyze();
+		const seriousAxe = axeResults.violations.filter(
+			(v) => v.impact === 'critical' || v.impact === 'serious'
+		);
+		expect(seriousAxe).toEqual([]);
+
+		await signInAdmin(page, request);
+		const queue = await request.get('/admin/api/trust/verification/queue');
+		expect(queue.ok()).toBeTruthy();
+		const queueBody = (await queue.json()) as {
+			data: { queue: Array<{ providerProfileId: string }> };
+		};
+		expect(
+			queueBody.data.queue.some((item) => item.providerProfileId === SEED_DUAL_ROLE_PROFILE_ID)
+		).toBe(true);
+
+		const anonAfter = await anonContext.newPage();
+		await anonAfter.goto(`/provider/${SEED_DUAL_ROLE_PROFILE_ID}`);
+		await expect(anonAfter.getByRole('heading', { level: 1, name: renamed })).toBeVisible();
+		await expect(anonAfter.getByTestId('trust-badge-verified')).toHaveCount(0);
+		await expect(anonAfter.getByText(/unpublished|under review|pending approval/i)).toHaveCount(0);
+		await anonContext.close();
+	});
+});
