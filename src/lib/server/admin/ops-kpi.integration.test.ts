@@ -21,7 +21,9 @@ describe('US-ADMIN-08 ops KPI read model', () => {
 			await seedVerification(db);
 			await seedReports(db);
 
-			const now = new Date('2026-09-06T12:00:00.000Z');
+			// seeded users get createdAt = DB now(); anchor on the real clock so
+			// the 7-day registrations window actually contains them.
+			const now = new Date(Date.now() + 60_000);
 			const kpis = await loadOpsKpis(db, now, '7d');
 
 			expect(kpis.identityQueue.pendingCount).toBe(2);

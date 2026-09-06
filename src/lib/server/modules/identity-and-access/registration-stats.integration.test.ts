@@ -12,8 +12,10 @@ describe('US-ADMIN-08 getRegistrationStats integration', () => {
 			await loadConfigCache(db);
 			await seedCore(db);
 
-			const now = new Date('2026-09-06T12:00:00.000Z');
-			const from = new Date('2026-09-01T00:00:00.000Z');
+			// seed rows get createdAt = DB now(); anchor the window on the real
+			// clock (plus a small buffer) so it always contains the seeded users.
+			const now = new Date(Date.now() + 60_000);
+			const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
 			const stats = await getRegistrationStats(db, { from, to: now });
 			expect(stats.count).toBeGreaterThan(0);
