@@ -124,4 +124,48 @@ export class PaystackGateway implements PaymentGateway {
 			return Err({ kind: 'unavailable', dependency: 'paystack' });
 		}
 	}
+
+	async chargeAuthorization(input: {
+		authorizationCode: string;
+		customerCode: string;
+		amountCents: number;
+		metadata: { providerProfileId: string };
+	}): Promise<Result<{ reference: string }, UseCaseError>> {
+		try {
+			const reference = `pf_charge_${crypto.randomUUID().replace(/-/g, '')}`;
+			const response = await safeFetch(
+				`https://${PAYSTACK_HOST}/transaction/charge_authorization`,
+				{
+					method: 'POST',
+					timeoutMs: 10_000,
+					allowedHosts: [PAYSTACK_HOST],
+					headers: {
+						Authorization: `Bearer ${this.secretKey}`,
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						authorization_code: input.authorizationCode,
+						email: input.customerCode,
+						amount: input.amountCents * 100,
+						currency: 'ZAR',
+						reference,
+						metadata: input.metadata
+					})
+				}
+			);
+
+			if (!response.ok) {
+				return Err({ kind: 'unavailable', dependency: 'paystack' });
+			}
+
+			const body = (await response.json()) as { status?: boolean };
+			if (!body.status) {
+				return Err({ kind: 'unavailable', dependency: 'paystack' });
+			}
+
+			return Ok({ reference });
+		} catch {
+			return Err({ kind: 'unavailable', dependency: 'paystack' });
+		}
+	}
 }

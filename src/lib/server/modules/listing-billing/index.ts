@@ -5,8 +5,9 @@ import { cancelListingForProfile } from './infra/cancel-on-delete';
 import { ensureBuildingListing } from './infra/ensure-building-listing';
 import { startTrialOnPublish } from './infra/start-trial-on-publish';
 import { handlePhoneVerifiedForTrialEligibility } from './infra/trial-eligibility-handler';
+import { runBillingLifecycleTick } from './infra/daily-lifecycle-job';
 
-export { startTrialOnPublish, ensureBuildingListing, handlePhoneVerifiedForTrialEligibility };
+export { startTrialOnPublish, ensureBuildingListing, handlePhoneVerifiedForTrialEligibility, runBillingLifecycleTick };
 export {
 	getSubscription,
 	getActiveListingCount,
@@ -41,6 +42,7 @@ export {
 	type InitializePaymentMethodResult
 } from './app/self-serve-billing';
 export { getBillingHistoryForOwner } from './app/get-billing-history';
+export { initiateListingPaymentForOwner } from './app/initiate-listing-payment';
 export { createPaymentGateway, getFakePaymentGateway } from './infra/payment-gateway-factory';
 
 export async function cancelListingForOwner(

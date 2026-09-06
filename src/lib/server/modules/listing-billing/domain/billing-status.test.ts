@@ -83,6 +83,22 @@ describe('billing-status domain', () => {
 		expect(view?.whatHappensNext.toLowerCase()).not.toContain('abuse');
 	});
 
+	it('builds unpublished billing copy without moderation framing', () => {
+		const view = buildProviderBillingStatusView({
+			state: 'unpublished',
+			trialStartedAt: null,
+			trialEndsAt: null,
+			graceEndsAt: null,
+			gracePeriodDays: 7,
+			listingPriceCents: 9900,
+			billingContinuity: 'new'
+		});
+
+		expect(view?.stateChipLabel).toBe('Unpublished');
+		expect(view?.whatHappensNext).toContain('billing state');
+		expect(view?.whatHappensNext.toLowerCase()).not.toContain('violation');
+	});
+
 	it('returns null when not in a dashboard-visible billing state', () => {
 		expect(
 			buildProviderBillingStatusView({

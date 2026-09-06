@@ -29,9 +29,9 @@ FR-MONET-04, SR-APP-12, FR-NOTIF-01.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -48,3 +48,19 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-BILL-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-MONET-04 lapse lifecycle on the existing `listing_billing.listing` table (consistent with US-BILL-01..03 deviation from full `subscription` schema):
+
+- Migration `0022_us_bill_04_lapse_lifecycle.sql` adds `processed_webhooks`, `dunning_dispatches`, and due-date indexes.
+- Domain state machine (`domain/subscription-state.ts`) with guarded transitions in `infra/billing-transitions.ts` (audit + outbox in same TX).
+- Paystack webhook `POST /api/billing/webhooks/paystack` with HMAC-SHA512 verification before any state read/write; fake-PSP signing when `PAYSTACK_SECRET_KEY` unset and `ALLOW_DEV_HELPERS=1`.
+- Daily lifecycle job `runBillingLifecycleTick` (worker hourly tick + `POST /api/dev/billing-lifecycle-tick`): trial→grace, renewal-due→grace, grace→unpublished, dunning-day reminders via `dispatchGraceDunningReminder`.
+- Provider reactions: `handleBillingListingLapsed` (unpublish reason `billing_lapse`), `handleRepublishAfterBillingLapse` on `PaymentSucceeded` (instant republish, no review).
+- Self-serve `POST /api/billing/subscription/pay` initiates listing charge; fake gateway auto-delivers webhook inline and dispatches billing subscribers.
+- UI: grace/unpublished billing status copy, pay-to-republish CTA on `/provider/billing`, billing-framed dashboard copy when `billingState=unpublished`.
+- Discoverability: `grace`, `paid_listed`, and `free_listed` are publicly visible listing states (`domain/listing-visibility.ts`).
+- Tests: `domain/subscription-state.test.ts`, `billing-lifecycle.integration.test.ts`, `testing/playwright/billing-lifecycle.e2e.ts`.
+
+**Deviations:** Featuring force-lapse on listing transition deferred to US-BILL-05 (no `featuring_addon` table yet). Renewal charge initiation uses `chargeAuthorization` when credentials exist; otherwise daily job moves directly to grace.

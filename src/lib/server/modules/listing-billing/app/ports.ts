@@ -23,4 +23,11 @@ export interface PaymentGateway {
 		reference: string,
 		context: { ownerId: string; providerProfileId: string }
 	): Promise<Result<PaymentAuthorizationResult, UseCaseError>>;
+
+	chargeAuthorization(input: {
+		authorizationCode: string;
+		customerCode: string;
+		amountCents: number;
+		metadata: { providerProfileId: string };
+	}): Promise<Result<{ reference: string }, UseCaseError>>;
 }

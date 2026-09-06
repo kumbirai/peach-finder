@@ -68,6 +68,7 @@
 				endDatePrefix: string | null;
 				whatHappensNext: string;
 			} | null;
+			billingState: string | null;
 			trialEndingNotification: {
 				id: string;
 				title: string;
@@ -151,22 +152,35 @@
 					</div>
 				{:else if data.publishState === 'unpublished'}
 					<p class="body">
-						Your profile is hidden from seekers. Everything you built is still here — republish when
-						you are ready, with no review step.
+						{#if data.billingState === 'unpublished'}
+							Your profile was hidden after a billing grace period ended. This is a billing state —
+							not moderation. Pay on the billing page to republish instantly with no review step.
+						{:else}
+							Your profile is hidden from seekers. Everything you built is still here — republish
+							when you are ready, with no review step.
+						{/if}
 					</p>
-					{#if form?.issues?.length}
-						<p class="error label" role="alert">{form.issues[0]?.message}</p>
+					{#if data.billingState === 'unpublished'}
+						<div class="action-row">
+							<Button variant="primary" href="/provider/billing">Pay to republish</Button>
+							<Button variant="secondary" href="/provider/profile/edit">Edit profile</Button>
+						</div>
+					{:else}
+						{#if form?.issues?.length}
+							<p class="error label" role="alert">{form.issues[0]?.message}</p>
+						{/if}
+						{#if form?.message}
+							<p class="error label" role="alert">{form.message}</p>
+						{/if}
+						<div class="action-row">
+							<form method="POST" action="?/republish" use:enhance>
+								<Button variant="primary" type="submit">Republish profile</Button>
+							</form>
+							<Button variant="secondary" href="/provider/profile/edit">Edit profile</Button>
+							<Button variant="secondary" href="/provider/profile/preview">Preview as seeker</Button
+							>
+						</div>
 					{/if}
-					{#if form?.message}
-						<p class="error label" role="alert">{form.message}</p>
-					{/if}
-					<div class="action-row">
-						<form method="POST" action="?/republish" use:enhance>
-							<Button variant="primary" type="submit">Republish profile</Button>
-						</form>
-						<Button variant="secondary" href="/provider/profile/edit">Edit profile</Button>
-						<Button variant="secondary" href="/provider/profile/preview">Preview as seeker</Button>
-					</div>
 				{:else}
 					<p class="body">Finish your profile so seekers can find and contact you.</p>
 					<Button variant="primary" href="/provider/onboarding">Continue setup</Button>

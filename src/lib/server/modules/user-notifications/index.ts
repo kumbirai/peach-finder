@@ -20,7 +20,8 @@ import {
 	handlePaymentFailed,
 	handleGraceEntered,
 	handleListingLapsed,
-	dispatchTrialEndingReminders
+	dispatchTrialEndingReminders,
+	dispatchGraceDunningReminder
 } from './infra/event-handlers';
 import { dispatchUndispatchedNotificationSubscribers } from './infra/dev-dispatch';
 
@@ -45,6 +46,7 @@ export {
 	handleGraceEntered,
 	handleListingLapsed,
 	dispatchTrialEndingReminders,
+	dispatchGraceDunningReminder,
 	dispatchUndispatchedNotificationSubscribers,
 	type InAppNotificationDto
 };

@@ -9,9 +9,10 @@ import {
 
 export const _requiredRole: Role = 'provider';
 
-export async function load({ locals }) {
+export async function load({ locals, url }) {
 	const db = getDb();
 	const ownerId = locals.auth.userId!;
+	const notice = url.searchParams.get('notice');
 
 	const [billing, priceResult, historyResult] = await Promise.all([
 		getSelfServeBillingForOwner(db, ownerId),
@@ -24,7 +25,8 @@ export async function load({ locals }) {
 			billing: null,
 			price: null,
 			history: [],
-			nextCursor: null
+			nextCursor: null,
+			notice
 		};
 	}
 
@@ -32,7 +34,8 @@ export async function load({ locals }) {
 		billing,
 		price: priceResult.ok ? priceResult.value : null,
 		history: historyResult.ok ? historyResult.value.items : [],
-		nextCursor: historyResult.ok ? historyResult.value.nextCursor : null
+		nextCursor: historyResult.ok ? historyResult.value.nextCursor : null,
+		notice
 	};
 }
 

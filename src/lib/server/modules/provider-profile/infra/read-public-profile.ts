@@ -1,6 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { asId, type ProviderProfileId } from '../../../shared/ids';
+import { isDiscoverableListingState } from '../../listing-billing/domain/listing-visibility';
 import { getPresence, getResponseTime } from '../../direct-messaging';
 import { loadBadgeDisplayState } from '../../trust-and-safety';
 import {
@@ -60,7 +61,7 @@ export async function loadProfileView(
 	const listing = (listingRows as unknown as ListingRow[])[0];
 	if (
 		requirePublished &&
-		(profile.publishState !== 'published' || listing?.state !== 'free_listed')
+		(profile.publishState !== 'published' || !listing || !isDiscoverableListingState(listing.state))
 	) {
 		return null;
 	}
@@ -189,7 +190,8 @@ export async function listPublishedProfileIds(db: Database): Promise<ProviderPro
 		SELECT p.id
 		FROM provider_profile.provider_profile p
 		INNER JOIN listing_billing.listing l ON l.provider_profile_id = p.id
-		WHERE p.publish_state = 'published' AND l.state = 'free_listed'
+		WHERE p.publish_state = 'published'
+		  AND l.state IN ('free_listed', 'paid_listed', 'grace')
 	`);
 	return (rows as unknown as { id: string }[]).map((r) => asId<'ProviderProfileId'>(r.id));
 }

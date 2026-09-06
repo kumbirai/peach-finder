@@ -4,6 +4,7 @@ import type {
 	PaymentAuthorizationSession,
 	PaymentGateway
 } from '../app/ports';
+import { signFakeWebhookPayload } from './webhook-signature';
 
 type PendingAuthorization = {
 	email: string;
@@ -11,7 +12,14 @@ type PendingAuthorization = {
 	completed: boolean;
 };
 
+type PendingCharge = {
+	providerProfileId: string;
+	amountCents: number;
+	shouldSucceed: boolean;
+};
+
 const pending = new Map<string, PendingAuthorization>();
+const pendingCharges = new Map<string, PendingCharge>();
 
 export class FakePaymentGateway implements PaymentGateway {
 	constructor(private readonly appOrigin: string) {}
@@ -66,12 +74,59 @@ export class FakePaymentGateway implements PaymentGateway {
 		});
 	}
 
+	async chargeAuthorization(input: {
+		authorizationCode: string;
+		customerCode: string;
+		amountCents: number;
+		metadata: { providerProfileId: string };
+	}): Promise<Result<{ reference: string }, UseCaseError>> {
+		const reference = `fake_charge_${crypto.randomUUID()}`;
+		pendingCharges.set(reference, {
+			providerProfileId: input.metadata.providerProfileId,
+			amountCents: input.amountCents,
+			shouldSucceed: true
+		});
+		return Ok({ reference });
+	}
+
 	/** Test/dev helper: mark a fake authorization as completed on the hosted page. */
 	markCompleted(reference: string): boolean {
 		const session = pending.get(reference);
 		if (!session) return false;
 		session.completed = true;
 		return true;
+	}
+
+	getPendingCharge(reference: string): PendingCharge | undefined {
+		return pendingCharges.get(reference);
+	}
+
+	setChargeOutcome(reference: string, shouldSucceed: boolean): boolean {
+		const charge = pendingCharges.get(reference);
+		if (!charge) return false;
+		charge.shouldSucceed = shouldSucceed;
+		return true;
+	}
+
+	buildWebhookPayload(
+		reference: string,
+		eventId: string,
+		eventType: 'charge.success' | 'charge.failed'
+	): { body: string; signature: string } | null {
+		const charge = pendingCharges.get(reference);
+		if (!charge) return null;
+		const body = JSON.stringify({
+			id: eventId,
+			event: eventType,
+			data: {
+				reference,
+				amount: charge.amountCents * 100,
+				metadata: {
+					providerProfileId: charge.providerProfileId
+				}
+			}
+		});
+		return { body, signature: signFakeWebhookPayload(body) };
 	}
 }
 
@@ -87,4 +142,5 @@ export function getFakePaymentGateway(appOrigin: string): FakePaymentGateway {
 export function resetFakePaymentGateway(): void {
 	fakeGateway = null;
 	pending.clear();
+	pendingCharges.clear();
 }

@@ -109,5 +109,23 @@ export function buildProviderBillingStatusView(input: {
 		};
 	}
 
+	if (input.state === 'unpublished') {
+		return {
+			state: input.state,
+			stateChipLabel: 'Unpublished',
+			trialStartedAt: input.trialStartedAt,
+			trialEndsAt: input.trialEndsAt,
+			graceEndsAt: input.graceEndsAt,
+			headline: 'Listing billing',
+			endDateLabel: null,
+			endDatePrefix: null,
+			whatHappensNext:
+				'Your profile is hidden from search after the grace period ended. This is a billing state — not a moderation action. Pay to republish instantly with no review step. Your photos, services, and reviews stay saved.',
+			listingPriceLabel,
+			gracePeriodDays: graceDays,
+			billingContinuity: input.billingContinuity
+		};
+	}
+
 	return null;
 }

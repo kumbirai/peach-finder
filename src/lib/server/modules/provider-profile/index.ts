@@ -138,6 +138,10 @@ export {
 	unpublishProviderProfile,
 	type UnpublishReason
 } from './infra/unpublish-profile';
+export {
+	handleBillingListingLapsed,
+	handleRepublishAfterBillingLapse
+} from './infra/billing-subscriptions';
 export { handleModerationActionTaken as handleProviderProfileModeration } from './infra/moderation-subscriptions';
 export { publishProfileForOwner } from './infra/publish-profile';
 export { createDraftProfile } from './infra/create-draft-profile';

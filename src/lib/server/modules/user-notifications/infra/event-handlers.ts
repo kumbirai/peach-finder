@@ -484,3 +484,31 @@ export async function dispatchTrialEndingReminders(db: Database, now: Date): Pro
 	}
 	return sent;
 }
+
+export async function dispatchGraceDunningReminder(
+	db: Database,
+	input: {
+		providerProfileId: ProviderProfileId;
+		graceEndsAt: Date;
+		dayInGrace: number;
+		correlationId: string;
+		now: Date;
+	}
+): Promise<void> {
+	const graceLabel = input.graceEndsAt.toLocaleDateString();
+	await db.transaction(async (tx) => {
+		await notifyBillingOwner(
+			tx,
+			input.providerProfileId,
+			'billing_grace',
+			['email', 'in_app'],
+			'Grace period reminder',
+			`Day ${input.dayInGrace} of your billing grace period — add payment by ${graceLabel} to keep your profile visible in search.`,
+			'/provider/billing',
+			'subscription',
+			input.providerProfileId,
+			`${input.correlationId}-dunning-${input.dayInGrace}`,
+			input.now
+		);
+	});
+}

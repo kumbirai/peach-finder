@@ -28,6 +28,7 @@
 				cancelAtPeriodEnd: boolean;
 				currentPeriodEndsLabel: string | null;
 				featuringPriceCents: number;
+				state: string;
 			} | null;
 			price: {
 				listing: { amountLabel: string };
@@ -42,11 +43,23 @@
 				paidAt: string | null;
 				pspInvoiceRef: string | null;
 			}>;
+			notice: string | null;
 		};
 	} = $props();
 
+	function noticeMessage(code: string | null): string | null {
+		if (code === 'republish') {
+			return 'Payment received — your profile is republished instantly.';
+		}
+		if (code === 'paid') {
+			return 'Payment received — your listing billing is up to date.';
+		}
+		return null;
+	}
+
 	let paymentBusy = $state(false);
 	let cancelBusy = $state(false);
+	let payBusy = $state(false);
 	let actionError = $state<string | null>(null);
 	let actionMessage = $state<string | null>(null);
 
@@ -101,6 +114,33 @@
 		}
 	}
 
+	async function payForListing() {
+		actionError = null;
+		actionMessage = null;
+		payBusy = true;
+		const wasUnpublished = data.billing?.state === 'unpublished';
+		try {
+			const res = await fetch('/api/billing/subscription/pay', { method: 'POST' });
+			const body = await res.json();
+			if (!res.ok) {
+				actionError = body?.error?.message ?? 'Could not start listing payment.';
+				return;
+			}
+
+			actionMessage = wasUnpublished
+				? 'Payment received — your profile is republished instantly.'
+				: 'Payment received — your listing billing is up to date.';
+			await goto(`/provider/billing?notice=${wasUnpublished ? 'republish' : 'paid'}`, {
+				invalidateAll: true,
+				replaceState: true
+			});
+		} catch {
+			actionError = 'Could not complete listing payment. Check your connection and try again.';
+		} finally {
+			payBusy = false;
+		}
+	}
+
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-ZA', {
 			day: 'numeric',
@@ -133,8 +173,10 @@
 			<Button variant="primary" href="/provider/onboarding">Continue setup</Button>
 		</Card>
 	{:else}
-		{#if actionMessage}
-			<p class="notice body" role="status" data-testid="billing-action-message">{actionMessage}</p>
+		{#if noticeMessage(data.notice) ?? actionMessage}
+			<p class="notice body" role="status" data-testid="billing-action-message">
+				{noticeMessage(data.notice) ?? actionMessage}
+			</p>
 		{/if}
 		{#if actionError}
 			<p class="error label" role="alert" data-testid="billing-action-error">{actionError}</p>
@@ -142,6 +184,31 @@
 
 		{#if data.billing.dashboard}
 			<ListingBillingStatus billing={data.billing.dashboard} />
+		{/if}
+
+		{#if data.billing.state === 'grace' || data.billing.state === 'unpublished'}
+			<section class="section" aria-labelledby="pay-listing-heading">
+				<h2 id="pay-listing-heading" class="title">Pay for listing</h2>
+				<Card>
+					<p class="body helper">
+						{data.billing.state === 'unpublished'
+							? 'Pay now to republish instantly — no review step. This is billing, not moderation.'
+							: 'Pay now to stay visible in search after your grace period.'}
+					</p>
+					<div class="action-row" data-testid="billing-pay-listing">
+						<Button
+							variant="primary"
+							disabled={payBusy || !data.billing.paymentMethod.onFile}
+							onclick={payForListing}
+						>
+							{payBusy ? 'Processing…' : `Pay ${data.price?.listing.amountLabel ?? ''}/month`}
+						</Button>
+						{#if !data.billing.paymentMethod.onFile}
+							<p class="body helper">Add a payment method first.</p>
+						{/if}
+					</div>
+				</Card>
+			</section>
 		{/if}
 
 		<section class="section" aria-labelledby="payment-method-heading">

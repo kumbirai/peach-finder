@@ -1,5 +1,5 @@
 import PgBoss from 'pg-boss';
-import { databaseUrl } from '../lib/server/env';
+import { databaseUrl, publicAppOrigin } from '../lib/server/env';
 import { getDb } from '../lib/server/db';
 import { bootApp, tickConfigRefresh } from '../lib/server/boot';
 import { deadLetter, markProcessed } from '../lib/server/shared/outbox';
@@ -14,16 +14,21 @@ import {
 import {
 	handleMediaProcessed,
 	handleMediaRemoved,
-	handleProviderProfileModeration
+	handleProviderProfileModeration,
+	handleBillingListingLapsed,
+	handleRepublishAfterBillingLapse
 } from '../lib/server/modules/provider-profile';
 import {
 	startTrialOnPublish,
-	handlePhoneVerifiedForTrialEligibility
+	handlePhoneVerifiedForTrialEligibility,
+	runBillingLifecycleTick,
+	createPaymentGateway
 } from '../lib/server/modules/listing-billing';
 import { handleReviewsModeration } from '../lib/server/modules/provider-reviews';
 import { handleMediaModeration } from '../lib/server/modules/media-processing';
 import {
 	handleModerationProjectionRemove,
+	handleListingLapsedProjectionRemove,
 	upsertSearchProjection
 } from '../lib/server/modules/discovery-search';
 import {
@@ -285,6 +290,27 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 		if (subscriber === 'user-notifications.lapsed-notice' && event.eventName === 'ListingLapsed') {
 			await handleListingLapsed(db, event as never);
 		}
+		if (subscriber === 'provider-profile.auto-unpublish' && event.eventName === 'ListingLapsed') {
+			await db.transaction(async (tx) => {
+				await handleBillingListingLapsed(tx, event as never, new Date(event.occurredAt));
+			});
+		}
+		if (
+			subscriber === 'discovery-search.projection-remove' &&
+			event.eventName === 'ListingLapsed'
+		) {
+			await db.transaction(async (tx) => {
+				await handleListingLapsedProjectionRemove(tx, event as never);
+			});
+		}
+		if (
+			subscriber === 'provider-profile.republish-after-lapse' &&
+			event.eventName === 'PaymentSucceeded'
+		) {
+			await db.transaction(async (tx) => {
+				await handleRepublishAfterBillingLapse(tx, event as never, new Date(event.occurredAt));
+			});
+		}
 		if (
 			subscriber === 'discovery-search.badge-flag' &&
 			(event.eventName === 'BadgeGranted' || event.eventName === 'BadgeRevoked')
@@ -328,7 +354,9 @@ await bootApp();
 
 let lastAvailabilityTickAt = 0;
 let lastActiveThisWeekTickAt = 0;
+let lastBillingLifecycleTickAt = 0;
 const ACTIVE_THIS_WEEK_TICK_MS = 24 * 60 * 60 * 1000;
+const BILLING_LIFECYCLE_TICK_MS = 60 * 60 * 1000;
 
 setInterval(() => {
 	void (async () => {
@@ -353,6 +381,13 @@ setInterval(() => {
 			lastActiveThisWeekTickAt = nowMs;
 			const now = new Date();
 			await runActiveThisWeekJob(db, now, `active-this-week-${now.toISOString()}`);
+		}
+
+		if (nowMs - lastBillingLifecycleTickAt >= BILLING_LIFECYCLE_TICK_MS) {
+			lastBillingLifecycleTickAt = nowMs;
+			const now = new Date();
+			const gateway = createPaymentGateway(publicAppOrigin());
+			await runBillingLifecycleTick(db, now, `billing-lifecycle-${now.toISOString()}`, gateway);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

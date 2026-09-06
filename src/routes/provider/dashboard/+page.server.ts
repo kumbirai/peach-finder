@@ -44,6 +44,7 @@ export async function load({ locals, url }) {
 			renewalNotification: null,
 			verification: null,
 			billing: null,
+			billingState: null,
 			trialEndingNotification: null
 		};
 	}
@@ -66,6 +67,7 @@ export async function load({ locals, url }) {
 			renewalNotification: null,
 			verification: null,
 			billing: null,
+			billingState: null,
 			trialEndingNotification: null
 		};
 	}
@@ -117,6 +119,7 @@ export async function load({ locals, url }) {
 		trialEndingNotification,
 		verification,
 		billing: billing?.dashboard ?? null,
+		billingState: billing?.state ?? null,
 		analytics: {
 			profileViews: 142,
 			searchAppearances: 89,

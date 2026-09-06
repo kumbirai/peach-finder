@@ -41,3 +41,26 @@ export const invoices = listingBillingSchema.table(
 	},
 	(table) => [index('invoice_provider_idx').on(table.providerProfileId, table.issuedAt)]
 );
+
+export const processedWebhooks = listingBillingSchema.table('processed_webhooks', {
+	pspEventId: text('psp_event_id').primaryKey(),
+	processedAt: timestamp('processed_at', { withTimezone: true, mode: 'date' })
+		.notNull()
+		.defaultNow()
+});
+
+export const dunningDispatches = listingBillingSchema.table(
+	'dunning_dispatches',
+	{
+		providerProfileId: uuid('provider_profile_id')
+			.notNull()
+			.references(() => listings.providerProfileId, { onDelete: 'cascade' }),
+		dayInGrace: integer('day_in_grace').notNull(),
+		dispatchedAt: timestamp('dispatched_at', { withTimezone: true, mode: 'date' })
+			.notNull()
+			.defaultNow()
+	},
+	(table) => [
+		index('dunning_dispatches_provider_idx').on(table.providerProfileId, table.dayInGrace)
+	]
+);
