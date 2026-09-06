@@ -9,6 +9,8 @@
 	import TrialEndingBanner from '$lib/components/provider/TrialEndingBanner.svelte';
 	import VerificationStatusBanner from '$lib/components/provider/VerificationStatusBanner.svelte';
 	import ThreadListItem from '$lib/components/ThreadListItem.svelte';
+	import ProviderAnalyticsSection from '$lib/components/provider/ProviderAnalyticsSection.svelte';
+	import type { ProviderDashboardView } from '$lib/server/modules/provider-analytics';
 	import type { VerificationOwnerStatus } from '$lib/server/modules/trust-and-safety/domain/verification-status';
 
 	let {
@@ -26,12 +28,8 @@
 				lastActivityAt: string;
 				unreadCount: number;
 			}>;
-			analytics: {
-				profileViews: number;
-				searchAppearances: number;
-				contactRequests: number;
-				reviewsReceived: number;
-			} | null;
+			analytics: ProviderDashboardView | null;
+			rangeDays: 7 | 30 | 90;
 			availability: {
 				state: 'not_available' | 'available' | 'expiry_warned';
 				setAt: string | null;
@@ -257,26 +255,9 @@
 		</section>
 
 		<section class="section" aria-labelledby="analytics-heading">
-			<h2 id="analytics-heading" class="title">Your reach</h2>
-			<p class="body hint">See how seekers find and contact you.</p>
-			<div class="stat-row">
-				<Card>
-					<p class="stat-label label">Profile views</p>
-					<p class="stat-value headline">{data.analytics.profileViews}</p>
-				</Card>
-				<Card>
-					<p class="stat-label label">Search appearances</p>
-					<p class="stat-value headline">{data.analytics.searchAppearances}</p>
-				</Card>
-				<Card>
-					<p class="stat-label label">Contact requests</p>
-					<p class="stat-value headline">{data.analytics.contactRequests}</p>
-				</Card>
-				<Card>
-					<p class="stat-label label">Reviews received</p>
-					<p class="stat-value headline">{data.analytics.reviewsReceived}</p>
-				</Card>
-			</div>
+			{#if data.analytics}
+				<ProviderAnalyticsSection analytics={data.analytics} rangeDays={data.rangeDays} />
+			{/if}
 		</section>
 	{/if}
 </main>
@@ -289,8 +270,7 @@
 		display: grid;
 		gap: var(--space-xl);
 	}
-	.intro,
-	.hint {
+	.intro {
 		margin: 0;
 		color: var(--color-stone);
 	}
@@ -329,19 +309,6 @@
 		display: grid;
 		gap: var(--space-md);
 	}
-	.stat-row {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: var(--space-md);
-	}
-	.stat-label {
-		margin: 0 0 var(--space-xs);
-		color: var(--color-stone);
-	}
-	.stat-value {
-		margin: 0;
-		color: var(--color-peach-deep);
-	}
 	.verify-row {
 		display: flex;
 		flex-wrap: wrap;
@@ -366,8 +333,8 @@
 		border: 0;
 	}
 	@media (min-width: 768px) {
-		.stat-row {
-			grid-template-columns: repeat(4, minmax(0, 1fr));
+		.verify-row {
+			flex-direction: row;
 		}
 	}
 	@media (max-width: 480px) {

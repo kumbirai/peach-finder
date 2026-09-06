@@ -244,6 +244,8 @@
 		{callHref}
 		displayName={profile.displayName}
 		{showMessage}
+		providerProfileId={profile.id}
+		{previewMode}
 		{...messageDraftKey ? { messageDraftKey } : {}}
 	/>
 </article>

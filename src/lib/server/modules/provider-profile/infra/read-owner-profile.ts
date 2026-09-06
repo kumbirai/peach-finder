@@ -213,3 +213,14 @@ export async function loadOwnerProfile(
 		selectedTagIds: tagRows.map((row) => row.tagId)
 	};
 }
+
+export async function listServiceTagIdsForProfileDb(
+	db: Database,
+	profileId: ProviderProfileId
+): Promise<string[]> {
+	const rows = await db
+		.select({ tagId: providerServiceTags.serviceTagId })
+		.from(providerServiceTags)
+		.where(eq(providerServiceTags.providerProfileId, profileId));
+	return rows.map((row) => row.tagId);
+}

@@ -5,6 +5,13 @@ import { getDb } from '$lib/server/db';
 import { runSearch, parseQuery } from '$lib/server/modules/discovery-search';
 import { DISCOVERY_CACHE_CONTROL } from '$lib/server/modules/discovery-search/discovery-cache';
 import { getActiveLexiconForSearch, getConfig } from '$lib/server/modules/platform-configuration';
+import {
+	captureAppearance,
+	captureFilterUsage,
+	deriveViewerKey,
+	ANON_COOKIE
+} from '$lib/server/modules/provider-analytics';
+import { asId } from '$lib/server/shared/ids';
 
 export const _requiredRole: Role = 'anonymous';
 
@@ -86,7 +93,7 @@ function canonicalizeNaturalLanguageQuery(
 	return `/?${params.toString()}`;
 }
 
-export async function load({ url, locals, setHeaders }) {
+export async function load({ url, locals, setHeaders, cookies }) {
 	setHeaders({ 'cache-control': DISCOVERY_CACHE_CONTROL });
 	const db = getDb();
 	const lexicon = await getActiveLexiconForSearch(db);
@@ -130,6 +137,14 @@ export async function load({ url, locals, setHeaders }) {
 		},
 		locals.auth
 	);
+
+	const now = new Date();
+	const viewerKey = deriveViewerKey(locals.auth, cookies.get(ANON_COOKIE), now);
+	const providerIds = result.cards.map((card) => asId<'ProviderProfileId'>(card.providerProfileId));
+	void captureAppearance(db, providerIds, viewerKey, now);
+	if (tags.length > 0) {
+		void captureFilterUsage(db, tags, now);
+	}
 
 	return {
 		cards: result.cards,

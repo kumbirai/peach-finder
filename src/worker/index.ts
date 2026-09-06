@@ -25,6 +25,10 @@ import {
 	createPaymentGateway
 } from '../lib/server/modules/listing-billing';
 import { handleReviewsModeration } from '../lib/server/modules/provider-reviews';
+import {
+	handleThreadCreatedForAnalytics,
+	runAnalyticsMaintenanceTick
+} from '../lib/server/modules/provider-analytics';
 import { handleMediaModeration } from '../lib/server/modules/media-processing';
 import {
 	handleModerationProjectionRemove,
@@ -329,6 +333,12 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 				await handleFeaturingLapsed(tx, event as never, new Date(event.occurredAt));
 			});
 		}
+		if (
+			subscriber === 'provider-analytics.contact-request' &&
+			event.eventName === 'ThreadCreated'
+		) {
+			await handleThreadCreatedForAnalytics(db, event as never);
+		}
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : 'unknown';
 		if ((job.retrycount ?? 0) >= MAX_ATTEMPTS - 1) {
@@ -367,8 +377,10 @@ await bootApp();
 let lastAvailabilityTickAt = 0;
 let lastActiveThisWeekTickAt = 0;
 let lastBillingLifecycleTickAt = 0;
+let lastAnalyticsMaintenanceTickAt = 0;
 const ACTIVE_THIS_WEEK_TICK_MS = 24 * 60 * 60 * 1000;
 const BILLING_LIFECYCLE_TICK_MS = 60 * 60 * 1000;
+const ANALYTICS_MAINTENANCE_TICK_MS = 60 * 60 * 1000;
 
 setInterval(() => {
 	void (async () => {
@@ -400,6 +412,12 @@ setInterval(() => {
 			const now = new Date();
 			const gateway = createPaymentGateway(publicAppOrigin());
 			await runBillingLifecycleTick(db, now, `billing-lifecycle-${now.toISOString()}`, gateway);
+		}
+
+		if (nowMs - lastAnalyticsMaintenanceTickAt >= ANALYTICS_MAINTENANCE_TICK_MS) {
+			lastAnalyticsMaintenanceTickAt = nowMs;
+			const now = new Date();
+			await runAnalyticsMaintenanceTick(db, now);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

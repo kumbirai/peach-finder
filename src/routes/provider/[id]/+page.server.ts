@@ -6,19 +6,36 @@ import { canSeekerMessageProvider } from '$lib/server/modules/direct-messaging';
 import {
 	buildShareMetadata,
 	getPublicProfile,
+	getProfileOwnerIdDb,
 	loadPrimarySharePhotoUrl,
 	parseProviderProfileId
 } from '$lib/server/modules/provider-profile';
+import {
+	captureView,
+	deriveViewerKey,
+	ANON_COOKIE
+} from '$lib/server/modules/provider-analytics';
 import { publicAppOrigin } from '$lib/server/env';
 
 export const _requiredRole: Role = 'anonymous';
 
-export async function load({ params, locals, url }) {
+export async function load({ params, locals, url, cookies }) {
 	const db = getDb();
 	const parsed = parseProviderProfileId(params.id);
 	if (!parsed.ok) error(404, 'Profile not found');
 	const result = await getPublicProfile(db, parsed.value, locals.auth);
 	if (!result.ok) error(404, 'Profile not found');
+
+	const ownerId = await getProfileOwnerIdDb(db, parsed.value);
+	const isOwnerView = ownerId != null && locals.auth.userId === ownerId;
+	if (!isOwnerView) {
+		const viewerKey = deriveViewerKey(
+			locals.auth,
+			cookies.get(ANON_COOKIE),
+			new Date()
+		);
+		void captureView(db, parsed.value, viewerKey);
+	}
 
 	const profilePath = `/provider/${params.id}`;
 	const origin = publicAppOrigin();

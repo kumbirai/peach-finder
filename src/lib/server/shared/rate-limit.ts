@@ -19,7 +19,8 @@ export type RateLimitBucketName =
 	| 'register'
 	| 'verify_email'
 	| 'reset_complete'
-	| 'verification_submit';
+	| 'verification_submit'
+	| 'analytics_tap';
 
 export type BucketSpec = {
 	name: RateLimitBucketName;
@@ -43,7 +44,8 @@ export const RATE_LIMIT_BUCKETS: readonly BucketSpec[] = [
 	{ name: 'register', windowMs: 60 * 60_000, limit: 5 },
 	{ name: 'verify_email', windowMs: 60 * 60_000, limit: 20 },
 	{ name: 'reset_complete', windowMs: 60 * 60_000, limit: 10 },
-	{ name: 'verification_submit', windowMs: 60 * 60_000, limit: 5 }
+	{ name: 'verification_submit', windowMs: 60 * 60_000, limit: 5 },
+	{ name: 'analytics_tap', windowMs: 60_000, limit: 30 }
 ];
 
 export function bucketSpec(

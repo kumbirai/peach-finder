@@ -1,0 +1,214 @@
+import { describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { withTestDatabase } from '../../db/test-harness';
+import { seedPlatform, loadConfigCache } from '../platform-configuration';
+import { seedCore, SEED_DUAL_ROLE_PROFILE_ID } from '../../../../../scripts/seed-core';
+import { asId, type ProviderProfileId } from '../../shared/ids';
+import { createAuthContext } from '../../shared/auth-context';
+import { queryRows } from '../../shared/sql-result';
+import {
+	captureView,
+	deriveViewerKey,
+	formatCount,
+	getDashboardForOwner,
+	runHourlyAnalyticsRollup
+} from './index';
+import { getCaptureFailureCount, incrementCaptureFailures } from './infra/capture-metrics';
+
+describe('US-ANLY-01 provider analytics integration', () => {
+	it('TC-ANLY-01a: dashboard returns four metrics with trend and prior comparison', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const now = new Date('2026-09-06T12:00:00.000Z');
+			const hour = new Date('2026-09-05T10:00:00.000Z');
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.hourly_rollup (
+					provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+				) VALUES
+					(${profileId}::uuid, ${hour.toISOString()}::timestamptz, 12, 20, 3),
+					(${profileId}::uuid, ${new Date('2026-07-10T10:00:00.000Z').toISOString()}::timestamptz, 4, 2, 1)
+			`);
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.raw_event (
+					id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+				) VALUES (
+					gen_random_uuid(),
+					'search_filter_applied',
+					NULL,
+					NULL,
+					${new Date('2026-09-04T10:00:00.000Z').toISOString()}::timestamptz,
+					'{"serviceTagIds":["01900000-0000-7000-8000-000000000201"]}'::jsonb
+				)
+			`);
+
+			const dashboard = await getDashboardForOwner(
+				db,
+				asId<'UserId'>('01900000-0000-7000-8000-000000000098'),
+				30,
+				now
+			);
+
+			expect(dashboard).not.toBeNull();
+			expect(dashboard?.profileViews.currentTotal).toBe('12');
+			expect(dashboard?.searchAppearances.currentTotal).toBe('20');
+			expect(dashboard?.contactRequests.currentTotal).toBe('< 5');
+			expect(dashboard?.profileViews.trend.length).toBeGreaterThan(0);
+			expect(dashboard?.profileViews.priorPeriodComparison.priorTotal).toBeTruthy();
+			expect(dashboard?.mostSearchedServices[0]?.tag).toBe('Deep tissue');
+		});
+	});
+
+	it('dedup: two profile views same viewer/day produce one raw_event row', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const auth = createAuthContext({
+				userId: asId<'UserId'>('01900000-0000-7000-8000-000000000002'),
+				role: 'seeker',
+				sessionId: asId<'SessionId'>('01900000-0000-7000-8000-000000000902'),
+				ipAddress: '127.0.0.1'
+			});
+			const occurredAt = new Date('2026-09-06T09:00:00.000Z');
+			const viewerKey = deriveViewerKey(auth, 'anon-cookie', occurredAt);
+
+			await captureView(db, profileId, viewerKey, occurredAt);
+			await captureView(db, profileId, viewerKey, occurredAt);
+
+			const rows = await db.execute(sql`
+				SELECT COUNT(*)::int AS count
+				FROM provider_analytics.raw_event
+				WHERE provider_profile_id = ${profileId}::uuid
+				  AND event_type = 'profile_view'
+			`);
+			const count = Number(queryRows(rows)[0]?.count ?? 0);
+			expect(count).toBe(1);
+		});
+	});
+
+	it('fire-and-forget: capture failures are swallowed and counted', async () => {
+		incrementCaptureFailures('reset-marker');
+		const before = getCaptureFailureCount();
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = 'not-a-valid-uuid' as ProviderProfileId;
+			const auth = createAuthContext({
+				userId: null,
+				role: 'anonymous',
+				sessionId: null,
+				ipAddress: '127.0.0.1'
+			});
+			const viewerKey = deriveViewerKey(auth, 'anon', new Date());
+			await captureView(db, profileId, viewerKey);
+		});
+		expect(getCaptureFailureCount()).toBeGreaterThan(before);
+	});
+
+	it('rollup idempotency: re-running the same hour does not double-count', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const hourStart = new Date('2026-09-05T10:00:00.000Z');
+			const hourEnd = new Date('2026-09-05T11:00:00.000Z');
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.raw_event (
+					id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+				) VALUES (
+					gen_random_uuid(), 'profile_view', ${profileId}::uuid, 'viewer-a', ${hourStart.toISOString()}::timestamptz, '{}'::jsonb
+				)
+			`);
+
+			await runHourlyAnalyticsRollup(db, hourStart, hourEnd);
+			await runHourlyAnalyticsRollup(db, hourStart, hourEnd);
+
+			const rows = await db.execute(sql`
+				SELECT profile_views::int AS profile_views
+				FROM provider_analytics.hourly_rollup
+				WHERE provider_profile_id = ${profileId}::uuid
+				  AND hour_bucket = date_trunc('hour', ${hourStart.toISOString()}::timestamptz)
+			`);
+			const profileViews = Number(queryRows(rows)[0]?.profile_views ?? 0);
+			expect(profileViews).toBe(1);
+		});
+	});
+
+	it('TC-ANLY-02b: dashboard floors small counts at read time', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			await db.execute(sql`
+				INSERT INTO provider_analytics.hourly_rollup (
+					provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+				) VALUES (
+					${profileId}::uuid, ${new Date('2026-09-05T10:00:00.000Z').toISOString()}::timestamptz, 3, 0, 0
+				)
+			`);
+
+			const dashboard = await getDashboardForOwner(
+				db,
+				asId<'UserId'>('01900000-0000-7000-8000-000000000098'),
+				7,
+				new Date('2026-09-06T12:00:00.000Z')
+			);
+
+			expect(dashboard?.profileViews.currentTotal).toBe(formatCount(3));
+			expect(dashboard?.profileViews.currentTotal).toBe('< 5');
+		});
+	});
+
+	it('dashboard cache stores raw counts and re-applies the privacy floor on read', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const ownerId = asId<'UserId'>('01900000-0000-7000-8000-000000000098');
+			const now = new Date('2026-09-06T12:00:00.000Z');
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.hourly_rollup (
+					provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+				) VALUES (
+					${profileId}::uuid, ${new Date('2026-09-05T10:00:00.000Z').toISOString()}::timestamptz, 3, 0, 0
+				)
+			`);
+
+			const first = await getDashboardForOwner(db, ownerId, 7, now);
+			const second = await getDashboardForOwner(db, ownerId, 7, now);
+
+			expect(first?.profileViews.currentTotal).toBe('< 5');
+			expect(second?.profileViews.currentTotal).toBe('< 5');
+
+			const cacheRow = await db.execute(sql`
+				SELECT payload
+				FROM provider_analytics.dashboard_metric_cache
+				WHERE provider_profile_id = ${profileId}::uuid
+				  AND range_days = 7
+				LIMIT 1
+			`);
+			const payload = queryRows(cacheRow)[0]?.payload as {
+				profileViews?: { currentCount?: number };
+			};
+			expect(payload.profileViews?.currentCount).toBe(3);
+		});
+	});
+});

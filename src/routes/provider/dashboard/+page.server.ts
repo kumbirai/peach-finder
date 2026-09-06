@@ -8,7 +8,6 @@ import {
 	publishProfileForOwner,
 	unpublishProfileForOwnerDb
 } from '$lib/server/modules/provider-profile';
-import { countReviewsOnProfile } from '$lib/server/modules/provider-reviews';
 import {
 	clearAvailabilityForOwner,
 	getAvailabilityTransparencyForOwner,
@@ -21,11 +20,16 @@ import {
 } from '$lib/server/modules/user-notifications';
 import { getOwnVerificationStatus } from '$lib/server/modules/trust-and-safety';
 import { getBillingStatusForOwner } from '$lib/server/modules/listing-billing';
+import {
+	getDashboardForOwner,
+	parseDashboardRange
+} from '$lib/server/modules/provider-analytics';
 
 export const _requiredRole: Role = 'provider';
 
 export async function load({ locals, url }) {
 	const db = getDb();
+	const rangeDays = parseDashboardRange(url.searchParams.get('range'));
 	const ownerProfile = await loadOwnerProfile(db, locals.auth.userId!);
 	if (!ownerProfile) {
 		return {
@@ -72,14 +76,14 @@ export async function load({ locals, url }) {
 		};
 	}
 
-	const [inbox, reviewCount, transparencyResult, notifications, verification, billing] =
+	const [inbox, transparencyResult, notifications, verification, billing, analytics] =
 		await Promise.all([
 			listProviderInbox(db, locals.auth.userId!),
-			countReviewsOnProfile(db, dashboard.profileId),
 			getAvailabilityTransparencyForOwner(db, locals.auth.userId!, new Date()),
 			listUnreadInAppNotifications(db, locals.auth.userId!, 5),
 			getOwnVerificationStatus(db, dashboard.profileId),
-			getBillingStatusForOwner(db, locals.auth.userId!)
+			getBillingStatusForOwner(db, locals.auth.userId!),
+			getDashboardForOwner(db, locals.auth.userId!, rangeDays)
 		]);
 
 	const availability =
@@ -120,12 +124,8 @@ export async function load({ locals, url }) {
 		verification,
 		billing: billing?.dashboard ?? null,
 		billingState: billing?.state ?? null,
-		analytics: {
-			profileViews: 142,
-			searchAppearances: 89,
-			contactRequests: inbox.length,
-			reviewsReceived: reviewCount
-		}
+		analytics,
+		rangeDays
 	};
 }
 
