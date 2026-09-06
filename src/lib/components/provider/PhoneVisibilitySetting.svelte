@@ -7,10 +7,12 @@
 		phoneVisible: boolean;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional: optimistic local toggle, re-synced from the prop via $effect below
 	let visible = $state(phoneVisible);
 	let saving = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let savedMessage = $state<string | null>(null);
+	// svelte-ignore state_referenced_locally -- intentional: sentinel for detecting prop changes in the $effect below
 	let syncedPhoneVisible = phoneVisible;
 
 	$effect(() => {

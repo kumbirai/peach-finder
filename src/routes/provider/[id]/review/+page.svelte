@@ -26,6 +26,7 @@
 	let editConfirming = $state(false);
 	let deleteConfirming = $state(false);
 	let deleted = $state(false);
+	// svelte-ignore state_referenced_locally -- intentional: sentinel for detecting provider changes in the $effect below
 	let syncedProfileId = $state(data.providerProfileId);
 	let hydrated = $state(false);
 

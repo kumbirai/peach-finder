@@ -24,6 +24,7 @@
 		onSearch?: (query: string) => void | Promise<void>;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional: seed the editable query from the initial prop value
 	let query = $state(value);
 	let suggestions = $state<Suggestion[]>([]);
 	let loading = $state(false);

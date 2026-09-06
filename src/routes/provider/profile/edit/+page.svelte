@@ -33,6 +33,7 @@
 	const saveMessage = $derived(
 		introSaved ? 'Saved — your profile is live now.' : (form?.message ?? null)
 	);
+	// svelte-ignore state_referenced_locally -- intentional: seed the editable intro, re-synced from form.intro in the $effect below
 	let introValue = $state(data.profile.intro ?? '');
 
 	$effect(() => {

@@ -24,6 +24,7 @@
 		form?: { held?: true; sent?: true; message?: string };
 	} = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional: seed the editable draft, re-synced from data in the $effect below
 	let body = $state(data.draft ?? '');
 	let status = $state<'idle' | 'sending' | 'held' | 'sent' | 'error'>('idle');
 	let statusMessage = $state('');

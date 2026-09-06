@@ -34,6 +34,7 @@
 		showResponseTimeDisclosure?: boolean;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional: snapshot initialMessages, then merge live poll/WS updates
 	let messages = $state.raw<ThreadMessage[]>([...initialMessages]);
 	let body = $state('');
 	let sending = $state(false);

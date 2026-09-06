@@ -17,7 +17,9 @@
 		onSubmit: (input: { rating: number; body?: string }) => Promise<void>;
 	} = $props();
 
+	// svelte-ignore state_referenced_locally -- intentional: seed editable form state from the initial prop
 	let rating = $state<number | null>(initialRating);
+	// svelte-ignore state_referenced_locally -- intentional: seed editable form state from the initial prop
 	let body = $state(initialBody);
 	let errorMessage = $state('');
 

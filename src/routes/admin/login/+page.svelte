@@ -22,6 +22,7 @@
 	} = $props();
 
 	let step = $state<'password' | 'enroll' | 'totp'>('password');
+	// svelte-ignore state_referenced_locally -- intentional: seed from data, then updated from form results in the $effect below
 	let returnTo = $state(data.returnTo);
 	let otpauthUrl = $state<string | undefined>();
 	let secretBase32 = $state<string | undefined>();
