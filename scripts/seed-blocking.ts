@@ -12,37 +12,39 @@ import { notifBlockCache } from '../src/lib/server/modules/user-notifications/in
 import { threads, messages } from '../src/lib/server/modules/direct-messaging/infra/schema';
 import { reviews } from '../src/lib/server/modules/provider-reviews/infra/schema';
 
-export const SEED_MSG01_BLOCKED_SEEKER_ID = '01900000-0000-7000-8000-00000000b101';
-export const SEED_MSG01_BLOCKED_SEEKER_EMAIL = 'msg01-blocked@example.com';
-export const SEED_MSG01_BLOCKED_SEEKER_PASSWORD = 'password123';
-
-/** Seeker used by e2e-block-unblock — not pre-blocked; has thread + review history with Amara. */
-export const SEED_SAFE02_SEEKER_ID = '01900000-0000-7000-8000-00000000c301';
-export const SEED_SAFE02_SEEKER_EMAIL = 'safe02-seeker@example.com';
-export const SEED_SAFE02_SEEKER_PASSWORD = 'password123';
-
-export const SEED_SAFE02_AMARA_EMAIL = 'amara@example.com';
-export const SEED_SAFE02_AMARA_PASSWORD = 'password123';
-
 const AMARA_OWNER_ID = '01900000-0000-7000-8000-000000000001';
+
+import {
+	SEED_MSG01_BLOCKED_SEEKER_EMAIL,
+	SEED_MSG01_BLOCKED_SEEKER_ID,
+	SEED_MSG01_BLOCKED_SEEKER_PASSWORD,
+	SEED_SAFE02_AMARA_EMAIL,
+	SEED_SAFE02_AMARA_PASSWORD,
+	SEED_SAFE02_REVIEW_BODY,
+	SEED_SAFE02_REVIEW_ID,
+	SEED_SAFE02_SEEKER_EMAIL,
+	SEED_SAFE02_SEEKER_ID,
+	SEED_SAFE02_SEEKER_PASSWORD
+} from './seed-blocking-constants';
+
+export {
+	SEED_MSG01_BLOCKED_SEEKER_EMAIL,
+	SEED_MSG01_BLOCKED_SEEKER_ID,
+	SEED_MSG01_BLOCKED_SEEKER_PASSWORD,
+	SEED_SAFE02_AMARA_EMAIL,
+	SEED_SAFE02_AMARA_PASSWORD,
+	SEED_SAFE02_REVIEW_BODY,
+	SEED_SAFE02_REVIEW_ID,
+	SEED_SAFE02_SEEKER_EMAIL,
+	SEED_SAFE02_SEEKER_ID,
+	SEED_SAFE02_SEEKER_PASSWORD
+} from './seed-blocking-constants';
 const SAFE02_THREAD_ID = '01900000-0000-7000-8000-00000000c311';
 const SAFE02_MESSAGE_ID = '01900000-0000-7000-8000-00000000c312';
-const SAFE02_REVIEW_ID = '01900000-0000-7000-8000-00000000c313';
 
-/** Provider owner blocked this seeker — used by TC-MSG-01c / seed-blocking pack. */
-export async function seedBlocking(db: Database): Promise<void> {
-	await seedCore(db);
-
-	const providerOwner = await db
-		.select({ ownerId: providerProfiles.ownerId })
-		.from(providerProfiles)
-		.where(eq(providerProfiles.id, SEED_CORE_PRIMARY_PROFILE_ID))
-		.limit(1);
-	const ownerId = providerOwner[0]?.ownerId;
-	if (!ownerId) throw new Error('seed-blocking: primary provider missing');
-
+/** Thread + review history for US-SAFE-02 / US-REV-06 e2e — safe to call after seed-reviews. */
+export async function seedSafe02BlockHistoryFixture(db: Database): Promise<void> {
 	const blockedAt = new Date('2026-09-01T09:00:00Z');
-	const passwordHash = await hashPassword(SEED_MSG01_BLOCKED_SEEKER_PASSWORD);
 	const safe02PasswordHash = await hashPassword(SEED_SAFE02_SEEKER_PASSWORD);
 	const amaraPasswordHash = await hashPassword(SEED_SAFE02_AMARA_PASSWORD);
 
@@ -58,18 +60,6 @@ export async function seedBlocking(db: Database): Promise<void> {
 	await db
 		.insert(users)
 		.values({
-			id: SEED_MSG01_BLOCKED_SEEKER_ID,
-			displayName: 'Blocked Seeker',
-			email: SEED_MSG01_BLOCKED_SEEKER_EMAIL,
-			emailVerifiedAt: blockedAt,
-			passwordHash,
-			status: 'active'
-		})
-		.onConflictDoNothing();
-
-	await db
-		.insert(users)
-		.values({
 			id: SEED_SAFE02_SEEKER_ID,
 			displayName: 'Safe02 Seeker',
 			email: SEED_SAFE02_SEEKER_EMAIL,
@@ -77,7 +67,15 @@ export async function seedBlocking(db: Database): Promise<void> {
 			passwordHash: safe02PasswordHash,
 			status: 'active'
 		})
-		.onConflictDoNothing();
+		.onConflictDoUpdate({
+			target: users.id,
+			set: {
+				displayName: 'Safe02 Seeker',
+				email: SEED_SAFE02_SEEKER_EMAIL,
+				passwordHash: safe02PasswordHash,
+				status: 'active'
+			}
+		});
 
 	await db
 		.insert(threads)
@@ -106,14 +104,52 @@ export async function seedBlocking(db: Database): Promise<void> {
 	await db
 		.insert(reviews)
 		.values({
-			id: SAFE02_REVIEW_ID,
+			id: SEED_SAFE02_REVIEW_ID,
 			providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
 			reviewerId: SEED_SAFE02_SEEKER_ID,
 			rating: 5,
-			body: 'Prior review that must remain after blocking.',
+			body: SEED_SAFE02_REVIEW_BODY,
 			createdAt: new Date('2026-08-27T12:00:00Z')
 		})
+		.onConflictDoUpdate({
+			target: reviews.id,
+			set: {
+				body: SEED_SAFE02_REVIEW_BODY,
+				rating: 5,
+				reviewerId: SEED_SAFE02_SEEKER_ID,
+				providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID
+			}
+		});
+}
+
+/** Provider owner blocked this seeker — used by TC-MSG-01c / seed-blocking pack. */
+export async function seedBlocking(db: Database): Promise<void> {
+	await seedCore(db);
+
+	const providerOwner = await db
+		.select({ ownerId: providerProfiles.ownerId })
+		.from(providerProfiles)
+		.where(eq(providerProfiles.id, SEED_CORE_PRIMARY_PROFILE_ID))
+		.limit(1);
+	const ownerId = providerOwner[0]?.ownerId;
+	if (!ownerId) throw new Error('seed-blocking: primary provider missing');
+
+	const blockedAt = new Date('2026-09-01T09:00:00Z');
+	const passwordHash = await hashPassword(SEED_MSG01_BLOCKED_SEEKER_PASSWORD);
+
+	await db
+		.insert(users)
+		.values({
+			id: SEED_MSG01_BLOCKED_SEEKER_ID,
+			displayName: 'Blocked Seeker',
+			email: SEED_MSG01_BLOCKED_SEEKER_EMAIL,
+			emailVerifiedAt: blockedAt,
+			passwordHash,
+			status: 'active'
+		})
 		.onConflictDoNothing();
+
+	await seedSafe02BlockHistoryFixture(db);
 
 	await db
 		.insert(blocks)

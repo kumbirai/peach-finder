@@ -1,6 +1,7 @@
 import type { Database } from '../src/lib/server/db';
 import { eq, sql } from 'drizzle-orm';
-import { seedCore } from './seed-core';
+import { seedCore, SEED_CORE_PRIMARY_PROFILE_ID } from './seed-core';
+import { seedSafe02BlockHistoryFixture } from './seed-blocking';
 import { users } from '../src/lib/server/modules/identity-and-access/infra/schema';
 import { threads } from '../src/lib/server/modules/direct-messaging/infra/schema';
 import { reviews } from '../src/lib/server/modules/provider-reviews/infra/schema';
@@ -143,4 +144,27 @@ export async function seedReviews(db: Database): Promise<void> {
 		delete from shared.rate_limit_bucket
 		where bucket_key like 'review_submit:account:%'
 	`);
+
+	await seedSafe02BlockHistoryFixture(db);
+
+	await db.transaction(async (tx) => {
+		await recomputeRatingAggregate(
+			tx,
+			asId<'ProviderProfileId'>(SEED_CORE_PRIMARY_PROFILE_ID),
+			'seed-reviews-safe02',
+			now
+		);
+	});
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+	const { getDb, closeDb } = await import('../src/lib/server/db');
+	const { seedPlatform, loadConfigCache } =
+		await import('../src/lib/server/modules/platform-configuration');
+	const db = getDb();
+	await seedPlatform(db);
+	await loadConfigCache(db);
+	await seedReviews(db);
+	await closeDb();
+	console.info('seed-reviews complete');
 }

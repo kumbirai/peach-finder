@@ -6,9 +6,14 @@ import {
 	SEED_DUAL_ROLE_PASSWORD,
 	SEED_DUAL_ROLE_PROFILE_ID
 } from '../../scripts/seed-core';
-
-const SEED_SAFE02_AMARA_EMAIL = 'amara@example.com';
-const SEED_SAFE02_AMARA_PASSWORD = 'password123';
+import {
+	SEED_SAFE02_AMARA_EMAIL,
+	SEED_SAFE02_AMARA_PASSWORD,
+	SEED_SAFE02_REVIEW_BODY,
+	SEED_SAFE02_REVIEW_ID,
+	SEED_SAFE02_SEEKER_EMAIL,
+	SEED_SAFE02_SEEKER_PASSWORD
+} from '../../scripts/seed-blocking-constants';
 
 const AMARA_OWNER_ID = '01900000-0000-7000-8000-000000000001';
 const DUAL_AMARA_THREAD_ID = '01900000-0000-7000-8000-000000000881';
@@ -163,6 +168,79 @@ test.describe('US-SAFE-02 block instant silent messages both ways', () => {
 		const amaraPage = await amaraContext.newPage();
 		const amaraResults = await searchProviderIds(amaraPage);
 		expect(amaraResults).toContain(SEED_DUAL_ROLE_PROFILE_ID);
+
+		await amaraContext.close();
+		await context.close();
+	});
+});
+
+test.describe('US-REV-06 blocking does not rewrite history', () => {
+	const SAFE02_THREAD_ID = '01900000-0000-7000-8000-00000000c311';
+
+	test('TC-REV-06a: existing reviews survive a block in both directions', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const profilePath = `/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`;
+		await page.goto(`/sign-in?flow=sign-in&returnTo=${encodeURIComponent(profilePath)}`);
+		await page.getByLabel('Email').fill(SEED_SAFE02_SEEKER_EMAIL);
+		await page.getByLabel('Password').fill(SEED_SAFE02_SEEKER_PASSWORD);
+		await page.getByRole('button', { name: 'Sign in' }).click();
+		await expect(page).toHaveURL(new RegExp(profilePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
+			timeout: 15_000
+		});
+
+		await expect(page.getByTestId('profile-reviews')).toBeVisible();
+		await expect(
+			page.getByTestId('profile-review-item').filter({ hasText: SEED_SAFE02_REVIEW_BODY })
+		).toBeVisible();
+
+		const beforeRes = await page.request.get(
+			`/api/reviews/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`
+		);
+		expect(beforeRes.ok()).toBeTruthy();
+		const beforeBody = (await beforeRes.json()) as { data: Array<{ id: string; body: string }> };
+		const beforeReview = beforeBody.data.find((review) => review.id === SEED_SAFE02_REVIEW_ID);
+		expect(beforeReview?.body).toBe(SEED_SAFE02_REVIEW_BODY);
+
+		const blockRes = await page.request.post('/api/trust/blocks', {
+			data: { blockedId: AMARA_OWNER_ID }
+		});
+		expect(blockRes.ok()).toBeTruthy();
+
+		const messageRes = await page.request.post(
+			`/api/messaging/threads/${SAFE02_THREAD_ID}/messages`,
+			{ data: { body: 'Blocked seeker attempt' } }
+		);
+		expect(messageRes.status()).toBe(404);
+
+		const afterRes = await page.request.get(
+			`/api/reviews/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`
+		);
+		expect(afterRes.ok()).toBeTruthy();
+		const afterBody = (await afterRes.json()) as { data: Array<{ id: string; body: string }> };
+		const afterReview = afterBody.data.find((review) => review.id === SEED_SAFE02_REVIEW_ID);
+		expect(afterReview?.body).toBe(SEED_SAFE02_REVIEW_BODY);
+
+		await page.reload();
+		await expect(
+			page.getByTestId('profile-review-item').filter({ hasText: SEED_SAFE02_REVIEW_BODY })
+		).toBeVisible();
+
+		const amaraContext = await browser.newContext();
+		const amaraPage = await amaraContext.newPage();
+		await amaraPage.goto('/sign-in?flow=sign-in&returnTo=%2Fprovider%2Freviews');
+		await amaraPage.getByLabel('Email').fill(SEED_SAFE02_AMARA_EMAIL);
+		await amaraPage.getByLabel('Password').fill(SEED_SAFE02_AMARA_PASSWORD);
+		await amaraPage.getByRole('button', { name: 'Sign in' }).click();
+		await expect(amaraPage).toHaveURL(/\/provider\/reviews/, { timeout: 15_000 });
+		await expect(
+			amaraPage.getByTestId('provider-review-item').filter({ hasText: SEED_SAFE02_REVIEW_BODY })
+		).toBeVisible();
+
+		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
+		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
+			[]
+		);
 
 		await amaraContext.close();
 		await context.close();

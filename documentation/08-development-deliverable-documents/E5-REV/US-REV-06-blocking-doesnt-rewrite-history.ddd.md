@@ -27,9 +27,9 @@ FR-REV-07, FR-TRUST-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-REV-06 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** FR-REV-07 is enforced architecturally — `provider-reviews` subscribes only to `ModerationActionTaken` (`handleReviewsModeration`); `UserBlocked` subscribers are limited to `direct-messaging.block-cache`, `discovery-search.exclude-blocker`, and `user-notifications.block-silence` per `event-catalog.ts`. No review rows, aggregates, or public serializers are filtered by block state; `listPublicReviewsForProvider`, `getSeekerReviewForProvider`, and `/provider/reviews` continue to serve existing reviews after a block. `applyUserBlockedSync` mirrors messaging/discovery/notification caches only — never touches `provider_reviews.*`.
+
+**Tests:** Integration `blocking-preserves-reviews.integration.test.ts` (TC-REV-06a: seeker-initiated and provider-initiated blocks leave review rows, public listing, seeker own-review, and aggregate unchanged while messaging is blocked; event-catalog regression for no `provider-reviews` `UserBlocked` subscriber). Playwright `testing/playwright/e2e-block-unblock.e2e.ts` US-REV-06 block (TC-REV-06a: review visible on public profile and provider management page after live block; messaging rejected; axe on reviews section). Exported `SEED_SAFE02_REVIEW_ID` / `SEED_SAFE02_REVIEW_BODY` from `scripts/seed-blocking.ts`; extracted `seedSafe02BlockHistoryFixture` re-applied at end of `seed-reviews.ts` (after `seedCore` wipes Amara reviews) and added missing CLI entrypoint to `seed-reviews.ts` so the Playwright webServer seed chain actually runs.
+
+**Assumption:** "Both directions" means both parties can still observe the pre-existing review (seeker on public profile / own-review page; provider on `/provider/reviews`) — there is no seeker-of-provider reverse rating in V1.
