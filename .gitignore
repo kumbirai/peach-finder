@@ -65,3 +65,6 @@ blob-report/
 # Python bytecode (local helper scripts)
 __pycache__/
 *.pyc
+
+# Local media storage fallback (test/dev artifact — see media-processing/infra/storage.ts)
+.media-local/
