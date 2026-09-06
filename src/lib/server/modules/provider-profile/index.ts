@@ -98,12 +98,22 @@ export async function getOwnedProfileDashboard(
 	};
 }
 
+export type GetPublicProfileOptions = {
+	/** When false, callers such as admin review can load draft/unpublished profile context. */
+	requirePublished?: boolean;
+};
+
 export async function getPublicProfile(
 	db: Database,
 	providerProfileId: ProviderProfileId,
-	viewer: AuthContext
+	viewer: AuthContext,
+	options: GetPublicProfileOptions = {}
 ): Promise<Result<PublicProfile, UseCaseError>> {
-	const view = await loadProfileView(db, providerProfileId);
+	const loadOptions =
+		options.requirePublished === undefined
+			? {}
+			: { requirePublished: options.requirePublished };
+	const view = await loadProfileView(db, providerProfileId, loadOptions);
 	if (!view) return Err({ kind: 'not_found', resource: 'provider_profile' });
 
 	const identity = await getDisplayIdentity(db, asId<'UserId'>(view.ownerId));

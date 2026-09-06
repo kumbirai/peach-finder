@@ -28,9 +28,9 @@ FR-ADM-02, SR-MEDIA-01, FR-ADM-08.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,15 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ADMIN-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+**Approach:** Admin identity queue is a thin delivery surface under `src/routes/admin/identity/` and `/admin/api/trust/verification/*` / `/admin/api/media/identity-doc-url/*`. Domain logic lives in `trust-and-safety` (`listIdentityQueue`, `approveVerification`, `rejectVerification`, `getIdentityQueueStats`) and `media-processing` (`storeIdentityDoc`, `issueIdentityDocUrl`, signed fetch at `/admin/api/media/identity-doc/:photoId`). Migration `0018_us_admin_02_identity_queue.sql` adds `verification_case.doc_photo_ids` and `processed_admin_action`. Seed pack `scripts/seed-verification.ts` (+ `seed-verification-constants.ts`) supplies pending/rejected/suppressed fixtures for live-stack E2E.
+
+**Endpoints:** `GET /admin/api/trust/verification/queue`; `POST /admin/api/trust/verification/:caseId/approve|reject`; `GET /admin/api/media/identity-doc-url/:photoId`; presigned document fetch `GET /admin/api/media/identity-doc/:photoId?exp=&sig=` (5 min TTL, issuance audit `media-processing.identity_doc_presign`). Public `/media/*` denies `identity-docs/` paths.
+
+**Tests:** Unit `queue-age.test.ts`; integration `identity-queue.integration.test.ts` (TC-ADMIN-02a–c); Playwright `testing/playwright/identity-verification.e2e.ts`. Playwright webServer seeds `seed-verification` after `seed-blocking`.
+
+**Deviations:** `getIdentityQueueStats` aggregates in application code (not SQL `avg/max` on timestamps) to avoid Drizzle date-parameter issues. Approve/reject reason on approve is optional; reject requires a non-empty reason per LLD.

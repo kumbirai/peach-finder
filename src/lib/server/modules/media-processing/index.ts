@@ -38,3 +38,12 @@ export async function getPhotoVariantUrls(db: Database, photoId: PhotoId) {
 }
 
 export { readLocalMediaFile } from './infra/storage';
+export {
+	IDENTITY_DOC_PRESIGN_TTL_MS,
+	buildIdentityDocFetchUrl,
+	buildIdentityDocPresignPayload,
+	issueIdentityDocUrl,
+	readIdentityDocBytes,
+	storeIdentityDoc,
+	verifyIdentityDocPresign
+} from './infra/identity-doc-presign';

@@ -60,10 +60,19 @@ export const verificationCases = trustAndSafetySchema.table('verification_case',
 	id: uuid('id').primaryKey(),
 	providerProfileId: uuid('provider_profile_id').notNull(),
 	status: text('status').notNull().default('pending'),
+	docPhotoIds: uuid('doc_photo_ids').array().notNull().default([]),
 	submittedAt: timestamp('submitted_at', { withTimezone: true, mode: 'date' })
 		.notNull()
 		.defaultNow(),
 	decidedAt: timestamp('decided_at', { withTimezone: true, mode: 'date' }),
 	decidedBy: uuid('decided_by'),
 	decisionReason: text('decision_reason')
+});
+
+export const processedAdminActions = trustAndSafetySchema.table('processed_admin_action', {
+	idempotencyKey: text('idempotency_key').primaryKey(),
+	resultRef: uuid('result_ref').notNull(),
+	processedAt: timestamp('processed_at', { withTimezone: true, mode: 'date' })
+		.notNull()
+		.defaultNow()
 });

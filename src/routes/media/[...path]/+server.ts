@@ -3,7 +3,7 @@ import { readLocalMediaFile } from '$lib/server/modules/media-processing';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const path = params.path ?? '';
-	if (!path || path.includes('..')) {
+	if (!path || path.includes('..') || path.startsWith('identity-docs/')) {
 		return new Response('Not found', { status: 404 });
 	}
 

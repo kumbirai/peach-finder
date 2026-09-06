@@ -23,6 +23,18 @@ export {
 	activeThisWeekWindowStart,
 	type ActiveThisWeekSignals
 } from './domain/active-this-week';
+export {
+	listIdentityQueue,
+	getIdentityQueueStats,
+	type IdentityQueueItem,
+	type IdentityQueueStats
+} from './infra/identity-queue-queries';
+export {
+	approveVerification,
+	rejectVerification,
+	verificationCaseReferencesPhoto,
+	type VerificationDecisionResult
+} from './infra/verification-commands';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
