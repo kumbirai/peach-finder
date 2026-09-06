@@ -28,6 +28,7 @@ describe('resolveProfileActionHrefs', () => {
 			})
 		);
 		expect(hrefs.message).toBe(`/messages/compose/${PROFILE_ID}`);
+		expect(hrefs.review).toBe(`/provider/${PROFILE_ID}/review`);
 		expect(hrefs.report).toBe(`/provider/${PROFILE_ID}/report`);
 	});
 });

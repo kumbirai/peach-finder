@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { abbreviateReviewerName, formatPublicReviewDate, toPublicReview } from './serializers';
+import {
+	abbreviateReviewerName,
+	formatPublicReviewDate,
+	toEligibility,
+	toOwnReview,
+	toPublicReview
+} from './serializers';
 
 describe('provider-reviews serializers', () => {
 	it('abbreviates reviewer names for public display', () => {
@@ -28,5 +34,38 @@ describe('provider-reviews serializers', () => {
 		expect(dto.isEdited).toBe(true);
 		expect(dto.providerReply).toEqual({ body: 'Thanks for visiting.' });
 		expect(JSON.stringify(dto)).not.toMatch(/2026-09-01T/);
+	});
+
+	it('toEligibility preserves reason copy for ineligible seekers', () => {
+		expect(
+			toEligibility({
+				eligible: false,
+				reason: 'You can review after you have been in contact for a day.'
+			})
+		).toEqual({
+			eligible: false,
+			reason: 'You can review after you have been in contact for a day.'
+		});
+	});
+
+	it('toOwnReview returns ISO timestamp for owner views', () => {
+		const createdAt = new Date('2026-09-01T12:00:00Z');
+		expect(
+			toOwnReview({
+				id: '01900000-0000-7000-8000-000000000601',
+				providerProfileId: '01900000-0000-7000-8000-000000000103',
+				rating: 5,
+				body: 'Great session',
+				isEdited: false,
+				createdAt
+			})
+		).toEqual({
+			id: '01900000-0000-7000-8000-000000000601',
+			providerProfileId: '01900000-0000-7000-8000-000000000103',
+			rating: 5,
+			body: 'Great session',
+			isEdited: false,
+			createdAt: createdAt.toISOString()
+		});
 	});
 });

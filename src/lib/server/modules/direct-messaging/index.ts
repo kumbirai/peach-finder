@@ -65,6 +65,8 @@ export {
 export type { MessageDTO, ThreadListItemDTO } from './infra/serializers';
 export { toThreadListItem } from './infra/serializers';
 
+export { hasEligibleThread, getThreadCreatedAtForPair } from './infra/thread-eligibility';
+
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
 }

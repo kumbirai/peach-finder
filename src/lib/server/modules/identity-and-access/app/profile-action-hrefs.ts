@@ -22,6 +22,9 @@ function hrefForAction(
 	if (action === 'message' && viewer.hasRole('seeker')) {
 		return `/messages/compose/${providerProfileId}`;
 	}
+	if (action === 'review' && viewer.hasRole('seeker')) {
+		return `/provider/${providerProfileId}/review`;
+	}
 	if (action === 'report') {
 		return `/provider/${providerProfileId}/report`;
 	}

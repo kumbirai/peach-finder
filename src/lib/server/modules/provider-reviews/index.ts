@@ -7,6 +7,8 @@ export {
 	type ListPublicReviewsOptions,
 	type ListPublicReviewsResult
 } from './infra/list-public-reviews';
+export { getReviewEligibility, getReviewEligibilityDto } from './infra/review-eligibility';
+export { submitReview } from './infra/submit-review';
 export {
 	listReviewsWrittenBySeeker,
 	countReviewsOnProfile,
@@ -15,8 +17,12 @@ export {
 export {
 	abbreviateReviewerName,
 	formatPublicReviewDate,
+	toEligibility,
+	toOwnReview,
 	toPublicReview,
-	type PublicReviewDto
+	type OwnReviewDto,
+	type PublicReviewDto,
+	type ReviewEligibilityDto
 } from './infra/serializers';
 
 export function parseProviderProfileId(raw: string): Result<ProviderProfileId, UseCaseError> {

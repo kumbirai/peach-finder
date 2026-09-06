@@ -16,6 +16,9 @@ export function buildPostAuthRedirect(input: {
 	if (input.action === 'report' && input.providerProfileId) {
 		return `/provider/${input.providerProfileId}/report`;
 	}
+	if (input.action === 'review' && input.providerProfileId) {
+		return `/provider/${input.providerProfileId}/review`;
+	}
 	if (input.returnTo.startsWith('/')) {
 		return input.returnTo;
 	}

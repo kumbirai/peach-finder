@@ -33,13 +33,23 @@ describe('buildPostAuthRedirect', () => {
 		).toBe('/provider/01900000-0000-7000-8000-000000000101/report');
 	});
 
-	it('falls back to returnTo for other actions', () => {
+	it('routes review action to the profile review page', () => {
 		expect(
 			buildPostAuthRedirect({
 				returnTo: '/provider/abc',
 				action: 'review',
+				providerProfileId: '01900000-0000-7000-8000-000000000101'
+			})
+		).toBe('/provider/01900000-0000-7000-8000-000000000101/review');
+	});
+
+	it('falls back to returnTo when action has no dedicated route', () => {
+		expect(
+			buildPostAuthRedirect({
+				returnTo: '/profile',
+				action: 'block',
 				providerProfileId: 'abc'
 			})
-		).toBe('/provider/abc');
+		).toBe('/profile');
 	});
 });

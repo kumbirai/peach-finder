@@ -54,12 +54,16 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 						code:
 							error.reason === 'VERIFICATION_ALREADY_PENDING'
 								? ERROR_CODES.VERIFICATION_ALREADY_PENDING
-								: ERROR_CODES.CONFLICT,
+								: error.reason === 'REVIEW_ALREADY_EXISTS'
+									? ERROR_CODES.REVIEW_ALREADY_EXISTS
+									: ERROR_CODES.CONFLICT,
 						message: friendlyOr(
 							error.reason,
 							error.reason === 'VERIFICATION_ALREADY_PENDING'
 								? 'You already have a verification submission under review.'
-								: 'That change could not be saved.'
+								: error.reason === 'REVIEW_ALREADY_EXISTS'
+									? 'You already reviewed this provider.'
+									: 'That change could not be saved.'
 						),
 						fields: null
 					}
@@ -109,8 +113,15 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 						code:
 							error.reason === 'PAYMENT_METHOD_REQUIRED'
 								? ERROR_CODES.PAYMENT_METHOD_REQUIRED
-								: ERROR_CODES.PRECONDITION_FAILED,
-						message: friendlyOr(error.reason, 'That is not available yet.'),
+								: error.reason === 'REVIEW_INELIGIBLE'
+									? ERROR_CODES.REVIEW_INELIGIBLE
+									: ERROR_CODES.PRECONDITION_FAILED,
+						message: friendlyOr(
+							error.reason,
+							error.reason === 'REVIEW_INELIGIBLE'
+								? 'You can review after your conversation is 24 hours old.'
+								: 'That is not available yet.'
+						),
 						fields: null
 					}
 				}
