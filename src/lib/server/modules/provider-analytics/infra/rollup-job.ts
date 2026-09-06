@@ -35,14 +35,14 @@ export async function purgeExpiredRawAnalyticsEvents(
 	db: Database,
 	now: Date
 ): Promise<{ deleted: number }> {
-	const cutoff = new Date(now);
-	cutoff.setUTCDate(cutoff.getUTCDate() - 90);
+	const cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60_000);
 	const result = await db.execute(sql`
 		DELETE FROM provider_analytics.raw_event
-		WHERE occurred_at < ${cutoff.toISOString()}::timestamptz
+		WHERE occurred_at <= ${cutoff.toISOString()}::timestamptz
+		RETURNING id
 	`);
-	const deleted = Number((result as { rowCount?: number }).rowCount ?? 0);
-	return { deleted };
+	const rows = ((result as unknown as { rows?: unknown[] }).rows ?? result) as unknown[];
+	return { deleted: rows.length };
 }
 
 export async function runAnalyticsMaintenanceTick(

@@ -11,7 +11,8 @@ import {
 	deriveViewerKey,
 	formatCount,
 	getDashboardForOwner,
-	runHourlyAnalyticsRollup
+	runHourlyAnalyticsRollup,
+	purgeExpiredRawAnalyticsEvents
 } from './index';
 import { assertAggregateOnlyPayload } from './domain/analytics-privacy-contract';
 import { getCaptureFailureCount, incrementCaptureFailures } from './infra/capture-metrics';
@@ -440,6 +441,55 @@ describe('US-ANLY-04 cause and effect on the chart', () => {
 				label: 'Featured'
 			});
 			assertAggregateOnlyPayload(dashboard);
+		});
+	});
+});
+
+describe('US-PRIV-03 raw analytics retention integration', () => {
+	it('TC-PRIV-03d: raw analytics destroyed at 90 days while aggregates survive', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
+			const now = new Date('2026-09-06T12:00:00.000Z');
+			const at90 = new Date(now.getTime() - 90 * 24 * 60 * 60_000);
+			const at89 = new Date(now.getTime() - 89 * 24 * 60 * 60_000);
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.raw_event (
+					id, event_type, provider_profile_id, viewer_key, occurred_at, metadata
+				) VALUES
+					(gen_random_uuid(), 'profile_view', ${profileId}::uuid, 'viewer-old', ${at90.toISOString()}::timestamptz, '{}'::jsonb),
+					(gen_random_uuid(), 'profile_view', ${profileId}::uuid, 'viewer-new', ${at89.toISOString()}::timestamptz, '{}'::jsonb)
+			`);
+
+			await db.execute(sql`
+				INSERT INTO provider_analytics.hourly_rollup (
+					provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+				) VALUES (
+					${profileId}::uuid, date_trunc('hour', ${at90.toISOString()}::timestamptz), 5, 0, 0
+				)
+			`);
+
+			const purge = await purgeExpiredRawAnalyticsEvents(db, now);
+			expect(purge.deleted).toBeGreaterThanOrEqual(1);
+
+			const remaining = await db.execute(sql`
+				SELECT COUNT(*)::int AS count
+				FROM provider_analytics.raw_event
+				WHERE provider_profile_id = ${profileId}::uuid
+			`);
+			expect(Number(queryRows(remaining)[0]?.count ?? 0)).toBe(1);
+
+			const rollup = await db.execute(sql`
+				SELECT profile_views::int AS profile_views
+				FROM provider_analytics.hourly_rollup
+				WHERE provider_profile_id = ${profileId}::uuid
+				  AND hour_bucket = date_trunc('hour', ${at90.toISOString()}::timestamptz)
+			`);
+			expect(Number(queryRows(rollup)[0]?.profile_views ?? 0)).toBe(5);
 		});
 	});
 });

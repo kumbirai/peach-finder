@@ -18,6 +18,10 @@ export {
 	type ActiveThisWeekJobResult
 } from './infra/active-this-week-job';
 export {
+	runIdentityDocPurgeJob,
+	type IdentityDocPurgeJobResult
+} from './infra/identity-doc-purge-job';
+export {
 	ACTIVE_THIS_WEEK_WINDOW_MS,
 	isActiveThisWeek,
 	activeThisWeekWindowStart,

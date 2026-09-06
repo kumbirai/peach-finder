@@ -66,7 +66,8 @@ export const verificationCases = trustAndSafetySchema.table('verification_case',
 		.defaultNow(),
 	decidedAt: timestamp('decided_at', { withTimezone: true, mode: 'date' }),
 	decidedBy: uuid('decided_by'),
-	decisionReason: text('decision_reason')
+	decisionReason: text('decision_reason'),
+	docsPurgedAt: timestamp('docs_purged_at', { withTimezone: true, mode: 'date' })
 });
 
 export const processedAdminActions = trustAndSafetySchema.table('processed_admin_action', {

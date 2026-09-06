@@ -28,9 +28,9 @@ FR-PRIV-03/04/05, SR-DATA-03, SR-APP-10, SR-PRIV-05.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction. *(N/A — backend-only scheduled retention jobs; no user-visible surface.)*
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,23 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-PRIV-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### 2026-09-06 — feat/initial-implementation — Cursor Composer
+
+**Approach:** Implemented SR-APP-10 cross-module retention automation for US-PRIV-03:
+
+- `trust-and-safety`: daily `runIdentityDocPurgeJob` deletes identity-doc photos via `media-processing.deletePhotos` for decided cases at ≥90 days, sets `docs_purged_at`, retains case metadata (`0027` migration).
+- `direct-messaging`: daily `purgeDormantThreads` deletes messages + threads at ≥24 months when both seeker and provider owner accounts are still active (deleted-account threads retained per FR-ACC-07).
+- `identity-and-access`: existing `anonymizePendingUsers` (≤30 days) wired into the daily retention tick with healthcheck ping; still also runs on the 15s worker interval for timely completion.
+- `provider-analytics`: `purgeExpiredRawAnalyticsEvents` aligned to `occurred_at <= now - 90 days` with `RETURNING` row count; hourly `runAnalyticsMaintenanceTick` unchanged in cadence.
+- Worker: 24h `RETENTION_TICK_MS` orchestrates anonymization healthcheck + identity-doc purge + dormant-thread purge.
+- Dev helpers (`ALLOW_DEV_HELPERS=1`): `/api/dev/retention-fixture`, `/api/dev/retention-tick`, `/api/dev/retention-verify` for live-stack Playwright.
+- Shared `pingHealthcheck` utility (optional `HEALTHCHECK_*` env URLs per job).
+
+**Deviations:** None. Frontend build-task marked N/A — story is worker-only with no new UI surface.
+
+**Verification:** `npm run check`, `npm run lint`, `npm run test`, `npm run test:integration` (TC-PRIV-03a/b/d), `testing/playwright/data-retention-schedule.e2e.ts` (TC-PRIV-03a/b/d; TC-PRIV-03c cross-ref TC-ACC-05d).
+
+**Follow-ups:** Configure production `HEALTHCHECK_IDENTITY_DOC_PURGE`, `HEALTHCHECK_DORMANT_THREAD_PURGE`, `HEALTHCHECK_ACCOUNT_ANONYMIZATION` URLs in deployment secrets.

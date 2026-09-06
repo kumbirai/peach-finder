@@ -50,8 +50,10 @@ import { anonymizePendingUsers } from '../lib/server/modules/identity-and-access
 import {
 	handleBadgeFlagEvent,
 	handleIdentityAttributesChanged,
-	runActiveThisWeekJob
+	runActiveThisWeekJob,
+	runIdentityDocPurgeJob
 } from '../lib/server/modules/trust-and-safety';
+import { purgeDormantThreads } from '../lib/server/modules/direct-messaging';
 import { runAvailabilityLifecycleTick } from '../lib/server/modules/provider-availability';
 import {
 	handleAvailabilityExpiryWarned,
@@ -72,6 +74,7 @@ import {
 	dispatchTrialEndingReminders
 } from '../lib/server/modules/user-notifications';
 import { log } from '../lib/server/shared/logger';
+import { pingHealthcheck } from '../lib/server/shared/healthcheck';
 import { dispatchUndispatched, type OutboxJob } from './dispatch';
 
 const QUEUE = 'outbox-subscriber';
@@ -378,9 +381,11 @@ let lastAvailabilityTickAt = 0;
 let lastActiveThisWeekTickAt = 0;
 let lastBillingLifecycleTickAt = 0;
 let lastAnalyticsMaintenanceTickAt = 0;
+let lastRetentionTickAt = 0;
 const ACTIVE_THIS_WEEK_TICK_MS = 24 * 60 * 60 * 1000;
 const BILLING_LIFECYCLE_TICK_MS = 60 * 60 * 1000;
 const ANALYTICS_MAINTENANCE_TICK_MS = 60 * 60 * 1000;
+const RETENTION_TICK_MS = 24 * 60 * 60 * 1000;
 
 setInterval(() => {
 	void (async () => {
@@ -418,6 +423,18 @@ setInterval(() => {
 			lastAnalyticsMaintenanceTickAt = nowMs;
 			const now = new Date();
 			await runAnalyticsMaintenanceTick(db, now);
+		}
+		if (nowMs - lastRetentionTickAt >= RETENTION_TICK_MS) {
+			lastRetentionTickAt = nowMs;
+			const now = new Date();
+			const correlationId = `retention-${now.toISOString()}`;
+			const anonymized = await anonymizePendingUsers(db, now);
+			if (anonymized > 0) {
+				log('info', 'account anonymization completed', { usersAnonymized: anonymized });
+			}
+			await pingHealthcheck('HEALTHCHECK_ACCOUNT_ANONYMIZATION');
+			await runIdentityDocPurgeJob(db, now, correlationId);
+			await purgeDormantThreads(db, now);
 		}
 	})().catch((error: unknown) => {
 		log('error', 'worker tick failed', {

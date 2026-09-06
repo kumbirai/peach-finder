@@ -5,6 +5,7 @@ import type { UploadScope } from './domain/upload-policy';
 import { getPhotoOwner } from './infra/process-photo';
 import { getUploadStatus, listVariantUrlsForPhoto } from './infra/photo-read';
 import { removePhoto } from './infra/remove-photo';
+import { deletePhotos } from './infra/delete-photos';
 import { uploadMediaPhoto, type UploadInitResult } from './infra/upload-commands';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
@@ -32,6 +33,8 @@ export async function getPhotoUploadStatus(db: Database, photoId: PhotoId, owner
 export async function removeMediaPhoto(db: Database, photoId: PhotoId, correlationId: string) {
 	return removePhoto(db, photoId, correlationId);
 }
+
+export { deletePhotos };
 
 export async function getPhotoVariantUrls(db: Database, photoId: PhotoId) {
 	return listVariantUrlsForPhoto(db, photoId);

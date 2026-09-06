@@ -66,6 +66,7 @@ export type { MessageDTO, ThreadListItemDTO } from './infra/serializers';
 export { toThreadListItem } from './infra/serializers';
 
 export { hasEligibleThread, getThreadCreatedAtForPair } from './infra/thread-eligibility';
+export { purgeDormantThreads, type DormantThreadPurgeJobResult } from './infra/dormant-thread-purge-job';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};
