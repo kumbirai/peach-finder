@@ -161,6 +161,12 @@ export {
 	deleteProfilePhoto
 } from './infra/photo-commands';
 export { proposeServiceTag } from './infra/tag-proposal-commands';
+export {
+	adminCreateServiceTag,
+	adminRetireServiceTag,
+	adminUpdateServiceTag,
+	listServiceTagsForAdmin
+} from './infra/admin-service-tag-commands';
 export { handleMediaProcessed, handleMediaRemoved } from './infra/subscriptions';
 export { getProfilePreviewForOwner, type PreviewAudience } from './infra/preview-profile';
 export { loadPrimarySharePhotoUrl } from './infra/read-public-profile';

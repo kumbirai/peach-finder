@@ -13,5 +13,6 @@ describe('requiredRoleFor', () => {
 	it('inherits admin from the admin layout', () => {
 		expect(requiredRoleFor('/admin')).toBe('admin');
 		expect(requiredRoleFor('/admin/api/platform/config')).toBe('admin');
+		expect(requiredRoleFor('/admin/api/provider/service-tags')).toBe('admin');
 	});
 });
