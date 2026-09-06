@@ -14,6 +14,7 @@
 		<li><a href="/admin/accounts">Account lookup</a></li>
 		<li><a href="/admin/moderation">Moderation actions</a></li>
 		<li><a href="/admin/config">Platform config</a></li>
+		<li><a href="/admin/audit">Audit log</a></li>
 	</ul>
 	<form method="POST" action="/api/identity/logout?returnTo=/admin/login">
 		<Button type="submit" variant="secondary">Sign out</Button>

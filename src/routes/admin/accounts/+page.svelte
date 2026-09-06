@@ -117,6 +117,23 @@
 								</div>
 							</details>
 						{/if}
+
+						<a
+							class="audit-link"
+							href="/admin/audit?targetType=user&targetId={item.userId}"
+							data-testid="account-audit-trail"
+						>
+							View audit trail
+						</a>
+						{#if item.providerProfileId}
+							<a
+								class="audit-link"
+								href="/admin/audit?targetType=provider_profile&targetId={item.providerProfileId}"
+								data-testid="profile-audit-trail"
+							>
+								View profile audit trail
+							</a>
+						{/if}
 					</div>
 				</article>
 			{/each}
@@ -300,6 +317,28 @@
 	.billing-facts dd {
 		margin: 0;
 		color: var(--color-ink);
+	}
+
+	.audit-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 44px;
+		padding: 13px 27px;
+		border-radius: var(--radius-pill);
+		border: 1px solid var(--color-stone);
+		background: var(--color-paper);
+		color: var(--color-pine);
+		font-family: var(--font-title-family);
+		font-size: var(--font-title-size);
+		font-weight: var(--font-title-weight);
+		text-decoration: none;
+		width: fit-content;
+	}
+
+	.audit-link:focus-visible {
+		outline: 2px solid var(--color-peach-deep);
+		outline-offset: 2px;
 	}
 
 	.verify-copy {

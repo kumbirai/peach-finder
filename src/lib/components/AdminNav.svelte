@@ -24,7 +24,12 @@
 			label: 'Moderation',
 			match: (p) => p.startsWith('/admin/moderation')
 		},
-		{ href: '/admin/config', label: 'Platform config', match: (p) => p.startsWith('/admin/config') }
+		{
+			href: '/admin/config',
+			label: 'Platform config',
+			match: (p) => p.startsWith('/admin/config')
+		},
+		{ href: '/admin/audit', label: 'Audit log', match: (p) => p.startsWith('/admin/audit') }
 	];
 </script>
 

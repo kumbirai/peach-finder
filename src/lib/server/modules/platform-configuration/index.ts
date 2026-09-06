@@ -36,6 +36,14 @@ import * as mediaProcessing from '../media-processing';
 
 export { getConfig, loadConfigCache, refreshConfigKey, maybeRefreshAll };
 export { CONFIG_KEYS, CONFIG_DEFAULTS, isConfigKey, type ConfigKey };
+export {
+	isValidAuditCursor,
+	readAuditLog,
+	type AuditLogEntryDto,
+	type AuditLogFilters,
+	type ReadAuditLogOptions,
+	type ReadAuditLogResult
+} from './infra/read-audit-log';
 
 const SAFETY_SANITIZE: sanitizeHtml.IOptions = {
 	allowedTags: ['p', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'br'],
