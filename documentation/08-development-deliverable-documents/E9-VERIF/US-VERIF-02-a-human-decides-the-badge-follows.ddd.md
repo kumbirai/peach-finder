@@ -28,9 +28,9 @@ FR-TRUST-02, FR-ADM-02, FR-NOTIF-01.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,13 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-VERIF-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Date:** 2026-09-06
+
+**Approach:** Admin approve/reject decision flow was delivered in US-ADMIN-02 (`approveVerification`, `rejectVerification` in `trust-and-safety`; admin routes under `/admin/api/trust/verification/:caseId/{approve,reject}`; `VerificationDecided` + `BadgeGranted` outbox events). Provider-facing outcome surfaces reuse US-VERIF-01 components: `VerificationStatusBanner` shows rejection reason and resubmit copy on `/provider/dashboard` and `/provider/verify`; `getOwnVerificationStatus` returns `rejectionReason` from the latest rejected case. Badge display rule (`identity_verified AND NOT suppressed`) in `loadBadgeDisplayState` ensures pending submissions never render the badge. `user-notifications.handleVerificationDecided` sends `identity_outcome` email + in-app notifications on approve and reject.
+
+**Tests:** Integration `verification-decision.integration.test.ts` (TC-VERIF-02a–b: badge absent while pending on profile + search; reject reason + resubmit + approve grants badge + notifications; seedVerification badge reset after prior approval). Playwright `testing/playwright/identity-verification.e2e.ts` extended with US-VERIF-02 blocks (TC-VERIF-02a before admin queue mutations; TC-VERIF-02b reject→resubmit→approve journey after US-VERIF-01 submission).
+
+**Deviations:** None. Backend and UI for this story were completed across US-ADMIN-02 and US-VERIF-01; this story adds explicit TC-VERIF-02 coverage and documents the end-to-end decision contract.

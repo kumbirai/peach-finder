@@ -1,12 +1,14 @@
 import sharp from 'sharp';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Database } from '../src/lib/server/db';
 import { seedCore } from './seed-core';
 import { seedPlatform, loadConfigCache } from '../src/lib/server/modules/platform-configuration';
 import { storeIdentityDoc } from '../src/lib/server/modules/media-processing';
 import { photos } from '../src/lib/server/modules/media-processing/infra/schema';
+import { searchProjection } from '../src/lib/server/modules/discovery-search/infra/schema';
 import {
 	badgeState,
+	providerBadges,
 	verificationCases
 } from '../src/lib/server/modules/trust-and-safety/infra/schema';
 import { providerProfiles } from '../src/lib/server/modules/provider-profile/infra/schema';
@@ -111,6 +113,38 @@ async function seedPendingCase(
 	return docPhotoIds;
 }
 
+/** Clears identity-verified badge state so repeatable E2E runs start from pending/unverified. */
+async function resetVerificationBadgeForE2e(
+	db: Database,
+	profileId: string,
+	now: Date
+): Promise<void> {
+	await db
+		.update(badgeState)
+		.set({
+			identityVerified: false,
+			identityVerifiedSince: null,
+			suppressed: false,
+			suppressedReason: null,
+			updatedAt: now
+		})
+		.where(eq(badgeState.providerProfileId, profileId));
+
+	await db
+		.update(searchProjection)
+		.set({ badgeIdentityVerified: false, updatedAt: now })
+		.where(eq(searchProjection.providerProfileId, profileId));
+
+	await db
+		.delete(providerBadges)
+		.where(
+			and(
+				eq(providerBadges.providerProfileId, profileId),
+				eq(providerBadges.badge, 'identity_verified')
+			)
+		);
+}
+
 /** Providers in each identity-verification state for admin queue + E2E flows. */
 export async function seedVerification(db: Database): Promise<void> {
 	await seedCore(db);
@@ -136,6 +170,14 @@ export async function seedVerification(db: Database): Promise<void> {
 	await db
 		.delete(verificationCases)
 		.where(eq(verificationCases.providerProfileId, SEED_DUAL_ROLE_PROFILE_ID));
+
+	for (const profileId of [
+		SEED_VERIF_PENDING_OLD_PROFILE_ID,
+		SEED_VERIF_PENDING_NEW_PROFILE_ID,
+		SEED_DUAL_ROLE_PROFILE_ID
+	]) {
+		await resetVerificationBadgeForE2e(db, profileId, now);
+	}
 
 	await db.execute(sql`
 		delete from shared.rate_limit_bucket

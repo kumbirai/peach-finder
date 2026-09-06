@@ -10,6 +10,7 @@ import {
 } from '../../scripts/seed-core';
 import {
 	SEED_VERIF_PENDING_NEW_CASE_ID,
+	SEED_VERIF_PENDING_NEW_PROFILE_ID,
 	SEED_VERIF_PENDING_OLD_CASE_ID,
 	SEED_VERIF_PENDING_OLD_PROFILE_ID
 } from '../../scripts/seed-verification-constants';
@@ -53,6 +54,47 @@ async function signInAdmin(
 }
 
 test.describe.configure({ mode: 'serial' });
+
+test.describe('US-VERIF-02 a human decides; the badge follows', () => {
+	test('TC-VERIF-02a: pending submissions never render the identity badge on profile or search', async ({
+		page,
+		request
+	}) => {
+		for (const profileId of [
+			SEED_VERIF_PENDING_OLD_PROFILE_ID,
+			SEED_VERIF_PENDING_NEW_PROFILE_ID
+		]) {
+			const profile = await request.get(`/api/provider/profile/${profileId}`);
+			expect(profile.ok()).toBeTruthy();
+			const body = (await profile.json()) as {
+				data: { badges: { identityVerified: boolean } };
+			};
+			expect(body.data.badges.identityVerified).toBe(false);
+		}
+
+		const search = await request.get('/api/discovery/search?limit=50');
+		expect(search.ok()).toBeTruthy();
+		const searchBody = (await search.json()) as {
+			data: Array<{ providerProfileId: string; badges: { identityVerified: boolean } }>;
+		};
+		const lerato = searchBody.data.find(
+			(card) => card.providerProfileId === SEED_VERIF_PENDING_OLD_PROFILE_ID
+		);
+		expect(lerato).toBeTruthy();
+		expect(lerato?.badges.identityVerified).toBe(false);
+
+		const zanele = searchBody.data.find(
+			(card) => card.providerProfileId === SEED_VERIF_PENDING_NEW_PROFILE_ID
+		);
+		expect(zanele).toBeTruthy();
+		expect(zanele?.badges.identityVerified).toBe(false);
+
+		await page.goto(`/provider/${SEED_VERIF_PENDING_OLD_PROFILE_ID}`);
+		await expect(page.getByTestId('profile-trust-badges')).toBeVisible();
+		await expect(page.getByTestId('trust-badge-verified')).toHaveCount(0);
+		await expect(page.getByTestId('trust-badge-active-week')).toBeVisible();
+	});
+});
 
 test.describe('US-ADMIN-02 work the identity queue', () => {
 	test('TC-ADMIN-02a: oldest pending case first with profile and documents', async ({
@@ -257,6 +299,174 @@ test.describe('US-VERIF-01 submit my identity claim', () => {
 	}) => {
 		await signInProvider(page);
 		await page.goto('/provider/verify');
+		const results = await new AxeBuilder({ page }).analyze();
+		const serious = results.violations.filter(
+			(v) => v.impact === 'critical' || v.impact === 'serious'
+		);
+		expect(serious).toEqual([]);
+	});
+});
+
+test.describe('US-VERIF-02 decision outcomes', () => {
+	test('TC-VERIF-02b: reject returns reason and resubmit path; approval grants badge and notifies', async ({
+		page,
+		request
+	}) => {
+		await signInProvider(page);
+
+		const statusBefore = await page.request.get('/api/trust/verification/me');
+		expect(statusBefore.ok()).toBeTruthy();
+		let statusBody = (await statusBefore.json()) as {
+			data: { status: string; caseId?: string };
+		};
+
+		if (statusBody.data.status === 'approved') {
+			throw new Error(
+				'dual-role fixture is already verified; seed-verification must reset badge state before TC-VERIF-02b'
+			);
+		}
+
+		if (statusBody.data.status !== 'pending') {
+			const idBytes = await tinyJpeg('verif-02b-id');
+			const selfieBytes = await tinyJpeg('verif-02b-selfie');
+
+			const idUpload = await page.request.post('/api/media/identity-docs', {
+				multipart: {
+					file: { name: 'id.jpg', mimeType: 'image/jpeg', buffer: idBytes },
+					docKind: 'id'
+				}
+			});
+			expect(idUpload.ok(), await idUpload.text()).toBeTruthy();
+			const idBody = (await idUpload.json()) as { data: { photoId: string } };
+
+			const selfieUpload = await page.request.post('/api/media/identity-docs', {
+				multipart: {
+					file: { name: 'selfie.jpg', mimeType: 'image/jpeg', buffer: selfieBytes },
+					docKind: 'selfie'
+				}
+			});
+			expect(selfieUpload.ok(), await selfieUpload.text()).toBeTruthy();
+			const selfieBody = (await selfieUpload.json()) as { data: { photoId: string } };
+
+			const submit = await page.request.post('/api/trust/verification', {
+				data: { docPhotoIds: [idBody.data.photoId, selfieBody.data.photoId] }
+			});
+			expect(submit.status(), await submit.text()).toBe(201);
+
+			const refreshed = await page.request.get('/api/trust/verification/me');
+			expect(refreshed.ok()).toBeTruthy();
+			statusBody = (await refreshed.json()) as { data: { status: string; caseId?: string } };
+		}
+
+		expect(statusBody.data.status).toBe('pending');
+		expect(statusBody.data.caseId).toBeTruthy();
+
+		const profileBefore = await page.request.get(
+			`/api/provider/profile/${SEED_DUAL_ROLE_PROFILE_ID}`
+		);
+		expect(profileBefore.ok()).toBeTruthy();
+		const profileBeforeBody = (await profileBefore.json()) as {
+			data: { badges: { identityVerified: boolean } };
+		};
+		expect(profileBeforeBody.data.badges.identityVerified).toBe(false);
+
+		await signInAdmin(page, request);
+		const rejected = await request.post(
+			`/admin/api/trust/verification/${statusBody.data.caseId}/reject`,
+			{ data: { reason: 'Selfie did not match the ID photo.' } }
+		);
+		expect(rejected.ok(), await rejected.text()).toBeTruthy();
+		await request.post('/api/dev/notification-dispatch');
+
+		await signInProvider(page);
+		const rejectedStatus = await page.request.get('/api/trust/verification/me');
+		expect(rejectedStatus.ok()).toBeTruthy();
+		const rejectedBody = (await rejectedStatus.json()) as {
+			data: { status: string; rejectionReason: string };
+		};
+		expect(rejectedBody.data.status).toBe('rejected');
+		expect(rejectedBody.data.rejectionReason).toContain('Selfie did not match');
+
+		await page.goto('/provider/dashboard');
+		await expect(page.getByTestId('verification-status-banner')).toHaveAttribute(
+			'data-status',
+			'rejected'
+		);
+		await expect(page.getByTestId('verification-status-banner')).toContainText(
+			'Selfie did not match'
+		);
+		await expect(page.getByRole('link', { name: 'Resubmit' })).toBeVisible();
+
+		await page.goto('/provider/verify');
+		await expect(page.getByTestId('verification-status-banner')).toContainText(
+			'Selfie did not match'
+		);
+		await expect(page.getByRole('button', { name: 'Resubmit for review' })).toBeVisible();
+
+		const idBytes = await tinyJpeg('resubmit-id');
+		const selfieBytes = await tinyJpeg('resubmit-selfie');
+		const idUpload = await page.request.post('/api/media/identity-docs', {
+			multipart: {
+				file: { name: 'id.jpg', mimeType: 'image/jpeg', buffer: idBytes },
+				docKind: 'id'
+			}
+		});
+		expect(idUpload.ok(), await idUpload.text()).toBeTruthy();
+		const idBody = (await idUpload.json()) as { data: { photoId: string } };
+
+		const selfieUpload = await page.request.post('/api/media/identity-docs', {
+			multipart: {
+				file: { name: 'selfie.jpg', mimeType: 'image/jpeg', buffer: selfieBytes },
+				docKind: 'selfie'
+			}
+		});
+		expect(selfieUpload.ok(), await selfieUpload.text()).toBeTruthy();
+		const selfieBody = (await selfieUpload.json()) as { data: { photoId: string } };
+
+		const resubmit = await page.request.post('/api/trust/verification/resubmit', {
+			data: { docPhotoIds: [idBody.data.photoId, selfieBody.data.photoId] }
+		});
+		expect(resubmit.status(), await resubmit.text()).toBe(201);
+		const resubmitBody = (await resubmit.json()) as { data: { caseId: string } };
+
+		await signInAdmin(page, request);
+		const approved = await request.post(
+			`/admin/api/trust/verification/${resubmitBody.data.caseId}/approve`,
+			{ data: {} }
+		);
+		expect(approved.ok(), await approved.text()).toBeTruthy();
+		await request.post('/api/dev/notification-dispatch');
+
+		await signInProvider(page);
+		const approvedProfile = await page.request.get(
+			`/api/provider/profile/${SEED_DUAL_ROLE_PROFILE_ID}`
+		);
+		expect(approvedProfile.ok()).toBeTruthy();
+		const approvedProfileBody = (await approvedProfile.json()) as {
+			data: { badges: { identityVerified: boolean } };
+		};
+		expect(approvedProfileBody.data.badges.identityVerified).toBe(true);
+
+		let notified = false;
+		for (let attempt = 0; attempt < 5 && !notified; attempt++) {
+			const notifRes = await page.request.get('/api/notifications/in-app');
+			expect(notifRes.ok()).toBeTruthy();
+			const notifBody = (await notifRes.json()) as {
+				data: Array<{ category: string; title: string }>;
+			};
+			notified = notifBody.data.some((n) => n.category === 'identity_outcome');
+		}
+		expect(notified).toBeTruthy();
+
+		await page.goto(`/provider/${SEED_DUAL_ROLE_PROFILE_ID}`);
+		await expect(page.getByTestId('trust-badge-verified')).toBeVisible();
+	});
+
+	test('has no critical or serious axe violations on provider dashboard after verification outcome', async ({
+		page
+	}) => {
+		await signInProvider(page);
+		await page.goto('/provider/dashboard');
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
