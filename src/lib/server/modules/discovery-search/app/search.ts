@@ -19,6 +19,7 @@ export type SearchInput = {
 	available?: boolean;
 	verified?: boolean;
 	minRating?: number;
+	minReviews?: number;
 	lang?: string[];
 	tag?: string[];
 	priceMin?: number;
@@ -51,6 +52,9 @@ function buildStructuredQuery(input: SearchInput): StructuredQuery {
 			...(input.tag ? { serviceTagIds: input.tag } : {}),
 			...(input.minRating !== undefined && Number.isFinite(input.minRating)
 				? { minRating: input.minRating }
+				: {}),
+			...(input.minReviews !== undefined && Number.isFinite(input.minReviews)
+				? { minReviews: input.minReviews }
 				: {}),
 			...(input.priceMin !== undefined ? { priceMin: input.priceMin } : {}),
 			...(input.priceMax !== undefined ? { priceMax: input.priceMax } : {}),

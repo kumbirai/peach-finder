@@ -1,5 +1,6 @@
 import type { AuthContext } from '../../../shared/auth-context';
 import { gatedActionHref } from '../../identity-and-access';
+import { toRatingDisplay } from '../../provider-reviews';
 import { resolveLanguageLabels } from '../domain/language-labels';
 
 export type SearchCardRow = {
@@ -59,10 +60,7 @@ function messageHrefForCard(providerProfileId: string, viewer: AuthContext): str
 }
 
 export function toSearchCard(row: SearchCardRow, viewer: AuthContext): SearchCard {
-	const rating =
-		row.ratingCount === 0 || row.ratingAverage === null
-			? { state: 'new' as const }
-			: { average: Number(row.ratingAverage), count: row.ratingCount };
+	const rating = toRatingDisplay(row.ratingAverage, row.ratingCount);
 
 	return {
 		providerProfileId: row.providerProfileId,

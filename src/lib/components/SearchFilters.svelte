@@ -12,6 +12,7 @@
 		available = false,
 		langs = [],
 		minRating = null,
+		minReviews = null,
 		priceMax = null,
 		appliedIntents = [],
 		availableHref = '/',
@@ -23,6 +24,7 @@
 		available?: boolean;
 		langs?: string[];
 		minRating?: number | null;
+		minReviews?: number | null;
 		priceMax?: number | null;
 		appliedIntents?: AppliedIntent[];
 		availableHref?: string;
@@ -50,6 +52,7 @@
 			langs,
 			tags: [],
 			minRating,
+			minReviews,
 			priceMin: null,
 			priceMax,
 			near: false,

@@ -4,10 +4,21 @@ import {
 	formatPublicReviewDate,
 	toEligibility,
 	toOwnReview,
-	toPublicReview
+	toPublicReview,
+	toRatingDisplay
 } from './serializers';
 
 describe('provider-reviews serializers', () => {
+	it('TC-REV-04b: toRatingDisplay renders New for zero-review providers', () => {
+		expect(toRatingDisplay(null, 0)).toEqual({ state: 'new' });
+		expect(toRatingDisplay('4.5', 0)).toEqual({ state: 'new' });
+	});
+
+	it('TC-REV-04b: toRatingDisplay never emits a zero score', () => {
+		expect(toRatingDisplay('4.5', 3)).toEqual({ average: 4.5, count: 3 });
+		expect(JSON.stringify(toRatingDisplay(null, 0))).not.toContain('0.0');
+	});
+
 	it('abbreviates reviewer names for public display', () => {
 		expect(abbreviateReviewerName('Thandi Mokoena')).toBe('Thandi M.');
 		expect(abbreviateReviewerName('Former user')).toBe('Former user');

@@ -7,6 +7,7 @@ export type SearchUrlState = {
 	langs: string[];
 	tags: string[];
 	minRating: number | null;
+	minReviews: number | null;
 	priceMin: number | null;
 	priceMax: number | null;
 	near: boolean;
@@ -36,6 +37,7 @@ export function structuredQueryToParams(state: SearchUrlState): URLSearchParams 
 	for (const lang of state.langs) params.append('lang', lang);
 	for (const tag of state.tags) params.append('tag', tag);
 	if (state.minRating != null) params.set('minRating', String(state.minRating));
+	if (state.minReviews != null) params.set('minReviews', String(state.minReviews));
 	if (state.priceMin != null) params.set('priceMin', String(state.priceMin));
 	if (state.priceMax != null) params.set('priceMax', String(state.priceMax));
 	if (state.near) params.set('near', '1');
@@ -64,8 +66,10 @@ export function removeIntentFromState(state: SearchUrlState, intentKey: string):
 			next.lng = null;
 			next.areaSlug = null;
 			break;
+		case 'highlyRated':
 		case 'rating':
 			next.minRating = null;
+			next.minReviews = null;
 			break;
 		default:
 			if (intentKey.startsWith('priceMax:')) {
@@ -93,6 +97,7 @@ export function hasStructuredFilters(state: SearchUrlState): boolean {
 		state.langs.length > 0 ||
 		state.tags.length > 0 ||
 		state.minRating != null ||
+		state.minReviews != null ||
 		state.priceMin != null ||
 		state.priceMax != null ||
 		state.near ||

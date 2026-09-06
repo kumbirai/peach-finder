@@ -41,6 +41,7 @@
 			langs: string[];
 			tags: string[];
 			minRating: number | null;
+			minReviews: number | null;
 			priceMin: number | null;
 			priceMax: number | null;
 			near: boolean;
@@ -62,6 +63,7 @@
 		langs: data.langs,
 		tags: data.tags,
 		minRating: data.minRating,
+		minReviews: data.minReviews,
 		priceMin: data.priceMin,
 		priceMax: data.priceMax,
 		near: data.near,
@@ -123,6 +125,7 @@
 			data.langs.length === 0 &&
 			data.tags.length === 0 &&
 			data.minRating == null &&
+			data.minReviews == null &&
 			data.priceMin == null &&
 			data.priceMax == null &&
 			!data.near &&
@@ -140,6 +143,7 @@
 			langs: data.langs,
 			tags: data.tags,
 			minRating: data.minRating,
+			minReviews: data.minReviews,
 			priceMin: data.priceMin,
 			priceMax: data.priceMax,
 			near: data.near,
@@ -213,6 +217,7 @@
 				params.has('lang') ||
 				params.has('tag') ||
 				params.has('minRating') ||
+				params.has('minReviews') ||
 				params.has('priceMin') ||
 				params.has('priceMax') ||
 				params.get('near') === '1' ||
@@ -261,6 +266,7 @@
 			available={data.available}
 			langs={data.langs}
 			minRating={data.minRating}
+			minReviews={data.minReviews}
 			priceMax={data.priceMax}
 			appliedIntents={visibleAppliedIntents}
 			{availableHref}

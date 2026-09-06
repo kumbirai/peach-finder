@@ -18,6 +18,7 @@ const sampleState = {
 	langs: ['zu'],
 	tags: [],
 	minRating: null,
+	minReviews: null,
 	priceMin: null,
 	priceMax: null,
 	near: false,

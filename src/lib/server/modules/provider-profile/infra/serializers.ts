@@ -1,6 +1,6 @@
 import type { AuthContext } from '../../../shared/auth-context';
 import type { ProviderProfileId } from '../../../shared/ids';
-import type { PublicReviewDto } from '../../provider-reviews';
+import { toRatingDisplay, type PublicReviewDto } from '../../provider-reviews';
 
 export type PublicService = {
 	id: string;
@@ -60,10 +60,7 @@ export type EnrichedProfileView = ProfileViewRow & {
 export function toPublicProfile(view: EnrichedProfileView, viewer: AuthContext): PublicProfile {
 	const includePhone = view.phone !== null && (view.phoneVisible || viewer.role !== 'anonymous');
 
-	const rating =
-		view.ratingCount === 0 || view.ratingAverage === null
-			? { state: 'new' as const }
-			: { average: Number(view.ratingAverage), count: view.ratingCount };
+	const rating = toRatingDisplay(view.ratingAverage, view.ratingCount);
 
 	return {
 		id: view.id,

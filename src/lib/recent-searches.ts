@@ -29,6 +29,7 @@ function isSearchUrlState(value: unknown): value is SearchUrlState {
 		Array.isArray(state.tags) &&
 		state.tags.every((tag) => typeof tag === 'string') &&
 		(state.minRating === null || typeof state.minRating === 'number') &&
+		(state.minReviews === null || typeof state.minReviews === 'number') &&
 		(state.priceMin === null || typeof state.priceMin === 'number') &&
 		(state.priceMax === null || typeof state.priceMax === 'number') &&
 		typeof state.near === 'boolean' &&

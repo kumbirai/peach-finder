@@ -13,6 +13,7 @@ export type ManualFilters = {
 	languageCodes?: string[];
 	serviceTagIds?: string[];
 	minRating?: number;
+	minReviews?: number;
 	priceMin?: number;
 	priceMax?: number;
 	nearMe?: boolean;
@@ -86,7 +87,7 @@ function applyMapsTo(sq: StructuredQuery, entry: LexiconEntry, config: ParseConf
 			sq.minRating = value;
 			sq.minRatingCount = minCount;
 			sq.appliedIntents.push({
-				key: 'rating',
+				key: 'highlyRated',
 				label: `Highly rated (${value}+)`,
 				source: 'query'
 			});
@@ -178,16 +179,29 @@ export function parseQuery(
 	}
 	if (manual.minRating != null) {
 		sq.minRating = Math.max(sq.minRating ?? 0, manual.minRating);
-		const hasQueryRatingIntent = sq.appliedIntents.some(
-			(intent) => intent.key === 'rating' && intent.source === 'query'
+		const hasHighlyRatedIntent = sq.appliedIntents.some(
+			(intent) => intent.key === 'highlyRated' && intent.source === 'query'
 		);
-		// Manual-only rating: require ≥1 review so zero-review providers stay "New" (FR-REV-05).
-		// Query-derived "highly rated" keeps its lexicon min review count (default 3).
-		sq.minRatingCount = hasQueryRatingIntent ? Math.max(sq.minRatingCount, 1) : 1;
-		if (!sq.appliedIntents.some((intent) => intent.key === 'rating')) {
+		if (manual.minReviews != null) {
+			sq.minRatingCount = manual.minReviews;
+		} else if (hasHighlyRatedIntent) {
+			sq.minRatingCount = Math.max(sq.minRatingCount, 1);
+		} else {
+			// Manual-only rating: require ≥1 review so zero-review providers stay "New" (FR-REV-05).
+			sq.minRatingCount = 1;
+		}
+		const isHighlyRated =
+			manual.minReviews != null &&
+			manual.minReviews >= config.highlyRatedMinReviews &&
+			manual.minRating >= config.highlyRatedMinAverage;
+		if (
+			!sq.appliedIntents.some((intent) => intent.key === 'highlyRated' || intent.key === 'rating')
+		) {
 			sq.appliedIntents.push({
-				key: 'rating',
-				label: `Rating ${manual.minRating}+`,
+				key: isHighlyRated ? 'highlyRated' : 'rating',
+				label: isHighlyRated
+					? `Highly rated (${manual.minRating}+)`
+					: `Rating ${manual.minRating}+`,
 				source: 'manual'
 			});
 		}

@@ -14,6 +14,7 @@ const emptyState = (): SearchUrlState => ({
 	langs: [],
 	tags: [],
 	minRating: null,
+	minReviews: null,
 	priceMin: null,
 	priceMax: null,
 	near: false,
@@ -55,5 +56,15 @@ describe('manual-filters', () => {
 				priceMax: 40_000
 			})
 		).toBe(true);
+	});
+
+	it('does not mark manual rating chip active when highly rated review floor is set', () => {
+		expect(
+			isManualFilterActive(DISCOVERY_MANUAL_FILTER_CHIPS[2]!, {
+				...emptyState(),
+				minRating: 4.5,
+				minReviews: 3
+			})
+		).toBe(false);
 	});
 });

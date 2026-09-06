@@ -23,8 +23,10 @@ export {
 	toEligibility,
 	toOwnReview,
 	toPublicReview,
+	toRatingDisplay,
 	type OwnReviewDto,
 	type PublicReviewDto,
+	type RatingDisplay,
 	type ReviewEligibilityDto
 } from './infra/serializers';
 

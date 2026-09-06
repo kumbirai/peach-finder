@@ -15,6 +15,7 @@ function readSearchParams(url: URL) {
 	const langs = url.searchParams.getAll('lang');
 	const tags = url.searchParams.getAll('tag');
 	const minRating = parseOptionalFiniteNumber(url.searchParams.get('minRating'));
+	const minReviews = parseOptionalFiniteNumber(url.searchParams.get('minReviews'));
 	const priceMin = parseOptionalFiniteNumber(url.searchParams.get('priceMin'));
 	const priceMax = parseOptionalFiniteNumber(url.searchParams.get('priceMax'));
 	const near = url.searchParams.get('near') === '1';
@@ -28,6 +29,7 @@ function readSearchParams(url: URL) {
 		langs,
 		tags,
 		minRating,
+		minReviews,
 		priceMin,
 		priceMax,
 		near,
@@ -44,6 +46,7 @@ function hasStructuredFilters(params: ReturnType<typeof readSearchParams>): bool
 		params.langs.length > 0 ||
 		params.tags.length > 0 ||
 		params.minRating != null ||
+		params.minReviews != null ||
 		params.priceMin != null ||
 		params.priceMax != null ||
 		params.near ||
@@ -78,6 +81,7 @@ function canonicalizeNaturalLanguageQuery(
 	for (const lang of sq.languageCodes) params.append('lang', lang);
 	for (const tag of sq.serviceTagIds) params.append('tag', tag);
 	if (sq.minRating != null) params.set('minRating', String(sq.minRating));
+	if (sq.minRatingCount > 1) params.set('minReviews', String(sq.minRatingCount));
 	if (sq.nearMe) params.set('near', '1');
 	return `/?${params.toString()}`;
 }
@@ -97,6 +101,7 @@ export async function load({ url, locals, setHeaders }) {
 		langs,
 		tags,
 		minRating,
+		minReviews,
 		priceMin,
 		priceMax,
 		near,
@@ -114,6 +119,7 @@ export async function load({ url, locals, setHeaders }) {
 			lang: langs,
 			tag: tags,
 			...(minRating != null ? { minRating } : {}),
+			...(minReviews != null ? { minReviews } : {}),
 			...(priceMin != null ? { priceMin } : {}),
 			...(priceMax != null ? { priceMax } : {}),
 			...(near ? { near: true } : {}),
@@ -136,6 +142,7 @@ export async function load({ url, locals, setHeaders }) {
 		langs,
 		tags,
 		minRating,
+		minReviews,
 		priceMin,
 		priceMax,
 		near,

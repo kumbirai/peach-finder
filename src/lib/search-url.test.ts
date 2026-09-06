@@ -20,6 +20,7 @@ describe('search-url', () => {
 			langs: ['zu'],
 			tags: ['tag-1'],
 			minRating: 4.5,
+			minReviews: null,
 			priceMin: null,
 			priceMax: 40_000,
 			near: true,
@@ -32,10 +33,31 @@ describe('search-url', () => {
 		expect(params.getAll('lang')).toEqual(['zu']);
 		expect(params.getAll('tag')).toEqual(['tag-1']);
 		expect(params.get('minRating')).toBe('4.5');
+		expect(params.get('minReviews')).toBeNull();
 		expect(params.get('priceMax')).toBe('40000');
 		expect(params.get('near')).toBe('1');
 		expect(params.get('lat')).toBe('-26.1448');
 		expect(params.get('lng')).toBe('28.0416');
+	});
+
+	it('serializes minReviews when preserving highly rated threshold', () => {
+		const params = structuredQueryToParams({
+			q: '',
+			verified: false,
+			available: false,
+			langs: [],
+			tags: [],
+			minRating: 4.5,
+			minReviews: 3,
+			priceMin: null,
+			priceMax: null,
+			near: false,
+			lat: null,
+			lng: null,
+			areaSlug: null
+		});
+		expect(params.get('minRating')).toBe('4.5');
+		expect(params.get('minReviews')).toBe('3');
 	});
 
 	it('removes a language intent chip from URL state', () => {
@@ -47,6 +69,7 @@ describe('search-url', () => {
 				langs: ['zu', 'en'],
 				tags: [],
 				minRating: null,
+				minReviews: null,
 				priceMin: null,
 				priceMax: null,
 				near: false,
@@ -68,6 +91,7 @@ describe('search-url', () => {
 				langs: [],
 				tags: [],
 				minRating: null,
+				minReviews: null,
 				priceMin: null,
 				priceMax: 40_000,
 				near: false,
@@ -80,6 +104,29 @@ describe('search-url', () => {
 		expect(next.priceMax).toBeNull();
 	});
 
+	it('removes highly rated intent and clears review floor from URL state', () => {
+		const next = removeIntentFromState(
+			{
+				q: '',
+				verified: false,
+				available: false,
+				langs: [],
+				tags: [],
+				minRating: 4.5,
+				minReviews: 3,
+				priceMin: null,
+				priceMax: null,
+				near: false,
+				lat: null,
+				lng: null,
+				areaSlug: null
+			},
+			'highlyRated'
+		);
+		expect(next.minRating).toBeNull();
+		expect(next.minReviews).toBeNull();
+	});
+
 	it('removes near intent and clears proximity coordinates', () => {
 		const next = removeIntentFromState(
 			{
@@ -89,6 +136,7 @@ describe('search-url', () => {
 				langs: [],
 				tags: [],
 				minRating: null,
+				minReviews: null,
 				priceMin: null,
 				priceMax: null,
 				near: true,

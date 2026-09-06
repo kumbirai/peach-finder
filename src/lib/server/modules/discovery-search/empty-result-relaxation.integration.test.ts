@@ -90,6 +90,7 @@ describe('US-DISC-07 empty result relaxation integration', () => {
 			langs: ['zu'],
 			tags: [],
 			minRating: null,
+			minReviews: null,
 			priceMin: null,
 			priceMax: 10_000,
 			near: false,

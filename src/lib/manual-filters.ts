@@ -34,7 +34,7 @@ export function isManualFilterActive(chip: ManualFilterChip, state: SearchUrlSta
 		case 'priceMax':
 			return state.priceMax === chip.cents;
 		case 'minRating':
-			return state.minRating === chip.value;
+			return state.minRating === chip.value && state.minReviews == null;
 		case 'lang':
 			return state.langs.includes(chip.code);
 	}
@@ -54,7 +54,13 @@ export function toggleManualFilter(chip: ManualFilterChip, state: SearchUrlState
 			next.priceMax = state.priceMax === chip.cents ? null : chip.cents;
 			break;
 		case 'minRating':
-			next.minRating = state.minRating === chip.value ? null : chip.value;
+			if (state.minRating === chip.value && state.minReviews == null) {
+				next.minRating = null;
+				next.minReviews = null;
+			} else {
+				next.minRating = chip.value;
+				next.minReviews = null;
+			}
 			break;
 		case 'lang':
 			if (state.langs.includes(chip.code)) {

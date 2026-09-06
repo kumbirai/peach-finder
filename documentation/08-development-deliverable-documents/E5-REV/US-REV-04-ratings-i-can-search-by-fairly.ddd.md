@@ -28,9 +28,9 @@ FR-REV-05, FR-SRCH-02.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,24 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-REV-04 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+### Session 2026-09-06 — feat/initial-implementation — Cursor
+
+**Approach:** US-DISC-02/04 already wired highly-rated lexicon parsing, minimum-rating filters, and card "New" display. This story centralised the FR-REV-05 rating display rule in `provider-reviews` via `toRatingDisplay`, reused it from `discovery-search` and `provider-profile` serializers, preserved the configured highly-rated review-count floor across NL canonicalisation via a `minReviews` URL param and `highlyRated` intent key, and added explicit US-REV-04 coverage for the threshold (default ≥4.5 with ≥3 reviews) and zero-review "New" behaviour on cards and profiles.
+
+**Files touched:**
+- `src/lib/server/modules/provider-reviews/infra/serializers.ts` (+ test) — `toRatingDisplay`, exported `RatingDisplay`
+- `src/lib/server/modules/discovery-search/app/serializers.ts` — uses shared rating display helper
+- `src/lib/server/modules/provider-profile/infra/serializers.ts` — profile "New" via shared helper
+- `src/lib/search-url.ts` (+ test), `src/routes/+page.server.ts`, `src/routes/+page.svelte`, `src/lib/manual-filters.ts` — `minReviews` URL state preserves highly-rated review floor after NL canonicalisation
+- `src/lib/server/modules/discovery-search/ratings-search-fairly.integration.test.ts` — TC-REV-04a/b
+- `testing/playwright/ratings-search-fairly.e2e.ts` — live-stack Playwright for US-REV-04
+- `scripts/seed-core.ts` — `SEED_CORE_ZERO_REVIEW_*` constants for e2e profile assertions
+
+**Assumption:** Highly-rated threshold remains the platform-config defaults (4.5 average, 3 reviews) seeded by `seedPlatform`; admin retuning is covered by US-ADMIN-06.
+
+**Verification:** `npm run check`, `npm run lint`, and `npm run test` green for touched modules; Playwright `ratings-search-fairly.e2e.ts` run via `npm run test:e2e` against live stack when Postgres is available.
+
+**Follow-ups:** None for this story.

@@ -22,6 +22,19 @@ export type ReviewEligibilityDto = {
 	reason?: string;
 };
 
+export type RatingDisplay = { average: number; count: number } | { state: 'new' };
+
+/** FR-REV-05: zero-review providers render "New", never a zero score. */
+export function toRatingDisplay(
+	average: string | number | null | undefined,
+	count: number
+): RatingDisplay {
+	if (count === 0 || average == null) {
+		return { state: 'new' };
+	}
+	return { average: Number(average), count };
+}
+
 export function toEligibility(state: { eligible: boolean; reason?: string }): ReviewEligibilityDto {
 	if (state.eligible) {
 		return { eligible: true };

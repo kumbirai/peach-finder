@@ -25,6 +25,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 
 	const lexicon = await getActiveLexiconForSearch(db);
 	const minRating = parseOptionalFiniteNumber(url.searchParams.get('minRating'));
+	const minReviews = parseOptionalFiniteNumber(url.searchParams.get('minReviews'));
 	const lat = parseOptionalCoord(url.searchParams.get('lat'));
 	const lng = parseOptionalCoord(url.searchParams.get('lng'));
 
@@ -35,6 +36,7 @@ export const GET: RequestHandler = async ({ url, locals, getClientAddress }) => 
 			verified: url.searchParams.get('verified') === '1',
 			available: url.searchParams.get('available') === '1',
 			...(minRating != null ? { minRating } : {}),
+			...(minReviews != null ? { minReviews } : {}),
 			lang: url.searchParams.getAll('lang'),
 			tag: url.searchParams.getAll('tag'),
 			...(url.searchParams.get('priceMin')

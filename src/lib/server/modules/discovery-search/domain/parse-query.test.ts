@@ -67,6 +67,27 @@ describe('parseQuery', () => {
 		expect(sq.freeText).toBe('');
 	});
 
+	it('TC-REV-04a: highly rated intent uses configured threshold defaults', () => {
+		const sq = parseQuery('highly rated', lexicon, {}, config);
+		expect(sq.minRating).toBe(4.5);
+		expect(sq.minRatingCount).toBe(3);
+		expect(sq.appliedIntents).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					key: 'highlyRated',
+					label: 'Highly rated (4.5+)',
+					source: 'query'
+				})
+			])
+		);
+	});
+
+	it('TC-REV-04a: explicit minReviews URL param is not raised by empty-query defaults', () => {
+		const sq = parseQuery('', lexicon, { minRating: 4, minReviews: 2 }, config);
+		expect(sq.minRating).toBe(4);
+		expect(sq.minRatingCount).toBe(2);
+	});
+
 	it('TC-DISC-02a: Massage therapist who speaks Zulu', () => {
 		const sq = parseQuery('Massage therapist who speaks Zulu', lexicon, {}, config);
 		expect(sq.languageCodes).toEqual(['zu']);
