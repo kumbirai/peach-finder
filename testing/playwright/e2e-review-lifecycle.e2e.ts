@@ -1,6 +1,8 @@
 import { expect, test, type BrowserContextOptions } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {
+	SEED_REV_ELIGIBLE_SEEKER_EMAIL,
+	SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
 	SEED_REV_INELIGIBLE_REASON,
 	SEED_REV_INELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_INELIGIBLE_SEEKER_ID,
@@ -143,6 +145,111 @@ test.describe('US-REV-01 leave a review that counts', () => {
 		expect(duplicateRes.status()).toBe(409);
 		const duplicateBody = (await duplicateRes.json()) as { error: { code: string } };
 		expect(duplicateBody.error.code).toBe('REVIEW_ALREADY_EXISTS');
+
+		await context.close();
+	});
+});
+
+test.describe('US-REV-02 live immediately, human-removable only', () => {
+	test.beforeAll(async ({ browser, request }) => {
+		const reseedRes = await request.post('/api/dev/reseed-reviews');
+		expect(reseedRes.ok()).toBeTruthy();
+
+		const ageRes = await request.post('/api/dev/review-thread-age', {
+			data: {
+				seekerId: SEED_REV_INELIGIBLE_SEEKER_ID,
+				providerProfileId: SEED_REV_PROVIDER_PROFILE_ID,
+				ageHours: 48
+			}
+		});
+		expect(ageRes.ok()).toBeTruthy();
+
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		await signInSeeker(
+			page,
+			SEED_REV_INELIGIBLE_SEEKER_EMAIL,
+			SEED_REV_INELIGIBLE_SEEKER_PASSWORD,
+			`/provider/${SEED_REV_PROVIDER_PROFILE_ID}/review`
+		);
+
+		const submitRes = await page.request.post('/api/reviews', {
+			data: {
+				providerProfileId: SEED_REV_PROVIDER_PROFILE_ID,
+				rating: 5,
+				body: 'Professional and attentive - would book again.'
+			}
+		});
+		expect(submitRes.status(), await submitRes.text()).toBe(201);
+		await context.close();
+	});
+
+	test('TC-REV-02a: submitted review is live on profile with no pending state', async ({
+		browser
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+
+		await page.goto(`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`);
+		await expect(page.getByTestId('profile-reviews')).toBeVisible();
+		await expect(
+			page.getByTestId('profile-review-item').filter({
+				hasText: 'Professional and attentive'
+			})
+		).toBeVisible();
+		await expect(page.getByText(/pending|queued|under review/i)).toHaveCount(0);
+
+		await context.close();
+	});
+
+	test('TC-REV-02b: rating aggregate reflects new review in the same profile read', async ({
+		request
+	}) => {
+		const profileRes = await request.get(`/api/provider/profile/${SEED_REV_PROVIDER_PROFILE_ID}`);
+		expect(profileRes.ok()).toBeTruthy();
+		const profileBody = (await profileRes.json()) as {
+			data: { rating: { average: number; count: number } | { state: 'new' } };
+		};
+		expect(profileBody.data.rating).toEqual({ average: 4.5, count: 2 });
+	});
+
+	test('TC-REV-02c: reporting a review does not remove it', async ({ browser, request }) => {
+		const reviewsRes = await request.get(`/api/reviews/provider/${SEED_REV_PROVIDER_PROFILE_ID}`);
+		expect(reviewsRes.ok()).toBeTruthy();
+		const reviewsBody = (await reviewsRes.json()) as {
+			data: Array<{ id: string; body: string }>;
+		};
+		const target = reviewsBody.data.find((review) =>
+			review.body.includes('Professional and attentive')
+		);
+		expect(target).toBeDefined();
+
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		await signInSeeker(
+			page,
+			SEED_REV_ELIGIBLE_SEEKER_EMAIL,
+			SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
+			`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+
+		for (const reason of ['spam_scam', 'harassment'] as const) {
+			const reportRes = await page.request.post('/api/trust/reports', {
+				data: {
+					targetType: 'review',
+					targetId: target!.id,
+					reason
+				}
+			});
+			expect(reportRes.status(), await reportRes.text()).toBe(201);
+		}
+
+		const afterRes = await page.request.get(
+			`/api/reviews/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(afterRes.ok()).toBeTruthy();
+		const afterBody = (await afterRes.json()) as { data: Array<{ id: string }> };
+		expect(afterBody.data.some((review) => review.id === target!.id)).toBe(true);
 
 		await context.close();
 	});

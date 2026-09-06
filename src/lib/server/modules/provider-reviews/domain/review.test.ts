@@ -27,4 +27,15 @@ describe('createReview', () => {
 			expect(result.issues[0]?.path).toBe('body');
 		}
 	});
+
+	it('TC-REV-02a: accepts provocative text without content screening', () => {
+		const result = createReview({
+			rating: 1,
+			body: 'spam scam harassment — no pre-moderation filter applies.'
+		});
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.value.body).toContain('spam scam');
+		}
+	});
 });
