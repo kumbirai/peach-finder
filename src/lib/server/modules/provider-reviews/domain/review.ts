@@ -12,6 +12,23 @@ export function createReview(input: {
 	rating: number;
 	body?: string | null;
 }): { ok: true; value: ReviewDraft } | { ok: false; issues: ValidationIssue[] } {
+	return validateReviewDraft(input);
+}
+
+export function editReview(
+	current: ReviewDraft,
+	input: { rating?: number; body?: string | null }
+): { ok: true; value: ReviewDraft } | { ok: false; issues: ValidationIssue[] } {
+	return validateReviewDraft({
+		rating: input.rating ?? current.rating,
+		...(input.body !== undefined ? { body: input.body } : { body: current.body })
+	});
+}
+
+function validateReviewDraft(input: {
+	rating: number;
+	body?: string | null;
+}): { ok: true; value: ReviewDraft } | { ok: false; issues: ValidationIssue[] } {
 	const issues: ValidationIssue[] = [];
 
 	if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) {

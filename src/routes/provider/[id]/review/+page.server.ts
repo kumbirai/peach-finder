@@ -3,6 +3,7 @@ import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
 import {
 	getReviewEligibilityDto,
+	getSeekerReviewForProvider,
 	parseProviderProfileId
 } from '$lib/server/modules/provider-reviews';
 import { getPublicProfile } from '$lib/server/modules/provider-profile';
@@ -24,10 +25,13 @@ export async function load({ params, locals }) {
 		new Date()
 	);
 
+	const ownReview = await getSeekerReviewForProvider(db, locals.auth.userId!, parsed.value);
+
 	return {
 		providerProfileId: params.id,
 		displayName: profile.value.displayName,
 		profilePath: `/provider/${params.id}`,
-		eligibility
+		eligibility,
+		ownReview
 	};
 }

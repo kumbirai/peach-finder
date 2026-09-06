@@ -9,6 +9,9 @@ export {
 } from './infra/list-public-reviews';
 export { getReviewEligibility, getReviewEligibilityDto } from './infra/review-eligibility';
 export { submitReview } from './infra/submit-review';
+export { editReview } from './infra/edit-review';
+export { deleteReview } from './infra/delete-review';
+export { getSeekerReviewForProvider } from './infra/review-queries';
 export {
 	listReviewsWrittenBySeeker,
 	countReviewsOnProfile,

@@ -1,9 +1,11 @@
 import type { Database } from '../src/lib/server/db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { seedCore } from './seed-core';
 import { users } from '../src/lib/server/modules/identity-and-access/infra/schema';
 import { threads } from '../src/lib/server/modules/direct-messaging/infra/schema';
 import { reviews } from '../src/lib/server/modules/provider-reviews/infra/schema';
+import { recomputeRatingAggregate } from '../src/lib/server/modules/provider-reviews/infra/rating-aggregate';
+import { asId } from '../src/lib/server/shared/ids';
 import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
 
 export const SEED_REV_PROVIDER_PROFILE_ID = '01900000-0000-7000-8000-000000000103';
@@ -114,4 +116,18 @@ export async function seedReviews(db: Database): Promise<void> {
 		body: 'Already reviewed this provider.',
 		createdAt: existingCreatedAt
 	});
+
+	await db.transaction(async (tx) => {
+		await recomputeRatingAggregate(
+			tx,
+			asId<'ProviderProfileId'>(SEED_REV_PROVIDER_PROFILE_ID),
+			'seed-reviews',
+			now
+		);
+	});
+
+	await db.execute(sql`
+		delete from shared.rate_limit_bucket
+		where bucket_key like 'review_submit:account:%'
+	`);
 }

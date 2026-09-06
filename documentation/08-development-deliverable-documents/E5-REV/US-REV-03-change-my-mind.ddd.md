@@ -26,9 +26,9 @@ FR-REV-04.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -45,3 +45,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-REV-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-REV-04 end-to-end in `provider-reviews`: domain `editReview`, infra `editReview`/`deleteReview` with ownership checks and in-transaction `recomputeRatingAggregate` + `RatingAggregateChanged`, API `PATCH`/`DELETE /api/reviews/:reviewId`, seeker manage surface on `/provider/[id]/review` (edit/delete with two-step confirmation per FR-UX-05), `scripts/seed-reviews.ts` aggregate recompute on reseed, unit tests in `domain/review.test.ts`, integration tests in `edit-delete-review.integration.test.ts` (TC-REV-03a–b), and Playwright `US-REV-03` block in `testing/playwright/e2e-review-lifecycle.e2e.ts`.
+
+**Deviations:** None.
+
+**Follow-ups:** US-REV-05 provider reply and full `e2e-review-lifecycle` steps 4–7 (reply, report-to-admin-removal journey) remain for later REV stories.

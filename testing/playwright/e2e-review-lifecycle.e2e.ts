@@ -3,6 +3,9 @@ import AxeBuilder from '@axe-core/playwright';
 import {
 	SEED_REV_ELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
+	SEED_REV_EXISTING_REVIEW_ID,
+	SEED_REV_EXISTING_SEEKER_EMAIL,
+	SEED_REV_EXISTING_SEEKER_PASSWORD,
 	SEED_REV_INELIGIBLE_REASON,
 	SEED_REV_INELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_INELIGIBLE_SEEKER_ID,
@@ -250,6 +253,136 @@ test.describe('US-REV-02 live immediately, human-removable only', () => {
 		expect(afterRes.ok()).toBeTruthy();
 		const afterBody = (await afterRes.json()) as { data: Array<{ id: string }> };
 		expect(afterBody.data.some((review) => review.id === target!.id)).toBe(true);
+
+		await context.close();
+	});
+});
+
+test.describe('US-REV-03 change my mind', () => {
+	test.beforeAll(async ({ request }) => {
+		const reseedRes = await request.post('/api/dev/reseed-reviews');
+		expect(reseedRes.ok()).toBeTruthy();
+	});
+
+	test('TC-REV-03a: edit updates aggregate and shows edited marker', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const reviewPath = `/provider/${SEED_REV_PROVIDER_PROFILE_ID}/review`;
+
+		await signInSeeker(
+			page,
+			SEED_REV_EXISTING_SEEKER_EMAIL,
+			SEED_REV_EXISTING_SEEKER_PASSWORD,
+			reviewPath
+		);
+
+		await expect(page.getByTestId('review-own-summary')).toBeVisible();
+		await page.waitForFunction(() => {
+			const panel = document.querySelector('[data-testid="review-panel"]');
+			return panel?.getAttribute('data-review-hydrated') === 'true';
+		});
+		await page.getByRole('button', { name: 'Edit review' }).click();
+		await expect(page.getByTestId('review-compose-form')).toBeVisible();
+
+		const ratingInput = page.locator('input[name="rating"][value="5"]');
+		await ratingInput.check();
+		await page.locator('#reviewBody').fill('Updated after more thought.');
+		await page.getByRole('button', { name: 'Update review' }).click();
+		await page.getByRole('button', { name: 'Confirm update' }).click();
+
+		await expect(page.getByTestId('review-own-edited')).toBeVisible();
+
+		const profileRes = await page.request.get(
+			`/api/reviews/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(profileRes.ok()).toBeTruthy();
+		const profileBody = (await profileRes.json()) as {
+			data: Array<{ id: string; body: string; isEdited: boolean }>;
+		};
+		const updated = profileBody.data.find((review) => review.id === SEED_REV_EXISTING_REVIEW_ID);
+		expect(updated?.body).toBe('Updated after more thought.');
+		expect(updated?.isEdited).toBe(true);
+
+		const aggregateRes = await page.request.get(
+			`/api/provider/profile/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(aggregateRes.ok()).toBeTruthy();
+		const aggregateBody = (await aggregateRes.json()) as {
+			data: { rating: { average: number; count: number } | { state: 'new' } };
+		};
+		expect(aggregateBody.data.rating).toEqual({ average: 5, count: 1 });
+
+		await page.goto(`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`);
+		await expect(page.getByTestId('profile-review-edited')).toBeVisible();
+
+		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
+		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
+		expect(serious).toEqual([]);
+
+		await context.close();
+	});
+
+	test('TC-REV-03c: manage view is server-rendered for existing reviewer', async ({ browser }) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const reviewPath = `/provider/${SEED_REV_PROVIDER_PROFILE_ID}/review`;
+
+		await signInSeeker(
+			page,
+			SEED_REV_EXISTING_SEEKER_EMAIL,
+			SEED_REV_EXISTING_SEEKER_PASSWORD,
+			reviewPath
+		);
+
+		const response = await page.request.get(reviewPath);
+		expect(response.ok()).toBeTruthy();
+		const html = await response.text();
+		expect(html).toContain('data-testid="review-own-summary"');
+		expect(html).toContain('Your review');
+		expect(html).not.toContain('data-testid="review-compose-form"');
+
+		await context.close();
+	});
+
+	test('TC-REV-03b: delete removes review after confirmation', async ({ browser, request }) => {
+		const reseedRes = await request.post('/api/dev/reseed-reviews');
+		expect(reseedRes.ok()).toBeTruthy();
+
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		const reviewPath = `/provider/${SEED_REV_PROVIDER_PROFILE_ID}/review`;
+
+		await signInSeeker(
+			page,
+			SEED_REV_EXISTING_SEEKER_EMAIL,
+			SEED_REV_EXISTING_SEEKER_PASSWORD,
+			reviewPath
+		);
+
+		await page.waitForFunction(() => {
+			const panel = document.querySelector('[data-testid="review-panel"]');
+			return panel?.getAttribute('data-review-hydrated') === 'true';
+		});
+		await page.getByTestId('review-delete-button').click();
+		await expect(page.getByTestId('review-delete-confirm')).toBeVisible();
+		await page.getByRole('button', { name: 'Confirm delete' }).click();
+		await expect(page.getByTestId('review-deleted')).toBeVisible();
+
+		const listedRes = await page.request.get(
+			`/api/reviews/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(listedRes.ok()).toBeTruthy();
+		const listedBody = (await listedRes.json()) as { data: Array<{ id: string }> };
+		expect(listedBody.data.some((review) => review.id === SEED_REV_EXISTING_REVIEW_ID)).toBe(false);
+
+		const aggregateRes = await page.request.get(
+			`/api/provider/profile/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(aggregateRes.ok()).toBeTruthy();
+		const aggregateBody = (await aggregateRes.json()) as {
+			data: { rating: { state: 'new' } | { average: number; count: number } };
+		};
+		expect(aggregateBody.data.rating).toEqual({ state: 'new' });
 
 		await context.close();
 	});

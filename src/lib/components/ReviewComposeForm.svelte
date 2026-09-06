@@ -3,14 +3,22 @@
 
 	let {
 		busy = false,
+		initialRating = null,
+		initialBody = '',
+		submitLabel = 'Publish review',
+		busyLabel = 'Publishing…',
 		onSubmit
 	}: {
 		busy?: boolean;
+		initialRating?: number | null;
+		initialBody?: string;
+		submitLabel?: string;
+		busyLabel?: string;
 		onSubmit: (input: { rating: number; body?: string }) => Promise<void>;
 	} = $props();
 
-	let rating = $state<number | null>(null);
-	let body = $state('');
+	let rating = $state<number | null>(initialRating);
+	let body = $state(initialBody);
 	let errorMessage = $state('');
 
 	const stars = [1, 2, 3, 4, 5];
@@ -76,7 +84,7 @@
 	{/if}
 
 	<Button type="submit" variant="primary" disabled={busy}>
-		{busy ? 'Publishing…' : 'Publish review'}
+		{busy ? busyLabel : submitLabel}
 	</Button>
 </form>
 
