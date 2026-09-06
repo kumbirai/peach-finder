@@ -68,7 +68,8 @@ describe('provider-reviews serializers', () => {
 				rating: 5,
 				body: 'Great session',
 				isEdited: false,
-				createdAt
+				createdAt,
+				replyBody: null
 			})
 		).toEqual({
 			id: '01900000-0000-7000-8000-000000000601',
@@ -76,7 +77,8 @@ describe('provider-reviews serializers', () => {
 			rating: 5,
 			body: 'Great session',
 			isEdited: false,
-			createdAt: createdAt.toISOString()
+			createdAt: createdAt.toISOString(),
+			providerReply: null
 		});
 	});
 });

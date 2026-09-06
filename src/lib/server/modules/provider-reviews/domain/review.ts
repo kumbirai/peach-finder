@@ -25,6 +25,30 @@ export function editReview(
 	});
 }
 
+export function validateReplyBody(
+	body: string
+): { ok: true; value: string } | { ok: false; issues: ValidationIssue[] } {
+	const trimmed = body.trim();
+	if (!trimmed) {
+		return {
+			ok: false,
+			issues: [{ path: 'body', message: 'Write a short reply before publishing.' }]
+		};
+	}
+	if (trimmed.length > REVIEW_BODY_MAX_LENGTH) {
+		return {
+			ok: false,
+			issues: [
+				{
+					path: 'body',
+					message: `Keep your reply to ${REVIEW_BODY_MAX_LENGTH} characters or fewer.`
+				}
+			]
+		};
+	}
+	return { ok: true, value: trimmed };
+}
+
 function validateReviewDraft(input: {
 	rating: number;
 	body?: string | null;

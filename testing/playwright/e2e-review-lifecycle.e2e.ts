@@ -10,6 +10,8 @@ import {
 	SEED_REV_INELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_INELIGIBLE_SEEKER_ID,
 	SEED_REV_INELIGIBLE_SEEKER_PASSWORD,
+	SEED_REV_PROVIDER_EMAIL,
+	SEED_REV_PROVIDER_PASSWORD,
 	SEED_REV_PROVIDER_PROFILE_ID
 } from '../../scripts/seed-reviews';
 
@@ -28,9 +30,21 @@ async function signInSeeker(
 	});
 }
 
-test.describe.configure({ mode: 'serial' });
+async function signInProvider(
+	page: import('@playwright/test').Page,
+	returnTo = '/provider/reviews'
+) {
+	await page.goto(`/sign-in?flow=sign-in&returnTo=${encodeURIComponent(returnTo)}`);
+	await page.getByLabel('Email').fill(SEED_REV_PROVIDER_EMAIL);
+	await page.getByLabel('Password').fill(SEED_REV_PROVIDER_PASSWORD);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await expect(page).toHaveURL(new RegExp(returnTo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
+		timeout: 15_000
+	});
+}
 
 test.describe('US-REV-01 leave a review that counts', () => {
+	test.describe.configure({ mode: 'serial' });
 	let seekerStorageState: BrowserContextOptions['storageState'];
 
 	test.beforeAll(async ({ browser, request }) => {
@@ -385,5 +399,106 @@ test.describe('US-REV-03 change my mind', () => {
 		expect(aggregateBody.data.rating).toEqual({ state: 'new' });
 
 		await context.close();
+	});
+});
+
+test.describe('US-REV-05 provider right of reply', () => {
+	test.beforeAll(async ({ request }) => {
+		const reseedRes = await request.post('/api/dev/reseed-reviews');
+		expect(reseedRes.ok()).toBeTruthy();
+	});
+
+	test('TC-REV-05a: provider posts one reply and duplicate is rejected', async ({
+		browser,
+		request
+	}) => {
+		const context = await browser.newContext();
+		const page = await context.newPage();
+		await signInProvider(page, '/provider/reviews');
+
+		const reviewItem = page
+			.getByTestId('provider-review-item')
+			.filter({ hasText: 'Already reviewed this provider.' });
+		await expect(reviewItem).toBeVisible();
+		await expect(reviewItem.getByTestId('provider-reply-compose')).toBeVisible();
+
+		const replyRes = await page.request.post(`/api/reviews/${SEED_REV_EXISTING_REVIEW_ID}/reply`, {
+			data: { body: 'Thanks for visiting — glad the session helped.' }
+		});
+		expect(replyRes.status(), await replyRes.text()).toBe(200);
+
+		await page.reload();
+		await expect(reviewItem.getByTestId('provider-review-reply')).toContainText(
+			'Thanks for visiting — glad the session helped.'
+		);
+		await expect(reviewItem.getByTestId('provider-reply-compose')).toHaveCount(0);
+
+		await page.goto(`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`);
+		await expect(page.getByTestId('profile-review-reply')).toContainText(
+			'Thanks for visiting — glad the session helped.'
+		);
+
+		const duplicateRes = await page.request.post(
+			`/api/reviews/${SEED_REV_EXISTING_REVIEW_ID}/reply`,
+			{ data: { body: 'Second reply attempt.' } }
+		);
+		expect(duplicateRes.status()).toBe(409);
+		const duplicateBody = (await duplicateRes.json()) as { error: { code: string } };
+		expect(duplicateBody.error.code).toBe('REPLY_ALREADY_EXISTS');
+
+		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
+		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
+		expect(serious).toEqual([]);
+
+		await context.close();
+	});
+
+	test('TC-REV-05b: reporting a reply uses the same review report path', async ({
+		browser,
+		request
+	}) => {
+		const reseedRes = await request.post('/api/dev/reseed-reviews');
+		expect(reseedRes.ok()).toBeTruthy();
+
+		const providerContext = await browser.newContext();
+		const providerPage = await providerContext.newPage();
+		await signInProvider(providerPage, '/provider/reviews');
+
+		const replyRes = await providerPage.request.post(
+			`/api/reviews/${SEED_REV_EXISTING_REVIEW_ID}/reply`,
+			{ data: { body: 'Provider reply for moderation test.' } }
+		);
+		expect(replyRes.ok()).toBeTruthy();
+		await providerContext.close();
+
+		const seekerContext = await browser.newContext();
+		const seekerPage = await seekerContext.newPage();
+		await signInSeeker(
+			seekerPage,
+			SEED_REV_ELIGIBLE_SEEKER_EMAIL,
+			SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
+			`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+
+		const reportRes = await seekerPage.request.post('/api/trust/reports', {
+			data: {
+				targetType: 'review',
+				targetId: SEED_REV_EXISTING_REVIEW_ID,
+				reason: 'harassment'
+			}
+		});
+		expect(reportRes.status(), await reportRes.text()).toBe(201);
+
+		const profileRes = await seekerPage.request.get(
+			`/api/reviews/provider/${SEED_REV_PROVIDER_PROFILE_ID}`
+		);
+		expect(profileRes.ok()).toBeTruthy();
+		const profileBody = (await profileRes.json()) as {
+			data: Array<{ id: string; providerReply: { body: string } | null }>;
+		};
+		const target = profileBody.data.find((review) => review.id === SEED_REV_EXISTING_REVIEW_ID);
+		expect(target?.providerReply?.body).toBe('Provider reply for moderation test.');
+
+		await seekerContext.close();
 	});
 });

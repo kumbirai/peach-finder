@@ -15,6 +15,7 @@ export type OwnReviewDto = {
 	body: string | null;
 	isEdited: boolean;
 	createdAt: string;
+	providerReply: { body: string } | null;
 };
 
 export type ReviewEligibilityDto = {
@@ -49,6 +50,7 @@ export function toOwnReview(input: {
 	body: string | null;
 	isEdited: boolean;
 	createdAt: Date;
+	replyBody?: string | null;
 }): OwnReviewDto {
 	return {
 		id: input.id,
@@ -56,7 +58,8 @@ export function toOwnReview(input: {
 		rating: input.rating,
 		body: input.body,
 		isEdited: input.isEdited,
-		createdAt: input.createdAt.toISOString()
+		createdAt: input.createdAt.toISOString(),
+		providerReply: input.replyBody ? { body: input.replyBody } : null
 	};
 }
 

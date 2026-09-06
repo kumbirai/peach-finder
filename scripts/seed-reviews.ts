@@ -9,6 +9,9 @@ import { asId } from '../src/lib/server/shared/ids';
 import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
 
 export const SEED_REV_PROVIDER_PROFILE_ID = '01900000-0000-7000-8000-000000000103';
+export const SEED_REV_PROVIDER_OWNER_ID = '01900000-0000-7000-8000-000000000003';
+export const SEED_REV_PROVIDER_EMAIL = 'rev-provider@example.com';
+export const SEED_REV_PROVIDER_PASSWORD = 'password123';
 
 export const SEED_REV_INELIGIBLE_SEEKER_ID = '01900000-0000-7000-8000-00000000d101';
 export const SEED_REV_INELIGIBLE_SEEKER_EMAIL = 'rev-ineligible@example.com';
@@ -79,6 +82,16 @@ export async function seedReviews(db: Database): Promise<void> {
 				}
 			});
 	}
+
+	await db
+		.update(users)
+		.set({
+			email: SEED_REV_PROVIDER_EMAIL,
+			emailVerifiedAt: new Date('2026-08-01T10:00:00Z'),
+			passwordHash,
+			status: 'active'
+		})
+		.where(eq(users.id, SEED_REV_PROVIDER_OWNER_ID));
 
 	await db.delete(reviews).where(eq(reviews.providerProfileId, SEED_REV_PROVIDER_PROFILE_ID));
 

@@ -223,6 +223,18 @@
 			</section>
 		{/if}
 
+		<section class="section" aria-labelledby="reviews-heading">
+			<h2 id="reviews-heading" class="title">Reviews on your profile</h2>
+			<Card>
+				<p class="body">
+					When someone leaves a review, you can post one public reply beneath it on your profile.
+				</p>
+				<div class="action-row">
+					<Button variant="secondary" href="/provider/reviews">Manage reviews</Button>
+				</div>
+			</Card>
+		</section>
+
 		<section class="section" aria-labelledby="inbox-heading">
 			<h2 id="inbox-heading" class="title">Messages from seekers</h2>
 			{#if data.inbox.length === 0}

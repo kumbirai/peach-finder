@@ -56,14 +56,18 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 								? ERROR_CODES.VERIFICATION_ALREADY_PENDING
 								: error.reason === 'REVIEW_ALREADY_EXISTS'
 									? ERROR_CODES.REVIEW_ALREADY_EXISTS
-									: ERROR_CODES.CONFLICT,
+									: error.reason === 'REPLY_ALREADY_EXISTS'
+										? ERROR_CODES.REPLY_ALREADY_EXISTS
+										: ERROR_CODES.CONFLICT,
 						message: friendlyOr(
 							error.reason,
 							error.reason === 'VERIFICATION_ALREADY_PENDING'
 								? 'You already have a verification submission under review.'
 								: error.reason === 'REVIEW_ALREADY_EXISTS'
 									? 'You already reviewed this provider.'
-									: 'That change could not be saved.'
+									: error.reason === 'REPLY_ALREADY_EXISTS'
+										? 'You already replied to this review.'
+										: 'That change could not be saved.'
 						),
 						fields: null
 					}

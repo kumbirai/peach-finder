@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createReview, editReview, REVIEW_BODY_MAX_LENGTH } from './review';
+import { createReview, editReview, REVIEW_BODY_MAX_LENGTH, validateReplyBody } from './review';
 
 describe('createReview', () => {
 	it('accepts rating with optional body', () => {
@@ -61,6 +61,29 @@ describe('editReview', () => {
 
 	it('rejects invalid rating on edit', () => {
 		const result = editReview({ rating: 4, body: 'Good.' }, { rating: 6 });
+		expect(result.ok).toBe(false);
+	});
+});
+
+describe('validateReplyBody', () => {
+	it('accepts a non-empty reply within the cap', () => {
+		const result = validateReplyBody('Thanks for the thoughtful feedback.');
+		expect(result).toEqual({
+			ok: true,
+			value: 'Thanks for the thoughtful feedback.'
+		});
+	});
+
+	it('rejects blank replies', () => {
+		const result = validateReplyBody('   ');
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.issues[0]?.path).toBe('body');
+		}
+	});
+
+	it('rejects replies over the cap', () => {
+		const result = validateReplyBody('x'.repeat(REVIEW_BODY_MAX_LENGTH + 1));
 		expect(result.ok).toBe(false);
 	});
 });
