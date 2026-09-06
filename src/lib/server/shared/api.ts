@@ -92,7 +92,10 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 				status: 503,
 				body: {
 					error: {
-						code: ERROR_CODES.UNAVAILABLE,
+						code:
+							error.dependency === 'paystack'
+								? ERROR_CODES.PSP_UNAVAILABLE
+								: ERROR_CODES.UNAVAILABLE,
 						message: 'A service we need is temporarily unavailable. Try again shortly.',
 						fields: null
 					}
@@ -103,7 +106,10 @@ export function useCaseErrorToHttp(error: UseCaseError): { status: number; body:
 				status: 412,
 				body: {
 					error: {
-						code: ERROR_CODES.PRECONDITION_FAILED,
+						code:
+							error.reason === 'PAYMENT_METHOD_REQUIRED'
+								? ERROR_CODES.PAYMENT_METHOD_REQUIRED
+								: ERROR_CODES.PRECONDITION_FAILED,
 						message: friendlyOr(error.reason, 'That is not available yet.'),
 						fields: null
 					}

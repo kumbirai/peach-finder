@@ -97,6 +97,9 @@
 
 		{#if data.billing}
 			<ListingBillingStatus billing={data.billing} />
+			<p class="billing-link-row">
+				<Button variant="secondary" href="/provider/billing">Manage billing</Button>
+			</p>
 		{/if}
 
 		{#if data.publishState === 'published'}
@@ -268,6 +271,9 @@
 	.section {
 		display: grid;
 		gap: var(--space-md);
+	}
+	.billing-link-row {
+		margin: calc(-1 * var(--space-sm)) 0 0;
 	}
 	.action-row {
 		display: flex;

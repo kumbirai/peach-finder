@@ -27,9 +27,9 @@ FR-MONET-06, SR-INT-03, SR-PRIV-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,16 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-BILL-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-MONET-06 self-serve billing on the simplified `listing_billing.listing` + new `listing_billing.invoice` tables (consistent with US-BILL-01/02 deviation — full `subscription` schema still deferred to US-BILL-04):
+
+- Migration `0021_us_bill_03_self_serve_billing.sql` adds payment-method refs (`psp_customer_ref`, `psp_authorization_code`, `card_last4`, `card_brand`), renewal cancel fields (`cancel_at_period_end`, `current_period_ends_at`), and itemized `invoice` rows.
+- Paystack gateway (`infra/paystack-gateway.ts`) when `PAYSTACK_SECRET_KEY` is set; `FakePaymentGateway` otherwise with hosted checkout at `/provider/billing/payment-method/hosted` (SAQ-A — card fields rejected at API boundary via `assertNoCardDataInBody`).
+- Self-serve API: `POST /api/billing/payment-method` (init + `PUT` complete), `GET /api/billing/price`, `POST /api/billing/subscription/cancel-renewal`, `GET /api/billing/history` (cursor pagination).
+- Provider UI: `/provider/billing` (payment method, prices-before-buy, cancel renewal, itemized history) + dashboard “Manage billing” link; notification deep links to `/provider/billing` now resolve.
+- Dev helpers (ALLOW_DEV_HELPERS): `POST /api/dev/billing-paid-listing`, `POST /api/dev/billing-seed-invoices`, `POST /api/dev/billing-complete-fake-auth`.
+- Tests: `domain/payment-method.test.ts`, `domain/invoice.test.ts`, `self-serve-billing.integration.test.ts`, `testing/playwright/billing-self-serve.e2e.ts` (TC-BILL-03a..d, axe on billing page).
+
+**Deviations:** Featuring purchase (`POST /api/billing/featuring`) deferred to US-BILL-05. Webhook/daily-job lifecycle remains US-BILL-04 scope. `psp_authorization_code` stored for renewal initiation in US-BILL-04 but not exposed in provider serializers.

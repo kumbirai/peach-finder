@@ -15,7 +15,9 @@ export {
 } from './infra/subscription-read';
 export {
 	getBillingStatusForOwner,
-	type BillingStatusDto
+	getSelfServeBillingForOwner,
+	type BillingStatusDto,
+	type SelfServeBillingDto
 } from './app/get-billing-status-for-owner';
 export {
 	buildProviderBillingStatusView,
@@ -30,6 +32,16 @@ export {
 	type BillingContinuity,
 	type TrialStartPlan
 } from './domain/trial-eligibility';
+export {
+	initializePaymentMethodForOwner,
+	completePaymentMethodForOwner,
+	getBillingPriceForOwner,
+	cancelListingRenewalForOwner,
+	type BillingPriceDto,
+	type InitializePaymentMethodResult
+} from './app/self-serve-billing';
+export { getBillingHistoryForOwner } from './app/get-billing-history';
+export { createPaymentGateway, getFakePaymentGateway } from './infra/payment-gateway-factory';
 
 export async function cancelListingForOwner(
 	tx: Transaction,

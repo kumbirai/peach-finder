@@ -13,6 +13,11 @@ export type SubscriptionSummary = {
 	trialEndsAt: string | null;
 	graceEndsAt: string | null;
 	billingContinuity: BillingContinuity;
+	pspCustomerRef: string | null;
+	cancelAtPeriodEnd: boolean;
+	currentPeriodEndsAt: string | null;
+	cardLast4: string | null;
+	cardBrand: string | null;
 	updatedAt: string;
 	listingLabel: string;
 };
@@ -53,6 +58,11 @@ export async function getSubscription(
 		trialEndsAt: row.trialEndsAt?.toISOString() ?? null,
 		graceEndsAt: row.graceEndsAt?.toISOString() ?? null,
 		billingContinuity: (row.billingContinuity as BillingContinuity) ?? 'new',
+		pspCustomerRef: row.pspCustomerRef,
+		cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+		currentPeriodEndsAt: row.currentPeriodEndsAt?.toISOString() ?? null,
+		cardLast4: row.cardLast4,
+		cardBrand: row.cardBrand,
 		updatedAt: row.updatedAt.toISOString(),
 		listingLabel: listingStateLabel(row.state)
 	};

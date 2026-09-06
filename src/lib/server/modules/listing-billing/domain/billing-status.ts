@@ -32,6 +32,8 @@ export function buildProviderBillingStatusView(input: {
 	trialStartedAt: string | null;
 	trialEndsAt: string | null;
 	graceEndsAt: string | null;
+	currentPeriodEndsAt?: string | null;
+	cancelAtPeriodEnd?: boolean;
 	gracePeriodDays: number;
 	listingPriceCents: number;
 	billingContinuity: BillingContinuity;
@@ -56,6 +58,26 @@ export function buildProviderBillingStatusView(input: {
 			endDateLabel,
 			endDatePrefix: 'Free period ends',
 			whatHappensNext: `When your free period ends on ${endDateLabel}, you enter a ${graceDays}-day grace period to add billing (${listingPriceLabel}/month) before your profile is hidden from search. Your photos, services, and reviews stay saved — you can republish any time after paying.${continuityNote}`,
+			listingPriceLabel,
+			gracePeriodDays: graceDays,
+			billingContinuity: input.billingContinuity
+		};
+	}
+
+	if (input.state === 'paid_listed' && input.currentPeriodEndsAt) {
+		const endDateLabel = formatBillingDate(input.currentPeriodEndsAt);
+		return {
+			state: input.state,
+			stateChipLabel: 'Paid listing',
+			trialStartedAt: input.trialStartedAt,
+			trialEndsAt: input.trialEndsAt,
+			graceEndsAt: input.graceEndsAt,
+			headline: 'Listing billing',
+			endDateLabel,
+			endDatePrefix: input.cancelAtPeriodEnd ? 'Listing stays live until' : 'Current period ends',
+			whatHappensNext: input.cancelAtPeriodEnd
+				? `Renewal is cancelled. Your listing stays visible in search until ${endDateLabel}, then enters a ${graceDays}-day grace period before being hidden. Your photos, services, and reviews stay saved.`
+				: `Your listing renews at ${listingPriceLabel}/month on ${endDateLabel} unless you cancel renewal.`,
 			listingPriceLabel,
 			gracePeriodDays: graceDays,
 			billingContinuity: input.billingContinuity
