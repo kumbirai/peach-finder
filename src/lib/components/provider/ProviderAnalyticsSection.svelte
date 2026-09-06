@@ -1,11 +1,15 @@
 <script lang="ts">
 	import Card from '$lib/components/Card.svelte';
 	import type {
+		ChartAnnotationMarker,
 		DashboardMetricView,
 		ProviderDashboardView
 	} from '$lib/server/modules/provider-analytics';
 	import {
+		chartAnnotationMarkerColor,
+		chartAnnotationMarkerSymbol,
 		demandTagOwnershipLabel,
+		sparklineMarkerX,
 		sparklineValueFromTrendLabel
 	} from '$lib/provider-analytics-display';
 
@@ -24,6 +28,7 @@
 	];
 
 	const topService = $derived(analytics.mostSearchedServices[0] ?? null);
+	const trendDates = $derived(analytics.profileViews.trend.map((point) => point.date));
 
 	function rangeHref(days: 7 | 30 | 90): string {
 		const params = new URLSearchParams();
@@ -47,6 +52,27 @@
 			return `<path d="M0 ${height / 2} L${width} ${height / 2}" stroke="${stroke}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
 		}
 		return `<path d="M${points.join(' L')}" stroke="${stroke}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+	}
+
+	function markerY(metric: DashboardMetricView, markerDate: string): number {
+		const values = metric.trend.map((point) => sparklineValueFromTrendLabel(point.value));
+		const index = trendDates.indexOf(markerDate);
+		const height = 24;
+		if (index < 0) return height / 2;
+		const max = Math.max(...values, 1);
+		const value = values[index] ?? 2;
+		return height - (value / max) * (height - 4) - 2;
+	}
+
+	function markersForMetric(metric: DashboardMetricView): Array<ChartAnnotationMarker & { x: number; y: number }> {
+		const width = 90;
+		return analytics.chartAnnotations.markers
+			.map((marker) => {
+				const x = sparklineMarkerX(marker.date, trendDates, width);
+				if (x == null) return null;
+				return { ...marker, x, y: markerY(metric, marker.date) };
+			})
+			.filter((marker): marker is ChartAnnotationMarker & { x: number; y: number } => marker !== null);
 	}
 </script>
 
@@ -79,45 +105,129 @@
 		</ul>
 	</details>
 
+	{#if analytics.chartAnnotations.summaries.length > 0}
+		<ul class="annotation-summaries" data-testid="analytics-chart-annotations" aria-label="Your activity on the chart">
+			{#each analytics.chartAnnotations.summaries as summary (summary.type)}
+				<li
+					class="annotation-summary"
+					class:went-available={summary.type === 'went_available'}
+					class:featured={summary.type === 'featured'}
+					data-testid={`analytics-chart-summary-${summary.type}`}
+				>
+					<span class="annotation-symbol" aria-hidden="true">
+						{chartAnnotationMarkerSymbol(summary.type)}
+					</span>
+					<span>{summary.label}</span>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+
 	<div class="stat-row">
 		<Card>
-			<p class="stat-label label">Profile views</p>
+			<p class="stat-label">Profile views</p>
 			<p class="stat-value headline" data-testid="analytics-profile-views">
 				{analytics.profileViews.currentTotal}
 			</p>
 			<p class="comparison label" data-testid="analytics-profile-views-comparison">
 				{analytics.profileViews.priorPeriodComparison.changeLabel}
 			</p>
-			<svg width="90" height="24" viewBox="0 0 90 24" fill="none" aria-hidden="true">
+			<svg
+				width="90"
+				height="24"
+				viewBox="0 0 90 24"
+				fill="none"
+				role="img"
+				aria-label="Profile views trend with your activity markers"
+				data-testid="analytics-profile-views-chart"
+			>
 				{@html sparklinePath(analytics.profileViews, '#B34625')}
+				{#each markersForMetric(analytics.profileViews) as marker (`profile-${marker.date}-${marker.type}`)}
+					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
+						<title>{marker.label} on {marker.date}</title>
+						<text
+							x={marker.x}
+							y={marker.y - 4}
+							text-anchor="middle"
+							font-size="8"
+							fill={chartAnnotationMarkerColor(marker.type)}
+						>
+							{chartAnnotationMarkerSymbol(marker.type)}
+						</text>
+					</g>
+				{/each}
 			</svg>
 		</Card>
 		<Card>
-			<p class="stat-label label">Search appearances</p>
+			<p class="stat-label">Search appearances</p>
 			<p class="stat-value headline" data-testid="analytics-search-appearances">
 				{analytics.searchAppearances.currentTotal}
 			</p>
 			<p class="comparison label" data-testid="analytics-search-appearances-comparison">
 				{analytics.searchAppearances.priorPeriodComparison.changeLabel}
 			</p>
-			<svg width="90" height="24" viewBox="0 0 90 24" fill="none" aria-hidden="true">
+			<svg
+				width="90"
+				height="24"
+				viewBox="0 0 90 24"
+				fill="none"
+				role="img"
+				aria-label="Search appearances trend with your activity markers"
+				data-testid="analytics-search-appearances-chart"
+			>
 				{@html sparklinePath(analytics.searchAppearances, '#2F5D50')}
+				{#each markersForMetric(analytics.searchAppearances) as marker (`search-${marker.date}-${marker.type}`)}
+					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
+						<title>{marker.label} on {marker.date}</title>
+						<text
+							x={marker.x}
+							y={marker.y - 4}
+							text-anchor="middle"
+							font-size="8"
+							fill={chartAnnotationMarkerColor(marker.type)}
+						>
+							{chartAnnotationMarkerSymbol(marker.type)}
+						</text>
+					</g>
+				{/each}
 			</svg>
 		</Card>
 		<Card>
-			<p class="stat-label label">Contact requests</p>
+			<p class="stat-label">Contact requests</p>
 			<p class="stat-value headline" data-testid="analytics-contact-requests">
 				{analytics.contactRequests.currentTotal}
 			</p>
 			<p class="comparison label" data-testid="analytics-contact-requests-comparison">
 				{analytics.contactRequests.priorPeriodComparison.changeLabel}
 			</p>
-			<svg width="90" height="24" viewBox="0 0 90 24" fill="none" aria-hidden="true">
+			<svg
+				width="90"
+				height="24"
+				viewBox="0 0 90 24"
+				fill="none"
+				role="img"
+				aria-label="Contact requests trend with your activity markers"
+				data-testid="analytics-contact-requests-chart"
+			>
 				{@html sparklinePath(analytics.contactRequests, '#B34625')}
+				{#each markersForMetric(analytics.contactRequests) as marker (`contact-${marker.date}-${marker.type}`)}
+					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
+						<title>{marker.label} on {marker.date}</title>
+						<text
+							x={marker.x}
+							y={marker.y - 4}
+							text-anchor="middle"
+							font-size="8"
+							fill={chartAnnotationMarkerColor(marker.type)}
+						>
+							{chartAnnotationMarkerSymbol(marker.type)}
+						</text>
+					</g>
+				{/each}
 			</svg>
 		</Card>
 		<Card>
-			<p class="stat-label label">Most searched service</p>
+			<p class="stat-label">Most searched service</p>
 			{#if topService}
 				<p
 					class="stat-value text"
@@ -230,6 +340,30 @@
 		color: var(--color-stone);
 		display: grid;
 		gap: var(--space-xs);
+	}
+	.annotation-summaries {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: var(--space-xs);
+	}
+	.annotation-summary {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		font-size: 0.875rem;
+		font-weight: 600;
+	}
+	.annotation-summary.went-available {
+		color: var(--color-peach-deep);
+	}
+	.annotation-summary.featured {
+		color: var(--color-pine);
+	}
+	.annotation-symbol {
+		font-size: 0.75rem;
+		line-height: 1;
 	}
 	.stat-row {
 		display: grid;

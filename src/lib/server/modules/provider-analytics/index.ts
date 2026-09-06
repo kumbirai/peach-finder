@@ -22,7 +22,11 @@ export {
 export type {
 	ProviderDashboardView,
 	DashboardMetricView,
-	MostSearchedServiceView
+	MostSearchedServiceView,
+	ChartAnnotationsView,
+	ChartAnnotationMarker,
+	ChartAnnotationSummary,
+	ChartAnnotationType
 } from './infra/serializers';
 
 import type { UserId } from '../../shared/ids';

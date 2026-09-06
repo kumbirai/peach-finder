@@ -32,11 +32,30 @@ export type ProviderDashboardView = {
 	searchAppearances: DashboardMetricView;
 	contactRequests: DashboardMetricView;
 	mostSearchedServices: MostSearchedServiceView[];
+	chartAnnotations: ChartAnnotationsView;
 	definitions: {
 		profileView: string;
 		searchAppearance: string;
 		contactRequest: string;
 	};
+};
+
+export type ChartAnnotationType = 'went_available' | 'featured';
+
+export type ChartAnnotationMarker = {
+	date: string;
+	type: ChartAnnotationType;
+	label: string;
+};
+
+export type ChartAnnotationSummary = {
+	type: ChartAnnotationType;
+	label: string;
+};
+
+export type ChartAnnotationsView = {
+	summaries: ChartAnnotationSummary[];
+	markers: ChartAnnotationMarker[];
 };
 
 export function buildComparison(currentCount: number, priorCount: number): MetricComparison {

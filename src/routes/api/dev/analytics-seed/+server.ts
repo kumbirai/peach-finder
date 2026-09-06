@@ -8,6 +8,49 @@ const TAG_DEEP_TISSUE = '01900000-0000-7000-8000-000000000201';
 const TAG_SWEDISH = '01900000-0000-7000-8000-000000000202';
 const TAG_SPORTS = '01900000-0000-7000-8000-000000000203';
 
+function startOfUtcDay(instant: Date): Date {
+	return new Date(Date.UTC(instant.getUTCFullYear(), instant.getUTCMonth(), instant.getUTCDate()));
+}
+
+function addUtcDays(instant: Date, days: number): Date {
+	const next = new Date(instant);
+	next.setUTCDate(next.getUTCDate() + days);
+	return next;
+}
+
+function atUtcHour(day: Date, hour: number): Date {
+	return new Date(
+		Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour, 0, 0, 0)
+	);
+}
+
+/** Align TC-ANLY-04a fixture dates with the live dashboard 7-day UTC window. */
+function chartAnnotationFixtureDates(now: Date): {
+	rollupAt: Date;
+	availabilityAt: Date[];
+	featuringActivatedAt: Date;
+	featuringPeriodEndsAt: Date;
+} {
+	const rangeEnd = addUtcDays(startOfUtcDay(now), 1);
+	const rangeStart = addUtcDays(rangeEnd, -7);
+	const availabilityDayOffsets = [
+		{ dayOffset: 2, hour: 10 },
+		{ dayOffset: 2, hour: 14 },
+		{ dayOffset: 4, hour: 9 },
+		{ dayOffset: 5, hour: 9 },
+		{ dayOffset: 6, hour: 9 }
+	];
+
+	return {
+		rollupAt: atUtcHour(addUtcDays(rangeEnd, -2), 10),
+		availabilityAt: availabilityDayOffsets.map(({ dayOffset, hour }) =>
+			atUtcHour(addUtcDays(rangeStart, dayOffset), hour)
+		),
+		featuringActivatedAt: atUtcHour(addUtcDays(rangeStart, 3), 12),
+		featuringPeriodEndsAt: addUtcDays(now, 30)
+	};
+}
+
 async function seedDemandFilterEvents(
 	db: ReturnType<typeof getDb>,
 	occurredAt: Date,
@@ -33,7 +76,7 @@ async function seedDemandFilterEvents(
 
 export const _requiredRole: Role = 'anonymous';
 
-/** Dev-only: seed analytics rollups for US-ANLY-01/02/03 Playwright. */
+/** Dev-only: seed analytics rollups for US-ANLY-01/02/03/04 Playwright. */
 export const POST: RequestHandler = async ({ url }) => {
 	if (process.env.ALLOW_DEV_HELPERS !== '1') {
 		return new Response('Not found', { status: 404 });
@@ -49,7 +92,62 @@ export const POST: RequestHandler = async ({ url }) => {
 		WHERE provider_profile_id = ${profileId}::uuid
 	`);
 
-	if (scenario === 'privacy-floor') {
+	if (scenario === 'chart-annotations') {
+		const fixture = chartAnnotationFixtureDates(now);
+
+		await db.execute(sql`
+			DELETE FROM provider_analytics.hourly_rollup
+			WHERE provider_profile_id = ${profileId}::uuid
+		`);
+		await db.execute(sql`
+			INSERT INTO provider_analytics.hourly_rollup (
+				provider_profile_id, hour_bucket, profile_views, search_appearances, contact_requests
+			) VALUES (
+				${profileId}::uuid, ${fixture.rollupAt.toISOString()}::timestamptz, 42, 86, 6
+			)
+			ON CONFLICT (provider_profile_id, hour_bucket) DO UPDATE
+			SET profile_views = EXCLUDED.profile_views,
+			    search_appearances = EXCLUDED.search_appearances,
+			    contact_requests = EXCLUDED.contact_requests
+		`);
+
+		await db.execute(sql`
+			DELETE FROM provider_availability.availability_history
+			WHERE provider_profile_id = ${profileId}::uuid
+		`);
+		for (const occurredAt of fixture.availabilityAt) {
+			await db.execute(sql`
+				INSERT INTO provider_availability.availability_history (
+					id, provider_profile_id, event_type, occurred_at, set_at, correlation_id
+				) VALUES (
+					gen_random_uuid(),
+					${profileId}::uuid,
+					'set',
+					${occurredAt.toISOString()}::timestamptz,
+					${occurredAt.toISOString()}::timestamptz,
+					gen_random_uuid()::text
+				)
+			`);
+		}
+
+		await db.execute(sql`
+			DELETE FROM listing_billing.featuring_addon
+			WHERE provider_profile_id = ${profileId}::uuid
+		`);
+		await db.execute(sql`
+			INSERT INTO listing_billing.featuring_addon (
+				id, provider_profile_id, state, current_period_ends_at, cancel_at_period_end, created_at, updated_at
+			) VALUES (
+				gen_random_uuid(),
+				${profileId}::uuid,
+				'active',
+				${fixture.featuringPeriodEndsAt.toISOString()}::timestamptz,
+				false,
+				${fixture.featuringActivatedAt.toISOString()}::timestamptz,
+				${fixture.featuringActivatedAt.toISOString()}::timestamptz
+			)
+		`);
+	} else if (scenario === 'privacy-floor') {
 		await db.execute(sql`
 			DELETE FROM provider_analytics.hourly_rollup
 			WHERE provider_profile_id = ${profileId}::uuid

@@ -3,10 +3,12 @@ import type { Database } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import { METRIC_DEFINITIONS, type DashboardRangeDays } from '../domain/metric-definitions';
 import { highlightOwnServiceTags } from '../domain/demand-signal';
+import { loadChartAnnotations } from './chart-annotations-read';
 import {
 	buildComparison,
 	buildTrendPoints,
 	formatCount,
+	type ChartAnnotationsView,
 	type DashboardMetricView,
 	type MostSearchedServiceView,
 	type ProviderDashboardView
@@ -120,14 +122,16 @@ function reapplyDemandTagOwnership(
 
 function serializeCachedPayload(
 	raw: CachedPayloadRaw,
-	providerTagIds: ReadonlySet<string>
+	providerTagIds: ReadonlySet<string>,
+	chartAnnotations: ChartAnnotationsView
 ): Omit<ProviderDashboardView, 'definitions'> {
 	return {
 		rangeDays: raw.rangeDays,
 		profileViews: serializeMetricRaw(raw.profileViews),
 		searchAppearances: serializeMetricRaw(raw.searchAppearances),
 		contactRequests: serializeMetricRaw(raw.contactRequests),
-		mostSearchedServices: reapplyDemandTagOwnership(raw.mostSearchedServices, providerTagIds)
+		mostSearchedServices: reapplyDemandTagOwnership(raw.mostSearchedServices, providerTagIds),
+		chartAnnotations
 	};
 }
 
@@ -194,10 +198,11 @@ export async function computeDashboardMetrics(
 	now: Date,
 	providerTagIds: Set<string>
 ): Promise<ProviderDashboardView> {
+	const chartAnnotations = await loadChartAnnotations(db, providerProfileId, rangeDays, now);
 	const cached = await readCache(db, providerProfileId, rangeDays, now);
 	if (cached) {
 		return {
-			...serializeCachedPayload(cached, providerTagIds),
+			...serializeCachedPayload(cached, providerTagIds, chartAnnotations),
 			definitions: METRIC_DEFINITIONS
 		};
 	}
@@ -236,7 +241,7 @@ export async function computeDashboardMetrics(
 	await writeCache(db, providerProfileId, rangeDays, payload, now);
 
 	return {
-		...serializeCachedPayload(payload, providerTagIds),
+		...serializeCachedPayload(payload, providerTagIds, chartAnnotations),
 		definitions: METRIC_DEFINITIONS
 	};
 }

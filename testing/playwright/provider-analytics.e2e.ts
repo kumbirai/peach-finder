@@ -231,3 +231,62 @@ test.describe('US-ANLY-02 aggregate always, identifiable never (live stack)', ()
 		await expect(page.getByTestId('analytics-profile-views')).not.toHaveText('3');
 	});
 });
+
+test.describe('US-ANLY-04 cause and effect on the chart (live stack)', () => {
+	test('TC-ANLY-04a: availability and featuring events annotate trend charts', async ({ page }) => {
+		const seedRes = await page.request.post('/api/dev/analytics-seed?scenario=chart-annotations');
+		expect(seedRes.ok(), await seedRes.text()).toBeTruthy();
+		await signInAsSeedProvider(page);
+
+		const apiRes = await page.request.get('/api/analytics/dashboard?range=7');
+		expect(apiRes.ok(), await apiRes.text()).toBeTruthy();
+		const body = (await apiRes.json()) as {
+			data: {
+				chartAnnotations: {
+					summaries: Array<{ type: string; label: string }>;
+					markers: Array<{ date: string; type: string; label: string }>;
+				};
+			};
+		};
+
+		const { summaries, markers } = body.data.chartAnnotations;
+
+		expect(summaries).toEqual(
+			expect.arrayContaining([{ type: 'went_available', label: 'Went available 5× this week' }])
+		);
+		const featuredSummary = summaries.find((row) => row.type === 'featured');
+		expect(featuredSummary?.label).toMatch(/^Featured since /);
+
+		const doubleAvailabilityMarker = markers.find(
+			(row) => row.type === 'went_available' && row.label === 'Went available (2×)'
+		);
+		const featuredMarker = markers.find((row) => row.type === 'featured');
+		expect(doubleAvailabilityMarker).toBeTruthy();
+		expect(featuredMarker).toMatchObject({ type: 'featured', label: 'Featured' });
+		expect(featuredMarker?.date).toBeTruthy();
+
+		await page.getByTestId('analytics-range-7').click();
+		await expect(page).toHaveURL(/range=7/);
+
+		await expect(page.getByTestId('analytics-chart-annotations')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('analytics-chart-summary-went_available')).toContainText(
+			'Went available 5× this week'
+		);
+		await expect(page.getByTestId('analytics-chart-summary-featured')).toContainText(
+			featuredSummary!.label
+		);
+		await expect(
+			page.getByTestId(`analytics-chart-marker-went_available-${doubleAvailabilityMarker!.date}`)
+		).toHaveCount(3);
+		await expect(
+			page.getByTestId(`analytics-chart-marker-featured-${featuredMarker!.date}`)
+		).toHaveCount(3);
+
+		const axe = await new AxeBuilder({ page })
+			.include('[data-testid="provider-analytics"]')
+			.analyze();
+		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
+			[]
+		);
+	});
+});

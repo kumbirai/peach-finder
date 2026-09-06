@@ -1,4 +1,4 @@
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, gte, lt } from 'drizzle-orm';
 import type { Database, Transaction } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import type { FeaturingState } from '../domain/featuring-state';
@@ -92,4 +92,48 @@ export async function cancelFeaturingRenewal(
 		.returning({ id: featuringAddons.id });
 
 	return rows.length > 0;
+}
+
+export type FeaturingActivationEvent = {
+	activatedAt: Date;
+};
+
+/** FR-ANLY-05 — featuring activation dates for dashboard chart annotations. */
+export async function listFeaturingActivationsInRange(
+	db: Database,
+	providerProfileId: ProviderProfileId,
+	rangeStart: Date,
+	rangeEnd: Date
+): Promise<FeaturingActivationEvent[]> {
+	const rows = await db
+		.select({ createdAt: featuringAddons.createdAt })
+		.from(featuringAddons)
+		.where(
+			and(
+				eq(featuringAddons.providerProfileId, providerProfileId),
+				gte(featuringAddons.createdAt, rangeStart),
+				lt(featuringAddons.createdAt, rangeEnd)
+			)
+		)
+		.orderBy(featuringAddons.createdAt);
+
+	return rows.map((row) => ({ activatedAt: row.createdAt }));
+}
+
+export async function getActiveFeaturingActivatedAt(
+	db: Database | Transaction,
+	providerProfileId: ProviderProfileId
+): Promise<Date | null> {
+	const rows = await db
+		.select({ createdAt: featuringAddons.createdAt })
+		.from(featuringAddons)
+		.where(
+			and(
+				eq(featuringAddons.providerProfileId, providerProfileId),
+				eq(featuringAddons.state, 'active')
+			)
+		)
+		.limit(1);
+
+	return rows[0]?.createdAt ?? null;
 }

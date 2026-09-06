@@ -15,6 +15,11 @@ export {
 	type SubscriptionSummary
 } from './infra/subscription-read';
 export {
+	getActiveFeaturingActivatedAt,
+	listFeaturingActivationsInRange,
+	type FeaturingActivationEvent
+} from './infra/featuring-read';
+export {
 	getBillingStatusForOwner,
 	getSelfServeBillingForOwner,
 	type BillingStatusDto,

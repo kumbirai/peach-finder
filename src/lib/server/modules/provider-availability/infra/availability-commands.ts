@@ -364,3 +364,29 @@ export async function getRecentActivityCount(
 	const row = (result as unknown as Array<{ count: string }>)[0];
 	return Number(row?.count ?? 0);
 }
+
+export type AvailabilityAnnotationEvent = {
+	occurredAt: Date;
+};
+
+/** FR-ANLY-05 — availability set/renewed events for dashboard chart annotations. */
+export async function listAvailabilityAnnotationEvents(
+	db: Database,
+	providerProfileId: ProviderProfileId,
+	rangeStart: Date,
+	rangeEnd: Date
+): Promise<AvailabilityAnnotationEvent[]> {
+	const result = await db.execute<{ occurred_at: Date }>(sql`
+		select occurred_at
+		from provider_availability.availability_history
+		where provider_profile_id = ${providerProfileId}::uuid
+		  and event_type in ('set', 'renewed')
+		  and occurred_at >= ${rangeStart.toISOString()}::timestamptz
+		  and occurred_at < ${rangeEnd.toISOString()}::timestamptz
+		order by occurred_at asc
+	`);
+	const rows =
+		(result as unknown as { rows?: Array<{ occurred_at: Date }> }).rows ??
+		(result as unknown as Array<{ occurred_at: Date }>);
+	return rows.map((row) => ({ occurredAt: new Date(row.occurred_at) }));
+}
