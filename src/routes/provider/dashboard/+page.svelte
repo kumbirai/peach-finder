@@ -61,8 +61,11 @@
 			} | null;
 			billing: {
 				headline: string;
-				trialEndsAt: string;
+				stateChipLabel: string;
+				trialEndsAt: string | null;
+				graceEndsAt: string | null;
 				endDateLabel: string | null;
+				endDatePrefix: string | null;
 				whatHappensNext: string;
 			} | null;
 			trialEndingNotification: {

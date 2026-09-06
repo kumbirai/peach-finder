@@ -27,9 +27,9 @@ FR-MONET-03.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -46,3 +46,17 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-BILL-02 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented FR-MONET-03 free-period anti-abuse at first publish per listing-billing LLD §9:
+
+- Migration `0020_us_bill_02_free_period_anti_abuse.sql` adds `phone_history_ref`, `grace_ends_at`, and `billing_continuity` to `listing_billing.listing`.
+- `identity-and-access` facades: `getVerifiedPhoneHash`, `getPhoneVerifiedAt`, `wasPhoneUsedBefore` (compares `phone_registry_history.first_registered_at` against current verification time).
+- `startTrialOnPublish` now accepts `ownerId`, resolves `resolveTrialStartPlan` / `inferResumedListingState`, and either starts a new trial, resumes prior listing clocks from a findable `phone_history_ref` row, or places the provider in immediate payment-required `grace` with `billing_continuity = no_trial`.
+- `PhoneVerified` worker subscriber `listing-billing.trial-eligibility` primes `phone_history_ref` on building listings via `handlePhoneVerifiedForTrialEligibility`.
+- Provider dashboard `ListingBillingStatus` and `GET /api/billing/status` expose resumed/grace copy via extended `buildProviderBillingStatusView` (plain continuity wording per user-stories §21.4 — no accusatory framing).
+- Dev helper `POST /api/dev/billing-continuity-snapshot` supports live-stack Playwright for TC-BILL-02b messaging assertions.
+- Tests: `domain/trial-eligibility.test.ts`, `domain/billing-status.test.ts`, `free-period-anti-abuse.integration.test.ts` (TC-BILL-02a/b), `identity-and-access/phone-registry-read.integration.test.ts`, `testing/playwright/billing-phone-reuse.e2e.ts`.
+
+**Deviations:** Simplified `listing_billing.listing` table retained (not full `subscription` schema). Resume infers live state from stored timestamps when prior row was `cancelled` on account deletion. Payment-required posture uses `grace` with `grace_ends_at = now` per LLD §9 edge case rather than a separate enum value.

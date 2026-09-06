@@ -12,6 +12,8 @@ export type BillingStatusDto = {
 	state: string;
 	trialStartedAt: string | null;
 	trialEndsAt: string | null;
+	graceEndsAt: string | null;
+	billingContinuity: string;
 	gracePeriodDays: number;
 	listingPriceCents: number;
 	dashboard: ProviderBillingStatusView | null;
@@ -34,14 +36,18 @@ export async function getBillingStatusForOwner(
 		state: subscription.state,
 		trialStartedAt: subscription.trialStartedAt,
 		trialEndsAt: subscription.trialEndsAt,
+		graceEndsAt: subscription.graceEndsAt,
 		gracePeriodDays,
-		listingPriceCents
+		listingPriceCents,
+		billingContinuity: subscription.billingContinuity
 	});
 
 	return {
 		state: subscription.state,
 		trialStartedAt: subscription.trialStartedAt,
 		trialEndsAt: subscription.trialEndsAt,
+		graceEndsAt: subscription.graceEndsAt,
+		billingContinuity: subscription.billingContinuity,
 		gracePeriodDays,
 		listingPriceCents,
 		dashboard

@@ -26,6 +26,11 @@ export {
 	getSelfAccountSummary
 } from './infra/display-identity';
 export {
+	getVerifiedPhoneHash,
+	getPhoneVerifiedAt,
+	wasPhoneUsedBefore
+} from './infra/phone-registry-read';
+export {
 	searchAccounts,
 	getAccountSummary,
 	type AccountSearchHit,

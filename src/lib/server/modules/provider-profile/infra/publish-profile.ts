@@ -107,7 +107,7 @@ export async function publishProfileForOwner(
 		}
 
 		await ensureBuildingListing(tx, profileId, now);
-		await startTrialOnPublish(tx, profileId, correlationId, now);
+		await startTrialOnPublish(tx, profileId, userId, correlationId, now);
 		await upsertSearchProjection(tx, profileId, publishFirstAt);
 
 		const event: DomainEvent<

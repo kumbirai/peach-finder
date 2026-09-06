@@ -6,11 +6,16 @@
 	}: {
 		billing: {
 			headline: string;
-			trialEndsAt: string;
+			stateChipLabel: string;
+			trialEndsAt: string | null;
+			graceEndsAt: string | null;
 			endDateLabel: string | null;
+			endDatePrefix: string | null;
 			whatHappensNext: string;
 		};
 	} = $props();
+
+	const endDateTime = $derived(billing.trialEndsAt ?? billing.graceEndsAt ?? null);
 </script>
 
 <section
@@ -21,13 +26,19 @@
 	<Card>
 		<div class="billing-status__header">
 			<h2 id="listing-billing-heading" class="title">{billing.headline}</h2>
-			<span class="status-chip" data-testid="listing-billing-state-chip">Active listing</span>
+			<span class="status-chip" data-testid="listing-billing-state-chip"
+				>{billing.stateChipLabel}</span
+			>
 		</div>
 
-		{#if billing.endDateLabel}
+		{#if billing.endDateLabel && billing.endDatePrefix}
 			<p class="end-date label" data-testid="listing-billing-end-date">
-				<span class="end-date__label">Free period ends</span>
-				<time datetime={billing.trialEndsAt}>{billing.endDateLabel}</time>
+				<span class="end-date__label">{billing.endDatePrefix}</span>
+				{#if endDateTime}
+					<time datetime={endDateTime}>{billing.endDateLabel}</time>
+				{:else}
+					{billing.endDateLabel}
+				{/if}
 			</p>
 		{/if}
 

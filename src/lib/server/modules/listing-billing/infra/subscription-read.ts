@@ -1,6 +1,7 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
+import type { BillingContinuity } from '../domain/trial-eligibility';
 import { listings } from './schema';
 
 const LIVE_LISTING_STATES = ['free_listed', 'paid_listed'] as const;
@@ -10,6 +11,8 @@ export type SubscriptionSummary = {
 	state: string;
 	trialStartedAt: string | null;
 	trialEndsAt: string | null;
+	graceEndsAt: string | null;
+	billingContinuity: BillingContinuity;
 	updatedAt: string;
 	listingLabel: string;
 };
@@ -48,6 +51,8 @@ export async function getSubscription(
 		state: row.state,
 		trialStartedAt: row.trialStartedAt?.toISOString() ?? null,
 		trialEndsAt: row.trialEndsAt?.toISOString() ?? null,
+		graceEndsAt: row.graceEndsAt?.toISOString() ?? null,
+		billingContinuity: (row.billingContinuity as BillingContinuity) ?? 'new',
 		updatedAt: row.updatedAt.toISOString(),
 		listingLabel: listingStateLabel(row.state)
 	};

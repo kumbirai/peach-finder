@@ -16,7 +16,10 @@ import {
 	handleMediaRemoved,
 	handleProviderProfileModeration
 } from '../lib/server/modules/provider-profile';
-import { startTrialOnPublish } from '../lib/server/modules/listing-billing';
+import {
+	startTrialOnPublish,
+	handlePhoneVerifiedForTrialEligibility
+} from '../lib/server/modules/listing-billing';
 import { handleReviewsModeration } from '../lib/server/modules/provider-reviews';
 import { handleMediaModeration } from '../lib/server/modules/media-processing';
 import {
@@ -102,12 +105,24 @@ async function handleJob(job: { data: OutboxJob; retrycount?: number }): Promise
 			await handleMediaRemoved(db, event as never);
 		}
 		if (subscriber === 'listing-billing.start-trial' && event.eventName === 'ProviderPublished') {
-			const payload = event.payload as { providerProfileId: string };
+			const payload = event.payload as { providerProfileId: string; ownerId: string };
 			await db.transaction(async (tx) => {
 				await startTrialOnPublish(
 					tx,
 					payload.providerProfileId as never,
+					payload.ownerId as never,
 					event.correlationId,
+					new Date(event.occurredAt)
+				);
+			});
+		}
+		if (subscriber === 'listing-billing.trial-eligibility' && event.eventName === 'PhoneVerified') {
+			const payload = event.payload as { userId: string; phoneHash: string };
+			await db.transaction(async (tx) => {
+				await handlePhoneVerifiedForTrialEligibility(
+					tx,
+					payload.userId as never,
+					payload.phoneHash,
 					new Date(event.occurredAt)
 				);
 			});

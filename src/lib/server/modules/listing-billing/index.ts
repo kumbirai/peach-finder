@@ -4,8 +4,9 @@ import { getOwnedProfileIdDb } from '../provider-profile';
 import { cancelListingForProfile } from './infra/cancel-on-delete';
 import { ensureBuildingListing } from './infra/ensure-building-listing';
 import { startTrialOnPublish } from './infra/start-trial-on-publish';
+import { handlePhoneVerifiedForTrialEligibility } from './infra/trial-eligibility-handler';
 
-export { startTrialOnPublish, ensureBuildingListing };
+export { startTrialOnPublish, ensureBuildingListing, handlePhoneVerifiedForTrialEligibility };
 export {
 	getSubscription,
 	getActiveListingCount,
@@ -22,6 +23,13 @@ export {
 	formatListingPrice,
 	type ProviderBillingStatusView
 } from './domain/billing-status';
+export {
+	resolveTrialStartPlan,
+	inferResumedListingState,
+	isResumablePriorListing,
+	type BillingContinuity,
+	type TrialStartPlan
+} from './domain/trial-eligibility';
 
 export async function cancelListingForOwner(
 	tx: Transaction,
