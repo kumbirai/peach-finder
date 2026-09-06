@@ -28,9 +28,9 @@ FR-ADM-03, FR-ADM-04, FR-MSG-09.
 
 Implement against that module's data model (§3 of its LLD doc), API contract, and domain-events sections; do not re-derive data shapes here — the LLD is the single source of truth for schema and contracts. Build tasks:
 
-- [ ] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
-- [ ] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
-- [ ] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
+- [x] Backend: implement/extend the endpoint(s) and event publishers/subscribers this story requires, per the primary module's API-contract and domain-events sections.
+- [x] Frontend: implement the surface(s) this story is user-visible on on the SvelteKit client, matching the interactive prototype (`06-ui-ux-design/prototypes/seeker-and-provider-prototype.html`) pixel-for-pixel on tokens and in spirit on interaction.
+- [x] Tests: runnable Playwright spec(s) authored from the relevant `07-test-artifacts/05-playwright-spec-designs/*.spec-design.md` file(s) and the story-level test cases in `07-test-artifacts/03-test-cases/`; unit/integration coverage per `05-low-level-design/14-test-strategy/test-strategy.md`'s module-by-module matrix.
 
 ## 5. Visual & UX acceptance (mission-driven)
 
@@ -47,3 +47,11 @@ This delivery's driving mission is a top-10-app bar on visual look, premium feel
 - Visual regression baseline captured/approved for every surface this story adds or changes; token-conformance and accessibility assertions above pass.
 - `07-test-artifacts/04-traceability-matrix.md` row for US-ADMIN-03 cross-references this DDD (applied in the stage-9 traceability pass).
 - No application code exists yet for this story; this document is the blueprint an implementer builds from, not the implementation.
+
+## 7. Implementation Notes
+
+**Approach (2026-09-06):** Implemented the reports queue as a thin admin delivery surface over `trust-and-safety` facades, mirroring US-ADMIN-02 identity queue patterns. Added `listReportsQueue`, `getReportsQueueStats`, `getReportContext`, `dismissReport`, and `actOnReport` (unpublish only for the act path in this story). Message content for thread reports is exposed only via `direct-messaging.listThreadMessagesForReport`, gated on a matching filed report row — no general admin message browser. Migration `0019_us_admin_03_reports_queue.sql` adds `trust_and_safety.moderation_action`. Seed pack `scripts/seed-reports.ts` resets fixture reports each E2E boot. Playwright coverage lives in `testing/playwright/admin-reports-queue.e2e.ts` (extends the `e2e-report-resolution` design).
+
+**Deviation:** Full moderation-action picker (remove photo/review, suspend, reinstate, revoke badge) is deferred to US-ADMIN-04; the reports queue "Take action" path supports `unpublish` only, which satisfies the E2E spec-design act example and links `moderation_action.report_id`.
+
+**Follow-ups:** Wire remaining moderation commands and the moderation action panel (US-ADMIN-04); add `provider-profile.moderation-effect` worker subscriber if event-only unpublish is preferred over the synchronous facade call inside `actOnReport`.

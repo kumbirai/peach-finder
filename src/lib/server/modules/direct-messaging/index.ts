@@ -58,6 +58,10 @@ export {
 } from './infra/messaging-queries';
 export { resolveThreadAccess } from './infra/thread-access';
 export { getThreadForReport, isThreadParticipant } from './infra/thread-for-report';
+export {
+	listThreadMessagesForReport,
+	type ReportThreadMessage
+} from './infra/thread-messages-for-report';
 export type { MessageDTO, ThreadListItemDTO } from './infra/serializers';
 export { toThreadListItem } from './infra/serializers';
 

@@ -35,6 +35,22 @@ export {
 	verificationCaseReferencesPhoto,
 	type VerificationDecisionResult
 } from './infra/verification-commands';
+export {
+	listReportsQueue,
+	getReportsQueueStats,
+	getReportContext,
+	findOpenReport,
+	countModerationActionsForTarget,
+	type ReportQueueItem,
+	type ReportsQueueStats,
+	type ReportHistoryItem
+} from './infra/reports-queue-queries';
+export {
+	dismissReport,
+	actOnReport,
+	type ReportResolutionResult,
+	type ModerationActionKind
+} from './infra/report-resolution-commands';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

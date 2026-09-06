@@ -21,6 +21,10 @@ if (process.env.SEED_PACK === 'seed-availability') {
 	const { seedVerification } = await import('./seed-verification');
 	await seedVerification(db);
 	console.info('seed-verification complete');
+} else if (process.env.SEED_PACK === 'seed-reports') {
+	const { seedReports } = await import('./seed-reports');
+	await seedReports(db);
+	console.info('seed-reports complete');
 } else {
 	console.info(
 		'platform seed complete (set SEED_PACK=seed-core or seed-availability for browse fixtures)'

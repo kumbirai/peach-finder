@@ -76,3 +76,15 @@ export const processedAdminActions = trustAndSafetySchema.table('processed_admin
 		.notNull()
 		.defaultNow()
 });
+
+export const moderationActions = trustAndSafetySchema.table('moderation_action', {
+	id: uuid('id').primaryKey(),
+	adminId: uuid('admin_id').notNull(),
+	action: text('action').notNull(),
+	targetType: text('target_type').notNull(),
+	targetId: uuid('target_id').notNull(),
+	reason: text('reason').notNull(),
+	reportId: uuid('report_id'),
+	metadata: jsonb('metadata').notNull().default({}),
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
+});
