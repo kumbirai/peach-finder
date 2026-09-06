@@ -15,12 +15,9 @@
 		onSubmit: (input: { body: string }) => Promise<void>;
 	} = $props();
 
-	let body = $state('');
+	// writable derived: tracks initialBody, but the user can type over it until the prop changes
+	let body = $derived(initialBody);
 	let errorMessage = $state('');
-
-	$effect(() => {
-		body = initialBody;
-	});
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();

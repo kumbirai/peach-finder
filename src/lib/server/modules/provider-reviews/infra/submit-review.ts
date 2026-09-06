@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';

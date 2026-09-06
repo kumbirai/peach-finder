@@ -408,10 +408,7 @@ test.describe('US-REV-05 provider right of reply', () => {
 		expect(reseedRes.ok()).toBeTruthy();
 	});
 
-	test('TC-REV-05a: provider posts one reply and duplicate is rejected', async ({
-		browser,
-		request
-	}) => {
+	test('TC-REV-05a: provider posts one reply and duplicate is rejected', async ({ browser }) => {
 		const context = await browser.newContext();
 		const page = await context.newPage();
 		await signInProvider(page, '/provider/reviews');

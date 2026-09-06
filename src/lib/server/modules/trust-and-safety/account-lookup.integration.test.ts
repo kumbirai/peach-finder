@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { withTestDatabase } from '../../db/test-harness';
-import { seedCore, SEED_ADMIN_USER_ID } from '../../../../../scripts/seed-core';
+import { SEED_ADMIN_USER_ID } from '../../../../../scripts/seed-core';
 import { seedReports } from '../../../../../scripts/seed-reports';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
 import { getOwnedProfileIdDb } from '../provider-profile';

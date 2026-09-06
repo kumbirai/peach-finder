@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 
 	let {
@@ -7,13 +8,11 @@
 		phoneVisible: boolean;
 	} = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional: optimistic local toggle, re-synced from the prop via $effect below
-	let visible = $state(phoneVisible);
+	let visible = $state(untrack(() => phoneVisible));
 	let saving = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let savedMessage = $state<string | null>(null);
-	// svelte-ignore state_referenced_locally -- intentional: sentinel for detecting prop changes in the $effect below
-	let syncedPhoneVisible = phoneVisible;
+	let syncedPhoneVisible = untrack(() => phoneVisible);
 
 	$effect(() => {
 		if (phoneVisible !== syncedPhoneVisible) {

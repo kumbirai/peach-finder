@@ -1,4 +1,4 @@
-import { and, eq, lt, sql } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import { getConfig } from '../../platform-configuration';

@@ -2,6 +2,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import AdminInkStrip from '$lib/components/AdminInkStrip.svelte';
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 
 	let {
@@ -22,8 +23,7 @@
 	} = $props();
 
 	let step = $state<'password' | 'enroll' | 'totp'>('password');
-	// svelte-ignore state_referenced_locally -- intentional: seed from data, then updated from form results in the $effect below
-	let returnTo = $state(data.returnTo);
+	let returnTo = $state(untrack(() => data.returnTo));
 	let otpauthUrl = $state<string | undefined>();
 	let secretBase32 = $state<string | undefined>();
 	let backupCodes = $state<string[]>([]);

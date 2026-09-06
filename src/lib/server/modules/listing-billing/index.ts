@@ -7,7 +7,12 @@ import { startTrialOnPublish } from './infra/start-trial-on-publish';
 import { handlePhoneVerifiedForTrialEligibility } from './infra/trial-eligibility-handler';
 import { runBillingLifecycleTick } from './infra/daily-lifecycle-job';
 
-export { startTrialOnPublish, ensureBuildingListing, handlePhoneVerifiedForTrialEligibility, runBillingLifecycleTick };
+export {
+	startTrialOnPublish,
+	ensureBuildingListing,
+	handlePhoneVerifiedForTrialEligibility,
+	runBillingLifecycleTick
+};
 export {
 	getSubscription,
 	getActiveListingCount,

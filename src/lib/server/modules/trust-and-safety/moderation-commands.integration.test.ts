@@ -14,7 +14,13 @@ import { auditLog, outbox } from '../../shared/schema';
 import { providerProfiles } from '../provider-profile/infra/schema';
 import { handleProviderProfileModeration } from '../provider-profile';
 import { findActiveSession, createSession } from '../identity-and-access';
-import { unpublishProfile, suspendAccount, reinstateAccount, revokeBadge, removePhoto } from './index';
+import {
+	unpublishProfile,
+	suspendAccount,
+	reinstateAccount,
+	revokeBadge,
+	removePhoto
+} from './index';
 import { badgeState, moderationActions } from './infra/schema';
 import { handleModerationActionTaken } from '../user-notifications';
 import { handleMediaModeration } from '../media-processing';

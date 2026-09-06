@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	inferResumedListingState,
-	isResumablePriorListing,
-	resolveTrialStartPlan
-} from './trial-eligibility';
+import { isResumablePriorListing, resolveTrialStartPlan } from './trial-eligibility';
 
 describe('trial-eligibility domain', () => {
 	const now = new Date('2026-09-05T12:00:00.000Z');

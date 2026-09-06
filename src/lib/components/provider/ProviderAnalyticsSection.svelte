@@ -31,13 +31,10 @@
 	const trendDates = $derived(analytics.profileViews.trend.map((point) => point.date));
 
 	function rangeHref(days: 7 | 30 | 90): string {
-		const params = new URLSearchParams();
-		if (days !== 30) params.set('range', String(days));
-		const query = params.toString();
-		return query ? `/provider/dashboard?${query}` : '/provider/dashboard';
+		return days === 30 ? '/provider/dashboard' : `/provider/dashboard?range=${days}`;
 	}
 
-	function sparklinePath(metric: DashboardMetricView, stroke: string): string {
+	function sparklineD(metric: DashboardMetricView): string {
 		const values = metric.trend.map((point) => sparklineValueFromTrendLabel(point.value));
 		const max = Math.max(...values, 1);
 		const width = 90;
@@ -49,9 +46,9 @@
 			return `${x} ${y}`;
 		});
 		if (points.length === 0) {
-			return `<path d="M0 ${height / 2} L${width} ${height / 2}" stroke="${stroke}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+			return `M0 ${height / 2} L${width} ${height / 2}`;
 		}
-		return `<path d="M${points.join(' L')}" stroke="${stroke}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+		return `M${points.join(' L')}`;
 	}
 
 	function markerY(metric: DashboardMetricView, markerDate: string): number {
@@ -64,7 +61,9 @@
 		return height - (value / max) * (height - 4) - 2;
 	}
 
-	function markersForMetric(metric: DashboardMetricView): Array<ChartAnnotationMarker & { x: number; y: number }> {
+	function markersForMetric(
+		metric: DashboardMetricView
+	): Array<ChartAnnotationMarker & { x: number; y: number }> {
 		const width = 90;
 		return analytics.chartAnnotations.markers
 			.map((marker) => {
@@ -72,7 +71,9 @@
 				if (x == null) return null;
 				return { ...marker, x, y: markerY(metric, marker.date) };
 			})
-			.filter((marker): marker is ChartAnnotationMarker & { x: number; y: number } => marker !== null);
+			.filter(
+				(marker): marker is ChartAnnotationMarker & { x: number; y: number } => marker !== null
+			);
 	}
 </script>
 
@@ -106,7 +107,11 @@
 	</details>
 
 	{#if analytics.chartAnnotations.summaries.length > 0}
-		<ul class="annotation-summaries" data-testid="analytics-chart-annotations" aria-label="Your activity on the chart">
+		<ul
+			class="annotation-summaries"
+			data-testid="analytics-chart-annotations"
+			aria-label="Your activity on the chart"
+		>
 			{#each analytics.chartAnnotations.summaries as summary (summary.type)}
 				<li
 					class="annotation-summary"
@@ -141,7 +146,14 @@
 				aria-label="Profile views trend with your activity markers"
 				data-testid="analytics-profile-views-chart"
 			>
-				{@html sparklinePath(analytics.profileViews, '#B34625')}
+				<path
+					d={sparklineD(analytics.profileViews)}
+					stroke="#B34625"
+					stroke-width="2"
+					fill="none"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
 				{#each markersForMetric(analytics.profileViews) as marker (`profile-${marker.date}-${marker.type}`)}
 					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
 						<title>{marker.label} on {marker.date}</title>
@@ -175,7 +187,14 @@
 				aria-label="Search appearances trend with your activity markers"
 				data-testid="analytics-search-appearances-chart"
 			>
-				{@html sparklinePath(analytics.searchAppearances, '#2F5D50')}
+				<path
+					d={sparklineD(analytics.searchAppearances)}
+					stroke="#2F5D50"
+					stroke-width="2"
+					fill="none"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
 				{#each markersForMetric(analytics.searchAppearances) as marker (`search-${marker.date}-${marker.type}`)}
 					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
 						<title>{marker.label} on {marker.date}</title>
@@ -209,7 +228,14 @@
 				aria-label="Contact requests trend with your activity markers"
 				data-testid="analytics-contact-requests-chart"
 			>
-				{@html sparklinePath(analytics.contactRequests, '#B34625')}
+				<path
+					d={sparklineD(analytics.contactRequests)}
+					stroke="#B34625"
+					stroke-width="2"
+					fill="none"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
 				{#each markersForMetric(analytics.contactRequests) as marker (`contact-${marker.date}-${marker.type}`)}
 					<g data-testid={`analytics-chart-marker-${marker.type}-${marker.date}`}>
 						<title>{marker.label} on {marker.date}</title>

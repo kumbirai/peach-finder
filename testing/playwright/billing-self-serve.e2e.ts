@@ -106,9 +106,9 @@ test.describe('US-BILL-03 painless self-serve billing (live stack)', () => {
 
 		await page.reload();
 		await expect(page.getByTestId('billing-history-list')).toBeVisible();
-		expect(await page.getByTestId('billing-history-list').locator('li').count()).toBeGreaterThanOrEqual(
-			beforeCount + 2
-		);
+		expect(
+			await page.getByTestId('billing-history-list').locator('li').count()
+		).toBeGreaterThanOrEqual(beforeCount + 2);
 
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="provider-billing-page"]')

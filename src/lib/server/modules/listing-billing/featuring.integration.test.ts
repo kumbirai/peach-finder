@@ -7,7 +7,7 @@ import {
 	SEED_DUAL_ROLE_USER_ID
 } from '../../../../../scripts/seed-core';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
-import { asId, type ProviderProfileId } from '../../shared/ids';
+import { asId } from '../../shared/ids';
 import {
 	cancelFeaturingRenewalForOwner,
 	completeFeaturingPurchaseForOwner,
@@ -137,7 +137,9 @@ describe('US-BILL-05 buy fair featuring integration', () => {
 					)
 				);
 			expect(lapsedFeaturing.length).toBeGreaterThan(0);
-			expect(await getActiveFeaturing(db, asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID))).toBeNull();
+			expect(
+				await getActiveFeaturing(db, asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID))
+			).toBeNull();
 
 			const projectionAfter = await db
 				.select({ isFeatured: searchProjection.isFeatured })
@@ -255,7 +257,10 @@ describe('US-BILL-05 buy fair featuring integration', () => {
 			const cancel = await cancelFeaturingRenewalForOwner(db, ownerId, now);
 			expect(cancel.ok).toBe(true);
 
-			const row = await getActiveFeaturing(db, asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID));
+			const row = await getActiveFeaturing(
+				db,
+				asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID)
+			);
 			expect(row?.cancelAtPeriodEnd).toBe(true);
 			expect(row?.currentPeriodEndsAt).toBe(periodEnd.toISOString());
 		});
@@ -278,9 +283,15 @@ describe('US-BILL-05 buy fair featuring integration', () => {
 				updatedAt: past
 			});
 
-			const tick = await runBillingLifecycleTick(db, new Date('2026-09-05T00:00:00.000Z'), 'corr-feat-lapse');
+			const tick = await runBillingLifecycleTick(
+				db,
+				new Date('2026-09-05T00:00:00.000Z'),
+				'corr-feat-lapse'
+			);
 			expect(tick.featuringLapsed).toBe(1);
-			expect(await getActiveFeaturing(db, asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID))).toBeNull();
+			expect(
+				await getActiveFeaturing(db, asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID))
+			).toBeNull();
 		});
 	});
 });

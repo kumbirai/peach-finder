@@ -35,7 +35,8 @@ export async function processFeaturingPaymentWebhook(
 		}
 
 		const activeFeaturing = await getActiveFeaturing(tx, input.providerProfileId);
-		const featuringPriceCents = input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
+		const featuringPriceCents =
+			input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
 
 		if (input.kind === 'purchase') {
 			if (activeFeaturing) {
@@ -109,7 +110,8 @@ export async function processFeaturingPaymentFailed(
 			return { status: 'ignored', reason: 'featuring_not_active' };
 		}
 
-		const featuringPriceCents = input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
+		const featuringPriceCents =
+			input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
 		const { insertInvoice } = await import('./invoice-read');
 		const { newId } = await import('../../../shared/ids');
 

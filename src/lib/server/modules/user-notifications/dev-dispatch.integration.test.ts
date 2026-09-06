@@ -10,7 +10,11 @@ import { outbox } from '../../shared/schema';
 import { reviews } from '../provider-reviews/infra/schema';
 import { users } from '../identity-and-access/infra/schema';
 import { sendOrHoldMessage } from '../direct-messaging';
-import { dispatchUndispatchedNotificationSubscribers, handleMessageSent, catchUpMessageSentNotificationLedger } from './index';
+import {
+	dispatchUndispatchedNotificationSubscribers,
+	handleMessageSent,
+	catchUpMessageSentNotificationLedger
+} from './index';
 import { notificationLog } from './infra/schema';
 
 const PROVIDER_OWNER_ID = asId<'UserId'>('01900000-0000-7000-8000-000000000001');
@@ -146,21 +150,18 @@ describe('dev notification dispatch helper', () => {
 				.limit(1);
 			if (!messageSentRow) throw new Error('MessageSent outbox row missing');
 
-			await handleMessageSent(
-				db,
-				{
-					eventId: messageSentRow.eventId,
-					eventName: 'MessageSent',
-					version: 1,
-					occurredAt: asInstant('2026-09-05T14:00:00Z'),
-					correlationId: 'corr-replay-guard',
-					payload: {
-						threadId: sent.value.threadId,
-						messageId: sent.value.messageId,
-						senderId: seekerId
-					}
-				} as never
-			);
+			await handleMessageSent(db, {
+				eventId: messageSentRow.eventId,
+				eventName: 'MessageSent',
+				version: 1,
+				occurredAt: asInstant('2026-09-05T14:00:00Z'),
+				correlationId: 'corr-replay-guard',
+				payload: {
+					threadId: sent.value.threadId,
+					messageId: sent.value.messageId,
+					senderId: seekerId
+				}
+			} as never);
 
 			const beforeRows = await db
 				.select()

@@ -20,10 +20,7 @@ import {
 } from '$lib/server/modules/user-notifications';
 import { getOwnVerificationStatus } from '$lib/server/modules/trust-and-safety';
 import { getBillingStatusForOwner } from '$lib/server/modules/listing-billing';
-import {
-	getDashboardForOwner,
-	parseDashboardRange
-} from '$lib/server/modules/provider-analytics';
+import { getDashboardForOwner, parseDashboardRange } from '$lib/server/modules/provider-analytics';
 
 export const _requiredRole: Role = 'provider';
 

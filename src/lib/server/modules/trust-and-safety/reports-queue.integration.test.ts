@@ -13,7 +13,7 @@ import {
 	SEED_REPORT_THREAD_ID,
 	SEED_REPORT_THREAD_OPEN_ID
 } from '../../../../../scripts/seed-reports-constants';
-import { asId, type ReportId, type ThreadId, type UserId } from '../../shared/ids';
+import { asId } from '../../shared/ids';
 import { auditLog, outbox } from '../../shared/schema';
 import {
 	actOnReport,

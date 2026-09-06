@@ -13,8 +13,8 @@ export async function purchaseFeaturingForOwner(
 	db: Database,
 	ownerId: UserId,
 	gateway: PaymentGateway,
-	correlationId: string,
-	now: Date
+	_correlationId: string,
+	_now: Date
 ): Promise<Result<{ reference: string }, UseCaseError>> {
 	const profileId = await getOwnedProfileIdDb(db, ownerId);
 	if (!profileId) {

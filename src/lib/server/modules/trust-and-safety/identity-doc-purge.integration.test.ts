@@ -3,10 +3,7 @@ import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { withTestDatabase } from '../../db/test-harness';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
-import {
-	seedCore,
-	SEED_ADMIN_USER_ID
-} from '../../../../../scripts/seed-core';
+import { seedCore, SEED_ADMIN_USER_ID } from '../../../../../scripts/seed-core';
 import {
 	SEED_VERIF_PENDING_NEW_OWNER_ID,
 	SEED_VERIF_PENDING_NEW_PROFILE_ID,
@@ -14,7 +11,7 @@ import {
 	SEED_VERIF_PENDING_OLD_PROFILE_ID
 } from '../../../../../scripts/seed-verification-constants';
 import { seedVerification } from '../../../../../scripts/seed-verification';
-import { asId, newId, type PhotoId, type ProviderProfileId, type UserId } from '../../shared/ids';
+import { asId, newId, type PhotoId, type UserId } from '../../shared/ids';
 import { storeIdentityDoc } from '../media-processing';
 import { photos } from '../media-processing/infra/schema';
 import { IDENTITY_DOC_RETENTION_MS } from './domain/identity-doc-retention';

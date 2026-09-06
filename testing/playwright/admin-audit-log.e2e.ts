@@ -107,9 +107,12 @@ test.describe('US-ADMIN-07 everything I do is on the record', () => {
 		await signInAdmin(request);
 
 		for (const days of [17, 19]) {
-			const update = await request.put('/admin/api/platform/config/listing-billing.trial_period_days', {
-				data: { value: days }
-			});
+			const update = await request.put(
+				'/admin/api/platform/config/listing-billing.trial_period_days',
+				{
+					data: { value: days }
+				}
+			);
 			expect(update.ok(), await update.text()).toBeTruthy();
 		}
 

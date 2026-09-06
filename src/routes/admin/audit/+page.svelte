@@ -40,6 +40,7 @@
 		loadingMore = true;
 		loadError = null;
 		try {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local request-builder, never stored in reactive state
 			const params = new URLSearchParams({
 				targetType: data.targetType,
 				targetId: data.targetId

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import MessageBubble from '$lib/components/MessageBubble.svelte';
@@ -34,8 +34,7 @@
 		showResponseTimeDisclosure?: boolean;
 	} = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional: snapshot initialMessages, then merge live poll/WS updates
-	let messages = $state.raw<ThreadMessage[]>([...initialMessages]);
+	let messages = $state.raw<ThreadMessage[]>(untrack(() => [...initialMessages]));
 	let body = $state('');
 	let sending = $state(false);
 	let statusMessage = $state('');

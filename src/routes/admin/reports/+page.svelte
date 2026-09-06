@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
@@ -9,8 +10,7 @@
 
 	let dismissOpenFor = $state<string | null>(null);
 	let dismissNote = $state('');
-	// svelte-ignore state_referenced_locally -- intentional: one-time seed of the open dialog from the deep-link query param
-	let actOpenFor = $state<string | null>(data.actReportId);
+	let actOpenFor = $state<string | null>(untrack(() => data.actReportId));
 	let actReason = $state('');
 	let actAction = $state('unpublish');
 

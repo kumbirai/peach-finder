@@ -97,12 +97,7 @@ test.describe('US-NOTIF-03 never a spam cannon (live stack)', () => {
 
 		await signIn(seekerPage, SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD);
 		await signIn(providerPage, SEED_SAFE02_AMARA_EMAIL, SEED_SAFE02_AMARA_PASSWORD);
-		await ensureUnblockedPair(
-			seekerPage,
-			providerPage,
-			SEED_DUAL_ROLE_USER_ID,
-			AMARA_OWNER_ID
-		);
+		await ensureUnblockedPair(seekerPage, providerPage, SEED_DUAL_ROLE_USER_ID, AMARA_OWNER_ID);
 
 		await flushNotificationBatches(providerPage.request);
 		await clearUnreadNewMessageNotifications(providerPage.request);

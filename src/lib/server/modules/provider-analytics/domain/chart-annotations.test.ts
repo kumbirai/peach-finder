@@ -47,6 +47,8 @@ describe('chart-annotations', () => {
 	it('labels availability markers and summaries for longer ranges', () => {
 		expect(availabilitySummaryLabel(3, 30)).toBe('Went available 3× the last 30 days');
 		expect(wentAvailableMarkerLabel(1)).toBe('Went available');
-		expect(featuringSummaryLabel(new Date('2026-09-12T00:00:00.000Z'))).toBe('Featured since 12 Sep');
+		expect(featuringSummaryLabel(new Date('2026-09-12T00:00:00.000Z'))).toBe(
+			'Featured since 12 Sep'
+		);
 	});
 });

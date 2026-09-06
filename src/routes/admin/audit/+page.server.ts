@@ -15,8 +15,7 @@ const TARGET_TYPE_OPTIONS = [
 	{ value: 'review', label: 'Review' }
 ] as const;
 
-const TARGET_ID_UUID =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TARGET_ID_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parsePageLimit(raw: string | null): number | undefined {
 	if (!raw) return undefined;

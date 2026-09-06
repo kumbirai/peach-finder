@@ -63,8 +63,8 @@ export async function applyListingBillingTransition(
 	const gracePeriodDays = getConfig('listing-billing.grace_period_days');
 	const listingPriceCents = getConfig('listing-billing.listing_price_cents');
 	const events: DomainEvent[] = [];
-	let invoiceId: InvoiceId | null = null;
-	let newState = previousState;
+	const invoiceId: InvoiceId | null = null;
+	let newState: string;
 	const updates: Partial<typeof listings.$inferInsert> = { updatedAt: input.now };
 
 	switch (input.kind) {

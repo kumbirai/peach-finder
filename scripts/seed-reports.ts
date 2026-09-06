@@ -1,5 +1,5 @@
 import type { Database } from '../src/lib/server/db';
-import { inArray, eq } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { seedCore } from './seed-core';
 import { seedPlatform, loadConfigCache } from '../src/lib/server/modules/platform-configuration';
 import {
@@ -63,9 +63,7 @@ export async function seedReports(db: Database): Promise<void> {
 			unpublishReason: null,
 			updatedAt: new Date('2026-09-06T08:00:00.000Z')
 		})
-		.where(
-			inArray(providerProfiles.id, [SEED_CORE_PRIMARY_PROFILE_ID, actTargetProfileId])
-		);
+		.where(inArray(providerProfiles.id, [SEED_CORE_PRIMARY_PROFILE_ID, actTargetProfileId]));
 
 	await db.insert(reports).values([
 		{
@@ -102,12 +100,12 @@ export async function seedReports(db: Database): Promise<void> {
 			id: SEED_REPORT_ACT_OPEN_ID,
 			reporterId: SEED_DUAL_ROLE_USER_ID,
 			targetType: 'profile',
-				targetId: SEED_CORE_PRIMARY_PROFILE_ID,
-				reason: 'safety_concern',
-				freeText: 'Needs admin action path.',
-				status: 'open',
-				createdAt: new Date('2026-09-05T09:00:00.000Z')
-			},
+			targetId: SEED_CORE_PRIMARY_PROFILE_ID,
+			reason: 'safety_concern',
+			freeText: 'Needs admin action path.',
+			status: 'open',
+			createdAt: new Date('2026-09-05T09:00:00.000Z')
+		},
 		{
 			id: SEED_REPORT_DISMISSED_ID,
 			reporterId: reviewerId,

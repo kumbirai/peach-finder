@@ -4,10 +4,7 @@ import type { ProviderProfileId } from '../../../shared/ids';
 import { applyFailedPaymentTransition, applyListingBillingTransition } from './billing-transitions';
 import { processedWebhooks } from './schema';
 import type { PaystackWebhookEvent } from './webhook-signature';
-import {
-	processFeaturingPaymentFailed,
-	processFeaturingPaymentWebhook
-} from './featuring-webhook';
+import { processFeaturingPaymentFailed, processFeaturingPaymentWebhook } from './featuring-webhook';
 
 export type WebhookProcessResult =
 	| { status: 'duplicate' }
@@ -129,7 +126,8 @@ export async function processPaystackWebhook(
 				await tx.delete(processedWebhooks).where(eq(processedWebhooks.pspEventId, event.id));
 				return {
 					status: 'ignored',
-					reason: result.previousState === 'missing' ? 'listing_not_found' : 'payment_not_applicable'
+					reason:
+						result.previousState === 'missing' ? 'listing_not_found' : 'payment_not_applicable'
 				};
 			}
 

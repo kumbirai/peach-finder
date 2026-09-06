@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
@@ -24,8 +25,7 @@
 		form?: { held?: true; sent?: true; message?: string };
 	} = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional: seed the editable draft, re-synced from data in the $effect below
-	let body = $state(data.draft ?? '');
+	let body = $state(untrack(() => data.draft ?? ''));
 	let status = $state<'idle' | 'sending' | 'held' | 'sent' | 'error'>('idle');
 	let statusMessage = $state('');
 

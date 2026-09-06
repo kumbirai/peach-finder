@@ -3,7 +3,7 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import ReviewComposeForm from '$lib/components/ReviewComposeForm.svelte';
 	import type { OwnReviewDto } from '$lib/server/modules/provider-reviews';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let {
 		data
@@ -26,8 +26,7 @@
 	let editConfirming = $state(false);
 	let deleteConfirming = $state(false);
 	let deleted = $state(false);
-	// svelte-ignore state_referenced_locally -- intentional: sentinel for detecting provider changes in the $effect below
-	let syncedProfileId = $state(data.providerProfileId);
+	let syncedProfileId = $state(untrack(() => data.providerProfileId));
 	let hydrated = $state(false);
 
 	onMount(() => {

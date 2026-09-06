@@ -302,8 +302,8 @@
 			<h2 id="featuring-heading" class="title">Featuring add-on</h2>
 			<Card>
 				<p class="body helper">
-					Boost placement within the fairness rules — availability still outranks everything. Requires
-					an active listing.
+					Boost placement within the fairness rules — availability still outranks everything.
+					Requires an active listing.
 				</p>
 				{#if data.billing.featuring.active}
 					<p class="body payment-on-file" data-testid="billing-featuring-active">

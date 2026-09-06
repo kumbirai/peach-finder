@@ -4,7 +4,7 @@ import { getDb } from '$lib/server/db';
 import { approveVerification } from '$lib/server/modules/trust-and-safety';
 import type { Role } from '$lib/server/shared/auth-context';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
-import { asId, type VerificationCaseId } from '$lib/server/shared/ids';
+import { asId } from '$lib/server/shared/ids';
 
 export const _requiredRole: Role = 'admin';
 

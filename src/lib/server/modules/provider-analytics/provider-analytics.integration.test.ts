@@ -252,7 +252,6 @@ describe('US-ANLY-03 demand signal I can act on', () => {
 			await loadConfigCache(db);
 			await seedCore(db);
 
-			const profileId = asId<'ProviderProfileId'>(SEED_DUAL_ROLE_PROFILE_ID);
 			const swedishTagId = '01900000-0000-7000-8000-000000000202';
 			const deepTissueTagId = '01900000-0000-7000-8000-000000000201';
 			const sportsTagId = '01900000-0000-7000-8000-000000000203';

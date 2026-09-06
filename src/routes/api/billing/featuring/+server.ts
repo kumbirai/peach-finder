@@ -5,7 +5,6 @@ import { publicAppOrigin } from '$lib/server/env';
 import {
 	completeFeaturingPurchaseForOwner,
 	createPaymentGateway,
-	getFakePaymentGateway,
 	purchaseFeaturingForOwner
 } from '$lib/server/modules/listing-billing';
 import { dispatchUndispatchedBillingSubscribers } from '$lib/server/modules/listing-billing/infra/dev-dispatch';

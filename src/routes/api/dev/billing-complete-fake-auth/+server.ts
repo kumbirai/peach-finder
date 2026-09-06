@@ -1,7 +1,6 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Role } from '$lib/server/shared/auth-context';
-import { getDb } from '$lib/server/db';
 import { getFakePaymentGateway } from '$lib/server/modules/listing-billing';
 import { publicAppOrigin } from '$lib/server/env';
 

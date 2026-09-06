@@ -1,5 +1,4 @@
 import type { Database } from '../../../db';
-import type { ProviderProfileId } from '../../../shared/ids';
 import { getOwnedProfileIdDb } from '../../provider-profile';
 import type { UserId } from '../../../shared/ids';
 import { listServiceTagIdsForProfileDb } from '../../provider-profile/infra/read-owner-profile';

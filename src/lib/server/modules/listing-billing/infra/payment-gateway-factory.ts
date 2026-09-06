@@ -1,5 +1,5 @@
 import type { PaymentGateway } from '../app/ports';
-import { FakePaymentGateway, getFakePaymentGateway } from './fake-payment-gateway';
+import { getFakePaymentGateway } from './fake-payment-gateway';
 import { PaystackGateway } from './paystack-gateway';
 
 export function createPaymentGateway(appOrigin: string): PaymentGateway {

@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { withTestDatabase } from '../../db/test-harness';
 import { loadConfigCache, readAuditLog, seedPlatform, updateConfig } from './index';
 import { resetConfigCacheForTests } from './infra/config-cache';
-import { users } from '../identity-and-access/infra/schema';
 import { asId } from '../../shared/ids';
 import { SystemClock } from '../../shared/clock';
 import { createAuthContext } from '../../shared/auth-context';
@@ -123,9 +122,10 @@ describe('US-ADMIN-07 audit log integration', () => {
 		expect(isValidAuditCursor('not-a-cursor')).toBe(false);
 		expect(
 			isValidAuditCursor(
-				Buffer.from(JSON.stringify({ occurredAt: '2026-09-06T12:00:00.000Z', id: 'x' }), 'utf8').toString(
-					'base64url'
-				)
+				Buffer.from(
+					JSON.stringify({ occurredAt: '2026-09-06T12:00:00.000Z', id: 'x' }),
+					'utf8'
+				).toString('base64url')
 			)
 		).toBe(true);
 	});

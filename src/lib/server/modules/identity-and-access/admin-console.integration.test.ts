@@ -152,14 +152,14 @@ describe('US-ADMIN-01 admin console hardening integration', () => {
 			expect(login.ok).toBe(true);
 			if (!login.ok) return;
 
-			const touchAt = new Date(loginAt.getTime() + 11 * ADMIN_IDLE_MS / 12);
+			const touchAt = new Date(loginAt.getTime() + (11 * ADMIN_IDLE_MS) / 12);
 			const activeBeforeTouch = await findActiveSession(db, login.value.token, touchAt);
 			expect(activeBeforeTouch).not.toBeNull();
 			if (!activeBeforeTouch) return;
 
 			await maybeTouchSession(db, activeBeforeTouch, touchAt);
 
-			const stillActiveAt = new Date(touchAt.getTime() + 11 * ADMIN_IDLE_MS / 12);
+			const stillActiveAt = new Date(touchAt.getTime() + (11 * ADMIN_IDLE_MS) / 12);
 			expect(await findActiveSession(db, login.value.token, stillActiveAt)).not.toBeNull();
 		});
 	});

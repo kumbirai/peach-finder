@@ -74,24 +74,23 @@ describe('US-NOTIF-04 deep-link integration', () => {
 				)
 			);
 
-			await handlePaymentFailed(
-				db,
-				{
-					eventId: newId<'OutboxEventId'>(),
-					eventName: 'PaymentFailed',
-					version: 1,
-					occurredAt: asInstant('2026-09-05T14:05:00Z'),
-					correlationId: 'corr-deeplink-billing',
-					payload: {
-						subscriptionId: PRIMARY_PROFILE_ID,
-						invoiceId: newId(),
-						amount: 29900
-					}
+			await handlePaymentFailed(db, {
+				eventId: newId<'OutboxEventId'>(),
+				eventName: 'PaymentFailed',
+				version: 1,
+				occurredAt: asInstant('2026-09-05T14:05:00Z'),
+				correlationId: 'corr-deeplink-billing',
+				payload: {
+					subscriptionId: PRIMARY_PROFILE_ID,
+					invoiceId: newId(),
+					amount: 29900
 				}
-			);
+			});
 
 			const providerNotifications = await listUnreadInAppNotifications(db, PROVIDER_OWNER_ID, 20);
-			const messageNotification = providerNotifications.find((row) => row.category === 'new_message');
+			const messageNotification = providerNotifications.find(
+				(row) => row.category === 'new_message'
+			);
 			const billingNotification = providerNotifications.find(
 				(row) => row.category === 'billing_payment'
 			);
@@ -110,21 +109,18 @@ describe('US-NOTIF-04 deep-link integration', () => {
 			await loadConfigCache(db);
 			await seedCore(db);
 
-			await handleVerificationDecided(
-				db,
-				{
-					eventId: newId<'OutboxEventId'>(),
-					eventName: 'VerificationDecided',
-					version: 1,
-					occurredAt: asInstant('2026-09-05T14:00:00Z'),
-					correlationId: 'corr-verify-reject',
-					payload: {
-						verificationCaseId: newId(),
-						providerProfileId: PRIMARY_PROFILE_ID,
-						decision: 'rejected'
-					}
+			await handleVerificationDecided(db, {
+				eventId: newId<'OutboxEventId'>(),
+				eventName: 'VerificationDecided',
+				version: 1,
+				occurredAt: asInstant('2026-09-05T14:00:00Z'),
+				correlationId: 'corr-verify-reject',
+				payload: {
+					verificationCaseId: newId(),
+					providerProfileId: PRIMARY_PROFILE_ID,
+					decision: 'rejected'
 				}
-			);
+			});
 
 			const notifications = await listUnreadInAppNotifications(db, PROVIDER_OWNER_ID, 5);
 			const verification = notifications.find((row) => row.category === 'identity_outcome');

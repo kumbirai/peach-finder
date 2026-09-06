@@ -4,7 +4,7 @@ import { seedCore, SEED_DUAL_ROLE_USER_ID } from '../../../../../scripts/seed-co
 import { SEED_VERIF_PENDING_OLD_OWNER_ID } from '../../../../../scripts/seed-verification-constants';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
 import { storeIdentityDoc } from './index';
-import { asId, type UserId } from '../../shared/ids';
+import { asId } from '../../shared/ids';
 
 async function tinyJpeg(): Promise<Buffer> {
 	const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80">

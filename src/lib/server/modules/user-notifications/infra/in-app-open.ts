@@ -6,8 +6,7 @@ import { notificationLog } from './schema';
 import { markInAppNotificationsRead } from './notification-commands';
 
 export type InAppNotificationOpenResult =
-	| { ok: true; deepLinkPath: string }
-	| { ok: false; reason: 'not_found' };
+	{ ok: true; deepLinkPath: string } | { ok: false; reason: 'not_found' };
 
 export async function openInAppNotification(
 	db: Database,
@@ -43,10 +42,7 @@ export async function openInAppNotification(
 	};
 }
 
-export function actionLabelForNotification(
-	category: string,
-	deepLinkPath: string
-): string {
+export function actionLabelForNotification(category: string, deepLinkPath: string): string {
 	if (category === 'identity_outcome') {
 		return actionLabelForCategory(category, {
 			verificationDecision: deepLinkPath.includes('/verify') ? 'rejected' : 'approved'

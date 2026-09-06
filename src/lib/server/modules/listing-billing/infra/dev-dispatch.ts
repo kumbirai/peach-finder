@@ -6,7 +6,11 @@ import {
 	subscribersFor,
 	type UndispatchedOutboxRow
 } from '../../../shared/outbox';
-import { handleListingLapsedProjectionRemove, handleFeaturingActivated, handleFeaturingLapsed } from '../../discovery-search';
+import {
+	handleListingLapsedProjectionRemove,
+	handleFeaturingActivated,
+	handleFeaturingLapsed
+} from '../../discovery-search';
 import {
 	handleBillingListingLapsed,
 	handleRepublishAfterBillingLapse

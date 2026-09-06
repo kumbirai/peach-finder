@@ -10,7 +10,7 @@ import {
 	SEED_VERIF_PENDING_OLD_CASE_ID
 } from '../../../../../scripts/seed-verification-constants';
 import { seedVerification } from '../../../../../scripts/seed-verification';
-import { asId, type PhotoId, type UserId, type VerificationCaseId } from '../../shared/ids';
+import { asId } from '../../shared/ids';
 import { auditLog, outbox } from '../../shared/schema';
 import { unpublishProfileForOwnerDb } from '../provider-profile';
 import {

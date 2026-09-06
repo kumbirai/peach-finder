@@ -10,11 +10,7 @@ import {
 	loadPrimarySharePhotoUrl,
 	parseProviderProfileId
 } from '$lib/server/modules/provider-profile';
-import {
-	captureView,
-	deriveViewerKey,
-	ANON_COOKIE
-} from '$lib/server/modules/provider-analytics';
+import { captureView, deriveViewerKey, ANON_COOKIE } from '$lib/server/modules/provider-analytics';
 import { publicAppOrigin } from '$lib/server/env';
 
 export const _requiredRole: Role = 'anonymous';
@@ -29,11 +25,7 @@ export async function load({ params, locals, url, cookies }) {
 	const ownerId = await getProfileOwnerIdDb(db, parsed.value);
 	const isOwnerView = ownerId != null && locals.auth.userId === ownerId;
 	if (!isOwnerView) {
-		const viewerKey = deriveViewerKey(
-			locals.auth,
-			cookies.get(ANON_COOKIE),
-			new Date()
-		);
+		const viewerKey = deriveViewerKey(locals.auth, cookies.get(ANON_COOKIE), new Date());
 		void captureView(db, parsed.value, viewerKey);
 	}
 

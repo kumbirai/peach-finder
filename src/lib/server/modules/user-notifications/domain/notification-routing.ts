@@ -75,7 +75,10 @@ export function actionLabelForCategory(
 	}
 }
 
-export function newMessageCopy(senderName: string, messageCount = 1): { title: string; body: string } {
+export function newMessageCopy(
+	senderName: string,
+	messageCount = 1
+): { title: string; body: string } {
 	if (messageCount <= 1) {
 		return {
 			title: `New message from ${senderName}`,
@@ -88,7 +91,10 @@ export function newMessageCopy(senderName: string, messageCount = 1): { title: s
 	};
 }
 
-export function verificationOutcomeCopy(decision: VerificationDecision): { title: string; body: string } {
+export function verificationOutcomeCopy(decision: VerificationDecision): {
+	title: string;
+	body: string;
+} {
 	if (decision === 'approved') {
 		return {
 			title: 'Identity verified',
@@ -121,7 +127,10 @@ export function billingPaymentCopy(succeeded: boolean): { title: string; body: s
 	};
 }
 
-export function billingGraceCopy(graceLabel: string, reminderDay?: number): { title: string; body: string } {
+export function billingGraceCopy(
+	graceLabel: string,
+	reminderDay?: number
+): { title: string; body: string } {
 	if (reminderDay !== undefined) {
 		return {
 			title: 'Grace period reminder',

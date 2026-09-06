@@ -4,7 +4,7 @@ import { z } from 'zod';
 import sharp from 'sharp';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
-import { asId, newId, type ProviderProfileId, type UserId } from '$lib/server/shared/ids';
+import { asId, newId } from '$lib/server/shared/ids';
 import {
 	SEED_ADMIN_USER_ID,
 	SEED_CORE_PRIMARY_PROFILE_ID,

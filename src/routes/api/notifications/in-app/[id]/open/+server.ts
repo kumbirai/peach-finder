@@ -13,12 +13,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	const db = getDb();
-	const result = await openInAppNotification(
-		db,
-		locals.auth.userId!,
-		notificationId,
-		new Date()
-	);
+	const result = await openInAppNotification(db, locals.auth.userId!, notificationId, new Date());
 
 	if (!result.ok) {
 		error(404, 'Notification not found');

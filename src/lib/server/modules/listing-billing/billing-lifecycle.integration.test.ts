@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { withTestDatabase } from '../../db/test-harness';
-import {
-	seedCore,
-	SEED_DUAL_ROLE_PROFILE_ID
-} from '../../../../../scripts/seed-core';
+import { seedCore, SEED_DUAL_ROLE_PROFILE_ID } from '../../../../../scripts/seed-core';
 import { seedPlatform, loadConfigCache } from '../platform-configuration';
 import { listings, processedWebhooks } from './infra/schema';
 import { runBillingLifecycleTick } from './infra/daily-lifecycle-job';
@@ -116,7 +113,11 @@ describe('US-BILL-04 lapse lifecycle integration', () => {
 			if (!charge.ok) return;
 
 			const eventId = 'evt_bill_04d_test';
-			const payload = gateway.buildWebhookPayload(charge.value.reference, eventId, 'charge.success');
+			const payload = gateway.buildWebhookPayload(
+				charge.value.reference,
+				eventId,
+				'charge.success'
+			);
 			expect(payload).toBeTruthy();
 			if (!payload) return;
 

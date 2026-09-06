@@ -62,9 +62,7 @@ export const featuringAddons = listingBillingSchema.table(
 		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow()
 	},
-	(table) => [
-		index('featuring_renewal_due_idx').on(table.currentPeriodEndsAt)
-	]
+	(table) => [index('featuring_renewal_due_idx').on(table.currentPeriodEndsAt)]
 );
 
 export const dunningDispatches = listingBillingSchema.table(

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
@@ -33,8 +34,7 @@
 	const saveMessage = $derived(
 		introSaved ? 'Saved — your profile is live now.' : (form?.message ?? null)
 	);
-	// svelte-ignore state_referenced_locally -- intentional: seed the editable intro, re-synced from form.intro in the $effect below
-	let introValue = $state(data.profile.intro ?? '');
+	let introValue = $state(untrack(() => data.profile.intro ?? ''));
 
 	$effect(() => {
 		if (form?.intro !== undefined) {

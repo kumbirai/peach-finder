@@ -2,13 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
-import {
-	newId,
-	asId,
-	type ProviderProfileId,
-	type ReviewId,
-	type UserId
-} from '../../../shared/ids';
+import { newId, asId, type ReviewId, type UserId } from '../../../shared/ids';
 import { publish } from '../../../shared/outbox';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { getProfileOwnerIdDb } from '../../provider-profile';

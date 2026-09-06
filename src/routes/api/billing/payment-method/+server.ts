@@ -18,7 +18,7 @@ const BodySchema = z
 	})
 	.passthrough();
 
-export const POST: RequestHandler = async ({ locals, request, url }) => {
+export const POST: RequestHandler = async ({ locals, request }) => {
 	const raw = await request.json().catch(() => ({}));
 	const parsed = BodySchema.safeParse(raw);
 	if (!parsed.success) {

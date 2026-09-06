@@ -22,7 +22,9 @@ export async function handleFeaturingActivated(
 			featuredSince: now,
 			updatedAt: now
 		})
-		.where(eq(searchProjection.providerProfileId, event.payload.providerProfileId as ProviderProfileId));
+		.where(
+			eq(searchProjection.providerProfileId, event.payload.providerProfileId as ProviderProfileId)
+		);
 }
 
 export async function handleFeaturingLapsed(
@@ -43,5 +45,7 @@ export async function handleFeaturingLapsed(
 			featuredSince: null,
 			updatedAt: now
 		})
-		.where(eq(searchProjection.providerProfileId, event.payload.providerProfileId as ProviderProfileId));
+		.where(
+			eq(searchProjection.providerProfileId, event.payload.providerProfileId as ProviderProfileId)
+		);
 }

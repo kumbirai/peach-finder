@@ -429,21 +429,18 @@ describe('US-NOTIF-03 never a spam cannon integration', () => {
 			});
 
 			const { handleReviewSubmitted } = await import('./infra/event-handlers');
-			await handleReviewSubmitted(
-				db,
-				{
-					eventId: newId<'OutboxEventId'>(),
-					eventName: 'ReviewSubmitted',
-					version: 1,
-					occurredAt: asInstant('2026-09-05T12:00:00Z'),
-					correlationId: 'corr-review-blocked',
-					payload: {
-						reviewId,
-						providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
-						rating: 5
-					}
-				} as never
-			);
+			await handleReviewSubmitted(db, {
+				eventId: newId<'OutboxEventId'>(),
+				eventName: 'ReviewSubmitted',
+				version: 1,
+				occurredAt: asInstant('2026-09-05T12:00:00Z'),
+				correlationId: 'corr-review-blocked',
+				payload: {
+					reviewId,
+					providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
+					rating: 5
+				}
+			} as never);
 
 			const rows = await db
 				.select()

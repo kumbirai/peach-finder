@@ -62,9 +62,9 @@ describe('US-NOTIF-04 notification routing', () => {
 	it('exposes plain-language action labels per category', () => {
 		expect(actionLabelForCategory('new_message')).toBe('Open thread');
 		expect(actionLabelForCategory('billing_payment')).toBe('Manage billing');
-		expect(
-			actionLabelForCategory('identity_outcome', { verificationDecision: 'rejected' })
-		).toBe('Resubmit verification');
+		expect(actionLabelForCategory('identity_outcome', { verificationDecision: 'rejected' })).toBe(
+			'Resubmit verification'
+		);
 		expect(actionLabelForCategory('review_received')).toBe('Read review');
 	});
 

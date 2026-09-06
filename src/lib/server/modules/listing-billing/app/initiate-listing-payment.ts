@@ -11,7 +11,7 @@ export async function initiateListingPaymentForOwner(
 	db: Database,
 	ownerId: UserId,
 	gateway: PaymentGateway,
-	correlationId: string
+	_correlationId: string
 ): Promise<Result<{ reference: string }, UseCaseError>> {
 	const profileId = await getOwnedProfileIdDb(db, ownerId);
 	if (!profileId) {

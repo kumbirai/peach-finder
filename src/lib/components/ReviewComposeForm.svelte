@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
+	import { untrack } from 'svelte';
 
 	let {
 		busy = false,
@@ -17,10 +18,8 @@
 		onSubmit: (input: { rating: number; body?: string }) => Promise<void>;
 	} = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional: seed editable form state from the initial prop
-	let rating = $state<number | null>(initialRating);
-	// svelte-ignore state_referenced_locally -- intentional: seed editable form state from the initial prop
-	let body = $state(initialBody);
+	let rating = $state<number | null>(untrack(() => initialRating));
+	let body = $state(untrack(() => initialBody));
 	let errorMessage = $state('');
 
 	const stars = [1, 2, 3, 4, 5];

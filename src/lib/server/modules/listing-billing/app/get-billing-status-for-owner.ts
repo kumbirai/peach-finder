@@ -12,10 +12,7 @@ import { buildPaymentMethodSummary } from '../domain/payment-method';
 import { getListingBillingRow } from '../infra/listing-billing-write';
 import { getSubscription } from '../infra/subscription-read';
 import { getActiveFeaturing } from '../infra/featuring-read';
-import {
-	canCancelFeaturingRenewal,
-	canPurchaseFeaturing
-} from '../domain/featuring-state';
+import { canCancelFeaturingRenewal, canPurchaseFeaturing } from '../domain/featuring-state';
 
 export type BillingStatusDto = {
 	state: string;

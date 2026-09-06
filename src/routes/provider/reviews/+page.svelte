@@ -15,7 +15,8 @@
 		};
 	} = $props();
 
-	let reviews = $state<PublicReviewDto[]>([]);
+	// writable derived: mirrors server data, but optimistic reply updates below can override until the next load
+	let reviews = $derived(data.reviews.map((review) => ({ ...review })));
 	let busyReviewId = $state<string | null>(null);
 	let statusMessage = $state('');
 	let statusRole = $state<'status' | 'alert'>('status');
@@ -23,10 +24,6 @@
 
 	onMount(() => {
 		hydrated = true;
-	});
-
-	$effect(() => {
-		reviews = data.reviews.map((review) => ({ ...review }));
 	});
 
 	async function publishReply(reviewId: string, body: string) {

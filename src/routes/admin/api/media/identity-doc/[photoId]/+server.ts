@@ -5,7 +5,7 @@ import {
 	verifyIdentityDocPresign
 } from '$lib/server/modules/media-processing';
 import type { Role } from '$lib/server/shared/auth-context';
-import { asId, type PhotoId } from '$lib/server/shared/ids';
+import { asId } from '$lib/server/shared/ids';
 
 export const _requiredRole: Role = 'anonymous';
 

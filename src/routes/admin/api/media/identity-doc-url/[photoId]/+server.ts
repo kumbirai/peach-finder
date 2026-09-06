@@ -4,7 +4,7 @@ import { issueIdentityDocUrl } from '$lib/server/modules/media-processing';
 import { verificationCaseReferencesPhoto } from '$lib/server/modules/trust-and-safety';
 import type { Role } from '$lib/server/shared/auth-context';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
-import { asId, type PhotoId } from '$lib/server/shared/ids';
+import { asId } from '$lib/server/shared/ids';
 
 export const _requiredRole: Role = 'admin';
 

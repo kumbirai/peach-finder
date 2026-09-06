@@ -16,7 +16,7 @@ import { seedVerification } from '../../../../../scripts/seed-verification';
 import { runSearch } from '../discovery-search';
 import { getPublicProfile } from '../provider-profile';
 import { anonymousAuth } from '../../shared/auth-context';
-import { asId, type PhotoId, type ProviderProfileId, type UserId } from '../../shared/ids';
+import { asId, type PhotoId, type UserId } from '../../shared/ids';
 import { outbox } from '../../shared/schema';
 import { storeIdentityDoc } from '../media-processing';
 import sharp from 'sharp';

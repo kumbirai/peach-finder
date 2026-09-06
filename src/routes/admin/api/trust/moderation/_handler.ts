@@ -1,6 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
-import { getDb } from '$lib/server/db';
 import type { Role } from '$lib/server/shared/auth-context';
 import { success, useCaseErrorToHttp } from '$lib/server/shared/api';
 import type { Result, UseCaseError } from '$lib/server/shared/result';

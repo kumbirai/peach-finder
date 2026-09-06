@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { suggestKindLabel } from '$lib/suggest-kind-label';
@@ -24,8 +25,7 @@
 		onSearch?: (query: string) => void | Promise<void>;
 	} = $props();
 
-	// svelte-ignore state_referenced_locally -- intentional: seed the editable query from the initial prop value
-	let query = $state(value);
+	let query = $state(untrack(() => value));
 	let suggestions = $state<Suggestion[]>([]);
 	let loading = $state(false);
 	let open = $state(false);

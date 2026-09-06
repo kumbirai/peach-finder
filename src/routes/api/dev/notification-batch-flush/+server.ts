@@ -2,7 +2,10 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
 import type { Role } from '$lib/server/shared/auth-context';
 import { getDb } from '$lib/server/db';
-import { catchUpMessageSentNotificationLedger, forceFlushOpenNotificationBatchWindows } from '$lib/server/modules/user-notifications';
+import {
+	catchUpMessageSentNotificationLedger,
+	forceFlushOpenNotificationBatchWindows
+} from '$lib/server/modules/user-notifications';
 
 export const _requiredRole: Role = 'anonymous';
 

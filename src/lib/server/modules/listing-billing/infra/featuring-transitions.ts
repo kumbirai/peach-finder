@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { Transaction } from '../../../db';
 import { writeAudit } from '../../../shared/audit';
 import type { DomainEvent } from '../../../shared/events';
-import { newId, type InvoiceId, type ProviderProfileId } from '../../../shared/ids';
+import { newId, type ProviderProfileId } from '../../../shared/ids';
 import { asInstant } from '../../../shared/clock';
 import { publish } from '../../../shared/outbox';
 import { getConfig } from '../../platform-configuration';
@@ -42,7 +42,8 @@ export async function activateFeaturing(
 		return { applied: false, providerProfileId: input.providerProfileId, events: [] };
 	}
 
-	const featuringPriceCents = input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
+	const featuringPriceCents =
+		input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
 	const periodEnd = paidPeriodEndsAt(input.now);
 	const featuringId = newId();
 	const invoiceId = newId<'InvoiceId'>();
@@ -123,7 +124,8 @@ export async function renewFeaturing(
 		return { applied: false, providerProfileId: input.providerProfileId, events: [] };
 	}
 
-	const featuringPriceCents = input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
+	const featuringPriceCents =
+		input.amountCents ?? getConfig('listing-billing.featuring_price_cents');
 	const invoiceId = newId<'InvoiceId'>();
 	const periodEnd = paidPeriodEndsAt(input.now);
 
