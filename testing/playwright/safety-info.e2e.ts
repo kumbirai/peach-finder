@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
 import { SAFETY_FOOTER_LABEL, SAFETY_PAGE_PATH } from '../../src/lib/trust-badges';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-SAFE-03 know what the badges actually mean', () => {
 	test('TC-SAFE-03a: safety page linked from badge area and footer', async ({ page }) => {
@@ -31,6 +32,7 @@ test.describe('US-SAFE-03 know what the badges actually mean', () => {
 
 	test('safety page has no critical or serious axe violations', async ({ page }) => {
 		await page.goto(SAFETY_PAGE_PATH);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

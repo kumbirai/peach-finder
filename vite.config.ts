@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
 		test: {
 			expect: { requireAssertions: true },
 			environment: 'node',
-			include: ['src/**/*.test.ts'],
+			include: ['src/**/*.test.ts', 'testing/playwright/seeding/**/*.test.ts'],
 			exclude: ['src/**/*.integration.test.ts', 'src/**/*.svelte.{test,spec}.{js,ts}']
 		}
 	};

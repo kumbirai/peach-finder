@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 function indexOfName(names: string[], target: string): number {
 	return names.findIndex((name) => name === target);
@@ -63,6 +64,7 @@ test.describe('US-DISC-06 availability outranks everything honestly', () => {
 
 	test('has no critical or serious axe violations on ranked search results', async ({ page }) => {
 		await page.goto('/?q=deep%20tissue');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

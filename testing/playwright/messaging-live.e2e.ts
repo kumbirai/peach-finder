@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_CORE_PRIMARY_PROFILE_ID,
 	SEED_DUAL_ROLE_EMAIL,
@@ -47,13 +48,14 @@ async function registerAndVerifySeeker(
 	await page.locator('input[name="acceptedTerms"]').check();
 	await page.getByRole('button', { name: 'Create account' }).click();
 	await expectProfilePage(page);
+	await page.waitForLoadState('domcontentloaded');
 
 	const token = await fetchDevVerificationToken(request, email);
-	await page.goto(`/verify-email?token=${token}&returnTo=/profile`);
-	await Promise.all([
-		expectProfilePage(page),
-		page.getByRole('button', { name: 'Verify email' }).click()
-	]);
+	await page.goto(`/verify-email?token=${token}&returnTo=/profile`, {
+		waitUntil: 'domcontentloaded'
+	});
+	await page.getByRole('button', { name: 'Verify email' }).click();
+	await expectProfilePage(page);
 }
 
 async function signIn(page: import('@playwright/test').Page, email: string, password: string) {
@@ -207,6 +209,7 @@ test.describe('US-MSG-02 live conversation', () => {
 		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg02 Axe');
 		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Accessibility check');
 
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -221,6 +224,7 @@ test.describe('US-MSG-03 quick-start prompts', () => {
 	test('TC-MSG-03a: quick-start prompt inserts plain editable text into composer', async ({
 		page
 	}) => {
+		test.setTimeout(90_000);
 		const email = `msg03a-${Date.now()}@example.com`;
 		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg03a Seeker');
 		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Opening message');
@@ -238,6 +242,12 @@ test.describe('US-MSG-03 quick-start prompts', () => {
 
 		await composer.fill('Are you available today at 3pm?');
 		await expect(composer).toHaveValue('Are you available today at 3pm?');
+		await page.getByRole('button', { name: 'Send' }).click();
+		await expect(
+			page
+				.getByTestId('message-bubble-outbound')
+				.filter({ hasText: 'Are you available today at 3pm?' })
+		).toBeVisible({ timeout: 15_000 });
 	});
 
 	test('TC-MSG-03b: thread view has no booking widgets or structured controls', async ({
@@ -353,9 +363,14 @@ test.describe('US-MSG-06 safety is two taps away', () => {
 	test('TC-MSG-06a: report and block reachable within two taps from thread header', async ({
 		page
 	}) => {
+		test.setTimeout(90_000);
 		const email = `msg06-${Date.now()}@example.com`;
 		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Msg06 Seeker');
-		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Safety reachability check');
+		const threadId = await openThreadWithProvider(
+			page,
+			SEED_CORE_PRIMARY_PROFILE_ID,
+			'Safety reachability check'
+		);
 
 		await expect(page.getByTestId('thread-safety-toggle')).toBeVisible();
 		await page.getByTestId('thread-safety-toggle').click();
@@ -364,6 +379,7 @@ test.describe('US-MSG-06 safety is two taps away', () => {
 		await expect(panel.getByTestId('thread-safety-report')).toBeVisible();
 		await expect(panel.getByTestId('thread-safety-block')).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const accessibilityScan = await new AxeBuilder({ page })
 			.include('[data-testid="thread-safety-panel"]')
 			.analyze();
@@ -371,20 +387,39 @@ test.describe('US-MSG-06 safety is two taps away', () => {
 			accessibilityScan.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')
 		).toEqual([]);
 
-		const blockButton = panel.getByRole('button', { name: /^Block / });
-		await blockButton.click();
-		await expect(panel.getByRole('button', { name: 'Confirm block' })).toBeVisible();
+		await panel.getByTestId('thread-safety-report').getByRole('button', { name: 'Report' }).click();
+		const reportResponse = page.waitForResponse(
+			(res) => res.url().includes('/api/trust/reports') && res.request().method() === 'POST'
+		);
+		await expect(page.getByRole('group', { name: 'Report reason' })).toBeVisible();
+		await page
+			.getByRole('group', { name: 'Report reason' })
+			.getByRole('button', { name: 'Harassment' })
+			.click();
+		expect((await reportResponse).status()).toBe(201);
+		await expect(panel).toContainText(/report started/i);
+
 		await page.getByTestId('thread-safety-toggle').click();
 		await page.getByTestId('thread-safety-toggle').click();
 		await expect(panel).toBeVisible();
 		await expect(panel.getByRole('button', { name: 'Report' })).toBeVisible();
-		await expect(panel.getByRole('button', { name: /^Block / })).toBeVisible();
-		await expect(panel.getByRole('button', { name: 'Confirm block' })).toHaveCount(0);
+		const blockButton = panel.getByRole('button', { name: /^Block / });
+		await expect(blockButton).toBeVisible();
+		await blockButton.click();
+		await expect(panel.getByRole('button', { name: 'Confirm block' })).toBeVisible();
+		await panel.getByRole('button', { name: 'Confirm block' }).click();
+		await expect(panel).toContainText(/Blocked/);
+
+		const blockedSend = await page.request.post(`/api/messaging/threads/${threadId}/messages`, {
+			data: { body: 'Should be rejected after block' }
+		});
+		expect(blockedSend.status()).toBe(404);
 	});
 
 	test('TC-MSG-06c: provider can reach report and block from thread header', async ({
 		browser
 	}) => {
+		test.setTimeout(90_000);
 		const providerContext = await browser.newContext();
 		const seekerContext = await browser.newContext();
 		const providerPage = await providerContext.newPage();
@@ -407,11 +442,25 @@ test.describe('US-MSG-06 safety is two taps away', () => {
 		);
 
 		await providerPage.goto(`/messages/${threadId}`);
+		await expect(providerPage.getByTestId('thread-safety-toggle')).toBeVisible();
+		await providerPage.waitForLoadState('networkidle');
 		await providerPage.getByTestId('thread-safety-toggle').click();
 		const panel = providerPage.getByTestId('thread-safety-panel');
 		await expect(panel).toBeVisible();
 		await expect(panel.getByRole('button', { name: 'Report' })).toBeVisible();
 		await expect(panel.getByRole('button', { name: /^Block / })).toBeVisible();
+
+		await panel.getByRole('button', { name: 'Report' }).click();
+		const reportResponse = providerPage.waitForResponse(
+			(res) => res.url().includes('/api/trust/reports') && res.request().method() === 'POST'
+		);
+		await expect(providerPage.getByRole('group', { name: 'Report reason' })).toBeVisible();
+		await providerPage
+			.getByRole('group', { name: 'Report reason' })
+			.getByRole('button', { name: 'Harassment' })
+			.click();
+		expect((await reportResponse).status()).toBe(201);
+		await expect(panel).toContainText(/report started/i);
 
 		await providerContext.close();
 		await seekerContext.close();

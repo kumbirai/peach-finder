@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_CORE_PRIMARY_PROFILE_ID,
 	SEED_DUAL_ROLE_EMAIL,
@@ -129,6 +130,7 @@ test.describe('US-PRIV-02 my address is not in the system', () => {
 		page
 	}) => {
 		await page.goto('/provider/register');
+		await assertPrimaryListingLive(page.request);
 		let results = await new AxeBuilder({ page }).analyze();
 		let serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -140,6 +142,7 @@ test.describe('US-PRIV-02 my address is not in the system', () => {
 		await expect(page.getByRole('heading', { name: 'Confirm your general area' })).toBeVisible({
 			timeout: 15_000
 		});
+		await assertPrimaryListingLive(page.request);
 		results = await new AxeBuilder({ page }).analyze();
 		serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
 		expect(serious).toEqual([]);

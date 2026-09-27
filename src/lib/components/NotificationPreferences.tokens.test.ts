@@ -20,6 +20,7 @@ describe('US-NOTIF-02 notification preferences tokens', () => {
 			'utf8'
 		);
 		expect(source).toMatch(/if \(savingKey !== null\) return;/);
+		expect(source).toMatch(/untrack\(/);
 		expect(source).toMatch(/syncedParentCategories = preferences\.categories;/);
 		expect(source).toMatch(/categories = structuredClone\(body\.data\.categories\)/);
 	});

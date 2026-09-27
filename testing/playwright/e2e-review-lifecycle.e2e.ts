@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContextOptions } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_REV_ELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
@@ -92,6 +93,7 @@ test.describe('US-REV-01 leave a review that counts', () => {
 		await expect(page).toHaveURL(new RegExp(`/provider/${SEED_REV_PROVIDER_PROFILE_ID}/review`));
 		await expect(page.getByTestId('review-ineligible-reason')).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).include('[data-testid="review-panel"]').analyze();
 		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
 		expect(serious).toEqual([]);
@@ -329,6 +331,7 @@ test.describe('US-REV-03 change my mind', () => {
 		await page.goto(`/provider/${SEED_REV_PROVIDER_PROFILE_ID}`);
 		await expect(page.getByTestId('profile-review-edited')).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
 		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
 		expect(serious).toEqual([]);
@@ -443,6 +446,7 @@ test.describe('US-REV-05 provider right of reply', () => {
 		const duplicateBody = (await duplicateRes.json()) as { error: { code: string } };
 		expect(duplicateBody.error.code).toBe('REPLY_ALREADY_EXISTS');
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
 		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
 		expect(serious).toEqual([]);

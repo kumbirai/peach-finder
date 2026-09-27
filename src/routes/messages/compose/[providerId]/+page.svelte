@@ -4,6 +4,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import QuickStartPrompts from '$lib/components/QuickStartPrompts.svelte';
+	import { initialComposeDraft } from '$lib/messaging/compose-draft';
 
 	const DRAFT_KEY = (id: string) => `pf_message_draft_${id}`;
 
@@ -25,7 +26,15 @@
 		form?: { held?: true; sent?: true; message?: string };
 	} = $props();
 
-	let body = $state(untrack(() => data.draft ?? ''));
+	let body = $state(
+		untrack(() => {
+			const stored =
+				typeof sessionStorage === 'undefined'
+					? null
+					: sessionStorage.getItem(DRAFT_KEY(data.providerProfileId));
+			return initialComposeDraft(data.draft ?? '', stored);
+		})
+	);
 	let status = $state<'idle' | 'sending' | 'held' | 'sent' | 'error'>('idle');
 	let statusMessage = $state('');
 

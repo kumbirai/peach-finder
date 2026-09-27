@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function uploadTestPhoto(page: import('@playwright/test').Page) {
 	const stamp = Date.now();
@@ -172,6 +173,7 @@ test.describe('US-PONB-04 provider onboarding publish', () => {
 	test('publish step has no critical or serious axe violations', async ({ page, request }) => {
 		await registerFreshProvider(page, request);
 		await completeOnboardingEssentials(page);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

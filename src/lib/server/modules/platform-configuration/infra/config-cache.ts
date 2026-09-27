@@ -80,3 +80,13 @@ export function resetConfigCacheForTests(): void {
 	loaded = false;
 	lastFullRefreshAt = 0;
 }
+
+/** Simulate a dropped ConfigChanged: keep stale in-process values. */
+export function overwriteCachedConfig<K extends ConfigKey>(key: K, value: ConfigValue<K>): void {
+	cache.set(key, value);
+}
+
+/** Mark the 5-minute TTL elapsed so maybeRefreshAll reloads from the database. */
+export function forceConfigTtlElapsed(nowMs = Date.now()): void {
+	lastFullRefreshAt = nowMs - TTL_MS - 1;
+}

@@ -12,6 +12,7 @@
 		onclick,
 		messageDraftKey,
 		ariaLabel,
+		testId,
 		children
 	}: {
 		variant?: Variant;
@@ -22,6 +23,7 @@
 		onclick?: (event: MouseEvent) => void;
 		messageDraftKey?: string | undefined;
 		ariaLabel?: string;
+		testId?: string;
 		children: Snippet;
 	} = $props();
 </script>
@@ -33,15 +35,31 @@
 		aria-disabled={disabled}
 		aria-label={ariaLabel}
 		data-message-draft-key={messageDraftKey}
+		data-testid={testId}
 	>
 		{@render children()}
 	</a>
 {:else if href}
-	<a class="btn btn-{variant}" {href} aria-disabled={disabled} aria-label={ariaLabel} {onclick}>
+	<a
+		class="btn btn-{variant}"
+		{href}
+		aria-disabled={disabled}
+		aria-label={ariaLabel}
+		{onclick}
+		data-testid={testId}
+	>
 		{@render children()}
 	</a>
 {:else}
-	<button class="btn btn-{variant}" {type} {disabled} {form} {onclick} aria-label={ariaLabel}>
+	<button
+		class="btn btn-{variant}"
+		{type}
+		{disabled}
+		{form}
+		{onclick}
+		aria-label={ariaLabel}
+		data-testid={testId}
+	>
 		{@render children()}
 	</button>
 {/if}

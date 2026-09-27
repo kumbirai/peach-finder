@@ -10,7 +10,7 @@ import { newId } from '../../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../../shared/result';
 import { validateUploadSize } from '../domain/upload-policy';
 import { photos } from './schema';
-import { readLocalMediaFile, sha256, writeFinalObject } from './storage';
+import { readStoredObject, sha256, writeFinalObject } from './storage';
 
 export const IDENTITY_DOC_PRESIGN_TTL_MS = 5 * 60_000;
 
@@ -150,5 +150,5 @@ export async function readIdentityDocBytes(db: Database, photoId: PhotoId): Prom
 	const rows = await db.select().from(photos).where(eq(photos.id, photoId)).limit(1);
 	const row = rows[0];
 	if (!row || row.bucket !== 'identity-docs' || !row.objectKey) return null;
-	return readLocalMediaFile(row.objectKey);
+	return readStoredObject(row.objectKey);
 }

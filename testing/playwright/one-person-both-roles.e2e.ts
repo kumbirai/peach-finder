@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD,
@@ -67,6 +68,7 @@ test.describe('US-ACC-04 one person both roles', () => {
 	test('role switch surfaces have no critical or serious axe violations', async ({ page }) => {
 		await signInDualRole(page);
 
+		await assertPrimaryListingLive(page.request);
 		let results = await new AxeBuilder({ page }).analyze();
 		let serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -74,6 +76,7 @@ test.describe('US-ACC-04 one person both roles', () => {
 		expect(serious).toEqual([]);
 
 		await page.getByRole('link', { name: 'Provider', exact: true }).click();
+		await assertPrimaryListingLive(page.request);
 		results = await new AxeBuilder({ page }).analyze();
 		serious = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
 		expect(serious).toEqual([]);

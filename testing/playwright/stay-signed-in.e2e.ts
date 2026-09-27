@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function registerSeeker(
 	page: import('@playwright/test').Page,
@@ -137,6 +138,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 
 	test('profile and reset screens have no critical or serious axe violations', async ({ page }) => {
 		await page.goto('/profile');
+		await assertPrimaryListingLive(page.request);
 		let results = await new AxeBuilder({ page }).analyze();
 		let serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

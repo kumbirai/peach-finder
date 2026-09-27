@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_CORE_PHONE_OFF_DISPLAY_NAME,
 	SEED_CORE_PHONE_OFF_NUMBER,
@@ -8,37 +9,9 @@ import {
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../scripts/seed-core';
 
+import { registerAndVerifySeeker } from './seeker-session';
+
 const DRAFT = 'Hi, are you available this afternoon?';
-
-async function registerAndVerifySeeker(
-	page: import('@playwright/test').Page,
-	request: import('@playwright/test').APIRequestContext,
-	email: string,
-	password: string,
-	name: string
-) {
-	await page.goto('/sign-in?returnTo=/profile');
-	await page.getByLabel('Your name').fill(name);
-	await page.getByLabel('Email').fill(email);
-	await page.getByLabel('Password').fill(password);
-	await page.locator('input[name="acceptedTerms"]').check();
-	await page.getByRole('button', { name: 'Create account' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
-
-	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
-	if (!tokenRes.ok()) {
-		await page.waitForTimeout(500);
-		const retry = await request.post('/api/dev/verification-token', { data: { email } });
-		expect(retry.ok()).toBe(true);
-		const retryData = (await retry.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${retryData.data.token}&returnTo=/profile`);
-	} else {
-		const { data } = (await tokenRes.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
-	}
-	await page.getByRole('button', { name: 'Verify email' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
-}
 
 test.describe('E2E-1 search to contact', () => {
 	test('TC-PRIV-01a: anonymous responses omit phone when visibility is OFF', async ({
@@ -317,18 +290,13 @@ test.describe('E2E-1 search to contact', () => {
 	test('TC-VIEW-03c: signed-in seeker message preserves session draft on direct compose link', async ({
 		browser
 	}) => {
+		test.setTimeout(90_000);
 		const context = await browser.newContext();
 		const page = await context.newPage();
 		const email = `view03-draft-${Date.now()}@example.com`;
 		const draft = 'Still interested — are you free Saturday?';
 
-		await page.goto('/sign-in?returnTo=/profile');
-		await page.getByLabel('Your name').fill('View03 Draft Seeker');
-		await page.getByLabel('Email').fill(email);
-		await page.getByLabel('Password').fill('password123');
-		await page.locator('input[name="acceptedTerms"]').check();
-		await page.getByRole('button', { name: 'Create account' }).click();
-		await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+		await registerAndVerifySeeker(page, page.request, email, 'password123', 'View03 Draft Seeker');
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		const message = page
@@ -351,12 +319,29 @@ test.describe('E2E-1 search to contact', () => {
 		);
 		await expect(page.getByLabel('Your message')).toHaveValue(draft, { timeout: 10_000 });
 
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await expect(page).toHaveURL(/\/messages\/[0-9a-f-]{36}/, { timeout: 15_000 });
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: draft })
+		).toBeVisible();
+		const threadId = new URL(page.url()).pathname.split('/messages/')[1]!;
+		const persisted = await page.request.get(`/api/messaging/threads/${threadId}/messages`);
+		expect(persisted.ok()).toBeTruthy();
+		const persistedBody = (await persisted.json()) as {
+			data: Array<{ body: string }> | { messages?: Array<{ body: string }> };
+		};
+		const messages = Array.isArray(persistedBody.data)
+			? persistedBody.data
+			: (persistedBody.data.messages ?? []);
+		expect(messages.some((message) => message.body === draft)).toBeTruthy();
+
 		await context.close();
 	});
 
 	test('golden path: homepage to profile to sign-up preserves message context', async ({
 		page
 	}) => {
+		test.setTimeout(90_000);
 		const email = `e2e-stc-${Date.now()}@example.com`;
 
 		await page.goto('/');
@@ -373,7 +358,8 @@ test.describe('E2E-1 search to contact', () => {
 			({ id, draft }) => sessionStorage.setItem(`pf_message_draft_${id}`, draft),
 			{ id: SEED_CORE_PRIMARY_PROFILE_ID, draft: DRAFT }
 		);
-		await page.reload();
+		await page.reload({ waitUntil: 'domcontentloaded' });
+		await expect(page.getByRole('group', { name: 'Contact actions' })).toBeVisible();
 
 		await page
 			.getByRole('group', { name: 'Contact actions' })
@@ -381,7 +367,14 @@ test.describe('E2E-1 search to contact', () => {
 			.click();
 		await expect(page).toHaveURL(/\/sign-in\?/);
 		await expect(page).toHaveURL(/draft=/);
+		await expect(
+			page.getByRole('heading', { name: /create your account|welcome back/i })
+		).toBeVisible();
 
+		if ((await page.getByLabel('Your name').count()) === 0) {
+			await page.locator('.toggle').getByRole('button', { name: 'Create account' }).click();
+		}
+		await expect(page.getByLabel('Your name')).toBeVisible({ timeout: 15_000 });
 		await page.getByLabel('Your name').fill('Search Contact E2E');
 		await page.getByLabel('Email').fill(email);
 		await page.getByLabel('Password').fill('password123');
@@ -392,10 +385,40 @@ test.describe('E2E-1 search to contact', () => {
 			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}\\?draft=`)
 		);
 		await expect(page.getByLabel('Your message')).toHaveValue(DRAFT, { timeout: 10_000 });
+
+		const tokenRes = await page.request.post('/api/dev/verification-token', { data: { email } });
+		expect(tokenRes.ok()).toBeTruthy();
+		const { data } = (await tokenRes.json()) as { data: { token: string } };
+		await page.goto(
+			`/verify-email?token=${data.token}&returnTo=${encodeURIComponent(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)}`
+		);
+		await page.getByRole('button', { name: 'Verify email' }).click();
+		await expect(page).toHaveURL(new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`), {
+			timeout: 15_000
+		});
+		await expect(page.getByLabel('Your message')).toHaveValue(DRAFT, { timeout: 10_000 });
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await expect(page).toHaveURL(/\/messages\/[0-9a-f-]{36}/, { timeout: 15_000 });
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: DRAFT })
+		).toBeVisible();
+		const threadId = new URL(page.url()).pathname.split('/messages/')[1]!;
+		const persisted = await page.request.get(`/api/messaging/threads/${threadId}/messages`);
+		expect(persisted.ok()).toBeTruthy();
+		const persistedBody = (await persisted.json()) as {
+			data: Array<{ body: string }> | { messages?: Array<{ body: string }> };
+		};
+		const messages = Array.isArray(persistedBody.data)
+			? persistedBody.data
+			: (persistedBody.data.messages ?? []);
+		expect(messages.some((message) => message.body === DRAFT)).toBeTruthy();
 	});
 
 	test('profile page has no critical or serious axe violations', async ({ page }) => {
 		await page.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		const live = await page.request.get(`/api/provider/profile/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
+		expect(live.ok()).toBeTruthy();
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -457,6 +480,7 @@ test.describe('E2E-1 search to contact', () => {
 	});
 
 	test('TC-MSG-01b: service Message button prefills editable Re: context', async ({ browser }) => {
+		test.setTimeout(90_000);
 		const context = await browser.newContext();
 		const page = await context.newPage();
 		const email = `msg01b-${Date.now()}@example.com`;
@@ -467,6 +491,21 @@ test.describe('E2E-1 search to contact', () => {
 		await page.getByRole('link', { name: 'Message about 60 minute session' }).click();
 		await expect(page).toHaveURL(/context=60\+minute\+session/);
 		await expect(page.getByLabel('Your message')).toHaveValue('Re: 60 minute session');
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await expect(page).toHaveURL(/\/messages\/[0-9a-f-]{36}/, { timeout: 15_000 });
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: 'Re: 60 minute session' })
+		).toBeVisible();
+		const threadId = new URL(page.url()).pathname.split('/messages/')[1]!;
+		const persisted = await page.request.get(`/api/messaging/threads/${threadId}/messages`);
+		expect(persisted.ok()).toBeTruthy();
+		const persistedBody = (await persisted.json()) as {
+			data: Array<{ body: string }> | { messages?: Array<{ body: string }> };
+		};
+		const messages = Array.isArray(persistedBody.data)
+			? persistedBody.data
+			: (persistedBody.data.messages ?? []);
+		expect(messages.some((message) => message.body === 'Re: 60 minute session')).toBeTruthy();
 
 		await context.close();
 	});

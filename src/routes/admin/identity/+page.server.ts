@@ -12,14 +12,14 @@ import { asId } from '$lib/server/shared/ids';
 
 export const _requiredRole: Role = 'admin';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
 	const db = getDb();
 	const now = new Date();
 	const [queue, stats] = await Promise.all([
 		listIdentityQueue(db, now),
 		getIdentityQueueStats(db, now)
 	]);
-	return { queue, stats };
+	return { queue, stats, rejectCaseId: url.searchParams.get('reject') };
 };
 
 export const actions: Actions = {

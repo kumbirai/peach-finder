@@ -59,7 +59,11 @@ export async function claimUndispatched(
 			from shared.outbox
 			where dispatched_at is null
 			  and attempt_count < 5
-			order by published_at
+			order by case
+				when event_name in ('UserBlocked', 'UserUnblocked') then 0
+				else 1
+			end,
+			published_at
 			limit ${limit}
 			for update skip locked
 		)

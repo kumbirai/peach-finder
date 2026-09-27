@@ -7,6 +7,7 @@ import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD
 } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_REPORT_ACT_OPEN_ID,
 	SEED_REPORT_NEW_OPEN_ID,
@@ -146,6 +147,7 @@ test.describe('US-ADMIN-03 work the reports queue to human resolution', () => {
 		const storage = await request.storageState();
 		await page.context().addCookies(storage.cookies);
 		await page.goto('/admin/reports');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page })
 			.include('[data-testid="admin-reports-queue"]')
 			.exclude('[data-testid="report-profile-context"]')

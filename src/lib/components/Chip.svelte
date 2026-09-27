@@ -17,7 +17,7 @@
 </script>
 
 {#if href}
-	<a class="chip chip-selected" {href} data-intent-key={intentKey}>
+	<a class="chip" class:chip-selected={selected} {href} data-intent-key={intentKey}>
 		{@render children()}
 	</a>
 {:else}

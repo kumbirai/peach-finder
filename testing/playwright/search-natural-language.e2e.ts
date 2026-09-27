@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const BRD_QUERIES = [
 	'Massage therapist available now',
@@ -63,6 +64,7 @@ test.describe('US-DISC-02 search the way I would say it', () => {
 
 	test('has no critical or serious axe violations on search results', async ({ page }) => {
 		await page.goto(`/?q=${encodeURIComponent('Deep tissue massage near me')}`);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

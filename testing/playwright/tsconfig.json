@@ -8,5 +8,14 @@
 		"skipLibCheck": true,
 		"types": ["node"]
 	},
-	"include": ["playwright.config.ts", "*.e2e.ts"]
+	"include": [
+		"playwright.config.ts",
+		"*.e2e.ts",
+		"admin-session.ts",
+		"provider-session.ts",
+		"seeker-session.ts",
+		"live-backend-assert.ts",
+		"mailhog.ts",
+		"seeding/**/*.ts"
+	]
 }

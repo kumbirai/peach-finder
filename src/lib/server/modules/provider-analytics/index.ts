@@ -9,6 +9,7 @@ export {
 export { deriveViewerKey, ANON_COOKIE } from './infra/viewer-key';
 export { formatCount } from './infra/serializers';
 export { handleThreadCreatedForAnalytics } from './infra/thread-created-subscription';
+export { countRawEvents } from './infra/raw-event-count';
 export {
 	runAnalyticsMaintenanceTick,
 	runHourlyAnalyticsRollup,

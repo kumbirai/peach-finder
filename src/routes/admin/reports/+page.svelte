@@ -14,6 +14,10 @@
 	let actReason = $state('');
 	let actAction = $state('unpublish');
 
+	$effect(() => {
+		actOpenFor = data.actReportId;
+	});
+
 	const actionLabels: Record<string, string> = {
 		remove_photo: 'Remove photo',
 		remove_review: 'Remove review',

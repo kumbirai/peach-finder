@@ -25,7 +25,6 @@ import {
 	verificationOutcomeCopy,
 	welcomeDeepLinkPath
 } from '../domain/notification-routing';
-import { isNotifBlockedBetween } from './block-cache';
 import { recordNotification } from './dispatch';
 import { notificationLog } from './schema';
 
@@ -124,9 +123,7 @@ export async function handleReviewSubmitted(
 				.where(eq(reviews.id, event.payload.reviewId as ReviewId))
 				.limit(1);
 			const reviewerId = reviewRows[0]?.reviewerId as UserId | undefined;
-			if (reviewerId && (await isNotifBlockedBetween(tx, reviewerId, ownerId))) {
-				return;
-			}
+			if (!reviewerId) return;
 
 			const reviewCopy = reviewReceivedCopy(event.payload.rating);
 			await recordNotification(tx, {
@@ -139,7 +136,8 @@ export async function handleReviewSubmitted(
 				relatedEntityType: 'review',
 				relatedEntityId: event.payload.reviewId,
 				correlationId: event.correlationId,
-				now
+				now,
+				actorUserId: reviewerId
 			});
 		}
 	);

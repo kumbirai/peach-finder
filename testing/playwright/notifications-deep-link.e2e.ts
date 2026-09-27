@@ -114,6 +114,9 @@ test.describe('US-NOTIF-04 every notification lands me where I act (live stack)'
 		await expect(messageCard).toHaveAttribute('data-deep-link-path', `/messages/${threadId}`);
 		await expect(messageCard.getByText('Open thread')).toBeVisible();
 
+		await messageCard.click();
+		await expect(providerPage).toHaveURL(new RegExp(`/messages/${threadId}`), { timeout: 15_000 });
+
 		const messageOpenRes = await providerPage.request.get(messageNotification!.openHref, {
 			maxRedirects: 0
 		});

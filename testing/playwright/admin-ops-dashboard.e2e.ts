@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function signInAdmin(request: import('@playwright/test').APIRequestContext) {
 	const login = await request.post('/admin/api/identity/login', {
@@ -90,6 +91,8 @@ test.describe('US-ADMIN-08 see the scaling wall coming', () => {
 		await page.goto('/');
 		await expect(page.getByTestId('admin-ops-dashboard')).toHaveCount(0);
 		await expect(page.getByTestId('kpi-identity-queue')).toHaveCount(0);
+		const search = await page.request.get('/api/discovery/search');
+		expect(search.ok()).toBeTruthy();
 	});
 
 	test('has no critical or serious axe violations on the ops dashboard', async ({
@@ -100,7 +103,12 @@ test.describe('US-ADMIN-08 see the scaling wall coming', () => {
 		const storage = await request.storageState();
 		await page.context().addCookies(storage.cookies);
 		await page.goto('/admin');
+		const kpis = await page.request.get('/admin/api/ops/kpis?range=7d');
+		expect(kpis.ok()).toBeTruthy();
+		const kpisBody = (await kpis.json()) as { data: { activeListings: number } };
+		expect(kpisBody.data.activeListings).toBeGreaterThan(0);
 
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

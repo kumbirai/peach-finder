@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_CORE_PRIMARY_PROFILE_ID,
 	SEED_VIEW_05_EDITED_REVIEW_BODY,
@@ -61,6 +62,7 @@ test.describe('US-VIEW-05 reviews I can weigh', () => {
 			page.getByTestId('profile-review-reply').filter({ hasText: SEED_VIEW_05_REPLY_BODY })
 		).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
 		const serious = axe.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
 		expect(serious).toEqual([]);

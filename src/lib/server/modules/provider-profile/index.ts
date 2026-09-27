@@ -143,6 +143,7 @@ export {
 	handleRepublishAfterBillingLapse
 } from './infra/billing-subscriptions';
 export { handleModerationActionTaken as handleProviderProfileModeration } from './infra/moderation-subscriptions';
+export { dispatchPendingProviderProfileModerationEffects } from './infra/dev-moderation-effect-dispatch';
 export { publishProfileForOwner } from './infra/publish-profile';
 export { createDraftProfile } from './infra/create-draft-profile';
 export { loadOwnerProfile, type OwnerProfileDto } from './infra/read-owner-profile';

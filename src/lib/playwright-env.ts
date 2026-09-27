@@ -32,3 +32,25 @@ export function resolveE2eBaseUrl(port: number, raw = process.env.E2E_BASE_URL):
 export function buildWebServerCommand(port: number): string {
 	return `npm run db:migrate && SEED_PACK=seed-core npm run db:seed && node --env-file=.env --import tsx scripts/seed-blocking.ts && node --env-file=.env --import tsx scripts/seed-verification.ts && node --env-file=.env --import tsx scripts/seed-reports.ts && node --env-file=.env --import tsx scripts/seed-reviews.ts && ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`;
 }
+
+export function definedEnv(source: Record<string, string | undefined>): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(source).filter((entry): entry is [string, string] => entry[1] !== undefined)
+	);
+}
+
+/** Pin the Playwright webServer to the same origin as `baseURL` so gated links never leak to a foreign :5173 app. */
+export function e2eWebServerEnv(
+	baseURL: string,
+	source: Record<string, string | undefined>
+): Record<string, string> {
+	return definedEnv({
+		...source,
+		PUBLIC_APP_ORIGIN: baseURL,
+		ALLOW_DEV_HELPERS: '1',
+		SMTP_HOST: source.SMTP_HOST ?? '127.0.0.1',
+		SMTP_PORT: source.SMTP_PORT ?? '1025',
+		SMTP_FROM: source.SMTP_FROM ?? 'Peach Finder <noreply@peachfinder.local>',
+		MAILHOG_URL: source.MAILHOG_URL ?? 'http://127.0.0.1:8025'
+	});
+}

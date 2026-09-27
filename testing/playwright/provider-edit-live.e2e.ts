@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function uploadTestPhoto(page: import('@playwright/test').Page) {
 	const stamp = Date.now();
@@ -143,6 +144,7 @@ test.describe('US-PONB-05 edit live always', () => {
 	test('edit profile page has no critical or serious axe violations', async ({ page, request }) => {
 		await registerAndPublishProvider(page, request);
 		await page.goto('/provider/profile/edit');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

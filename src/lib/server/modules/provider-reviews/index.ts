@@ -13,6 +13,7 @@ export { editReview } from './infra/edit-review';
 export { deleteReview } from './infra/delete-review';
 export { replyToReview, editReviewReply } from './infra/reply-to-review';
 export { getSeekerReviewForProvider } from './infra/review-queries';
+export { getRatingAggregate, type RatingAggregateSnapshot } from './infra/rating-read';
 export {
 	listReviewsWrittenBySeeker,
 	countReviewsOnProfile,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
@@ -7,7 +8,11 @@
 
 	let { data, form } = $props();
 
-	let rejectOpenFor = $state<string | null>(null);
+	let rejectOpenFor = $state<string | null>(untrack(() => data.rejectCaseId));
+
+	$effect(() => {
+		rejectOpenFor = data.rejectCaseId;
+	});
 	let rejectReason = $state('');
 	let docsNoteFor = $state<string | null>(null);
 	let docPreviewUrls = $state<Record<string, string>>({});
@@ -141,7 +146,9 @@
 								bind:value={rejectReason}
 							/>
 							<div class="queue-row__actions">
-								<Button type="submit" variant="secondary">Confirm rejection</Button>
+								<Button type="submit" variant="secondary" testId="identity-reject-confirm"
+									>Confirm rejection</Button
+								>
 							</div>
 						</form>
 					{:else}
@@ -152,10 +159,8 @@
 							</form>
 							<Button
 								variant="ghost"
-								onclick={() => {
-									rejectOpenFor = item.caseId;
-									rejectReason = '';
-								}}
+								href={`/admin/identity?reject=${item.caseId}`}
+								testId="identity-reject-open"
 							>
 								Reject
 							</Button>
@@ -334,4 +339,5 @@
 		color: var(--color-error);
 		margin: var(--space-sm) 0;
 	}
+
 </style>

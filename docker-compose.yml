@@ -51,6 +51,14 @@ services:
       echo buckets ready
       "
 
+  # Local SMTP2GO stand-in. Production uses mail.smtp2go.com:2525 (STARTTLS + SMTP_USER/SMTP_PASS).
+  # SMTP :1025 (no auth). Web UI + JSON API :8025.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
 volumes:
   peach_pg_data:
   peach_minio_data:

@@ -9,9 +9,12 @@ import type { DomainEvent } from '../../../shared/events';
 import { emailVerificationTokens, oauthLinks, passwordResetTokens, users } from './schema';
 import { hashPassword, verifyPassword } from './password-hash';
 import { storeDevVerificationToken, storeDevPasswordResetToken } from './dev-verification';
+import { sendTransactionalEmail } from '../../../shared/mailer';
+import { publicAppOrigin } from '../../../env';
 import { validateDisplayName, validateEmail, validatePassword } from '../domain/password-policy';
 import { PASSWORD_RESET_TTL_MS } from '../domain/session-policy';
 import { writeAudit } from '../../../shared/audit';
+import { log } from '../../../shared/logger';
 import { recordTermsAcceptance } from './terms-acceptance';
 import {
 	revokeAllSessionsForUser,
@@ -27,6 +30,26 @@ export function hashToken(token: string): string {
 
 export function newEmailVerificationToken(): string {
 	return randomBytes(32).toString('hex');
+}
+
+async function sendIdentityLinkEmail(input: {
+	to: string;
+	subject: string;
+	path: string;
+}): Promise<void> {
+	const actionUrl = `${publicAppOrigin()}${input.path}`;
+	try {
+		await sendTransactionalEmail({
+			to: input.to,
+			subject: input.subject,
+			text: `Open this link: ${actionUrl}`,
+			html: `<p><a href="${actionUrl}">${input.subject}</a></p>`
+		});
+	} catch {
+		log('warn', 'identity email not delivered', {
+			toHost: input.to.split('@')[1] ?? 'unknown'
+		});
+	}
 }
 
 export type RegisterSeekerInput = {
@@ -111,6 +134,11 @@ export async function registerSeeker(
 	});
 
 	storeDevVerificationToken(normalizedEmail, rawToken);
+	await sendIdentityLinkEmail({
+		to: normalizedEmail,
+		subject: 'Verify your Peach Finder email',
+		path: `/verify-email?token=${rawToken}`
+	});
 
 	return Ok({
 		userId,
@@ -343,6 +371,11 @@ export async function requestPasswordReset(
 			expiresAt: new Date(now.getTime() + PASSWORD_RESET_TTL_MS)
 		});
 		storeDevPasswordResetToken(normalizedEmail, rawToken);
+		await sendIdentityLinkEmail({
+			to: normalizedEmail,
+			subject: 'Reset your Peach Finder password',
+			path: `/reset-password?token=${rawToken}`
+		});
 		return Ok({
 			requested: true,
 			...(process.env.ALLOW_DEV_HELPERS === '1' ? { resetToken: rawToken } : {})

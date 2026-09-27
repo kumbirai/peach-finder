@@ -41,7 +41,13 @@ export async function getPhotoVariantUrls(db: Database, photoId: PhotoId) {
 }
 
 export { handleModerationActionTaken as handleMediaModeration } from './infra/moderation-subscriptions';
-export { readLocalMediaFile } from './infra/storage';
+export { isPublicMediaKey, readLocalMediaFile, readStoredObject } from './infra/storage';
+export {
+	objectStoreConfigFromEnv,
+	splitStoredObjectKey,
+	anonymousObjectUrl
+} from './infra/s3-path-style';
+export { probeIdentityDocsAnonymousDenial } from './infra/identity-doc-store-probe';
 export {
 	IDENTITY_DOC_PRESIGN_TTL_MS,
 	buildIdentityDocFetchUrl,

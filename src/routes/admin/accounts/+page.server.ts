@@ -1,4 +1,10 @@
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import {
+	exportPayloadHasForbiddenMaterial,
+	exportUserData
+} from '$lib/server/modules/platform-configuration';
+import { asId } from '$lib/server/shared/ids';
 import { getDb } from '$lib/server/db';
 import { getAccountSummary, searchAccounts } from '$lib/server/modules/identity-and-access';
 import { getOwnedProfileIdDb } from '$lib/server/modules/provider-profile';
@@ -110,4 +116,27 @@ export const load: PageServerLoad = async ({ url }) => {
 	}
 
 	return { query: q, results };
+};
+
+export const actions: Actions = {
+	exportUser: async ({ request, locals }) => {
+		const form = await request.formData();
+		const rawUserId = String(form.get('userId') ?? '');
+		try {
+			const userId = asId<'UserId'>(rawUserId);
+			const payload = await exportUserData(
+				userId,
+				locals.auth,
+				getDb(),
+				locals.correlationId,
+				`form-export-${userId}`
+			);
+			if (exportPayloadHasForbiddenMaterial(payload)) {
+				return fail(500, { exportError: 'Export contained forbidden material.' });
+			}
+			return { exportedUserId: userId, generatedAt: payload.generatedAt };
+		} catch {
+			return fail(422, { exportError: 'Could not export that account.' });
+		}
+	}
 };

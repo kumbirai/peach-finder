@@ -5,6 +5,7 @@ import {
 	SEED_ADMIN_PASSWORD,
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const PLATFORM_CONFIG_TARGET_ID = '00000000-0000-7000-8000-000000000000';
 
@@ -140,6 +141,7 @@ test.describe('US-ADMIN-07 everything I do is on the record', () => {
 		await page.goto(
 			`/admin/audit?targetType=provider_profile&targetId=${SEED_CORE_PRIMARY_PROFILE_ID}`
 		);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
 			.analyze();

@@ -33,10 +33,8 @@ async function registerAndVerifySeeker(
 
 	const token = await fetchDevVerificationToken(request, email);
 	await page.goto(`/verify-email?token=${token}&returnTo=/profile`);
-	await Promise.all([
-		expect(page).toHaveURL(/\/profile/, { timeout: 15_000 }),
-		page.getByRole('button', { name: 'Verify email' }).click()
-	]);
+	await page.getByRole('button', { name: 'Verify email' }).click();
+	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
 }
 
 test.describe('US-NOTIF-02 channel preferences (live stack)', () => {
@@ -105,21 +103,42 @@ test.describe('US-NOTIF-02 channel preferences (live stack)', () => {
 		const email = `e2e-notif-dispatch-${Date.now()}@example.com`;
 		await registerAndVerifySeeker(page, page.request, email, 'password123', 'Dispatch Seeker');
 
-		const disableInApp = await page.request.put('/api/notifications/preferences', {
-			data: {
-				updates: [{ category: 'new_message', channel: 'in_app', enabled: false }]
-			}
-		});
-		expect(disableInApp.ok()).toBeTruthy();
+		await page.goto('/profile');
+		const inAppToggle = page.getByTestId('notif-toggle-new_message-in_app');
+		await expect(inAppToggle).toHaveAttribute('aria-checked', 'true');
+		const prefsSave = page.waitForResponse(
+			(res) =>
+				res.url().includes('/api/notifications/preferences') &&
+				res.request().method() === 'PUT' &&
+				res.ok()
+		);
+		await inAppToggle.click();
+		expect((await prefsSave).ok()).toBeTruthy();
+		await expect(inAppToggle).toHaveAttribute('aria-checked', 'false');
 
-		const reportRes = await page.request.post('/api/trust/reports', {
+		const prefsRes = await page.request.get('/api/notifications/preferences');
+		expect(prefsRes.ok()).toBeTruthy();
+		const prefsBody = (await prefsRes.json()) as {
 			data: {
-				targetType: 'profile',
-				targetId: SEED_CORE_PRIMARY_PROFILE_ID,
-				reason: 'spam_scam'
-			}
-		});
-		expect(reportRes.status()).toBe(201);
+				categories: Array<{
+					id: string;
+					channels: Array<{ id: string; enabled: boolean }>;
+				}>;
+			};
+		};
+		const newMessage = prefsBody.data.categories.find((category) => category.id === 'new_message');
+		expect(newMessage?.channels.find((channel) => channel.id === 'in_app')?.enabled).toBe(false);
+
+		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}/report`);
+		const reportPost = page.waitForResponse(
+			(res) =>
+				res.url().includes('/api/trust/reports') &&
+				res.request().method() === 'POST' &&
+				res.status() === 201
+		);
+		await page.getByTestId('report-reason-spam_scam').click();
+		expect((await reportPost).ok()).toBeTruthy();
+		await expect(page.getByText(/Report started/i)).toBeVisible();
 
 		let found = false;
 		for (let attempt = 0; attempt < 5 && !found; attempt++) {

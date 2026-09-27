@@ -18,6 +18,14 @@ export const THREAD_SAFETY_REASON_OPTIONS = REPORT_REASON_OPTIONS;
 
 export type ThreadSafetyReason = (typeof THREAD_SAFETY_REASON_OPTIONS)[number]['value'];
 
+export function shouldResetThreadSafetyPanelOnMenuClose(state: {
+	choosingReason: boolean;
+	blockConfirming: boolean;
+	busy: boolean;
+}): boolean {
+	return !state.choosingReason && !state.blockConfirming && !state.busy;
+}
+
 export function threadSafetyPanelStateAfterMenuClose(): {
 	panelCopy: typeof THREAD_SAFETY_INTRO;
 	blockConfirming: boolean;

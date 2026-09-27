@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import Button from '$lib/components/Button.svelte';
 	import Input from '$lib/components/Input.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	function contactLine(item: (typeof data.results)[number]): string {
 		const parts: string[] = [];
@@ -49,6 +50,14 @@
 			No accounts match that search.
 		</p>
 	{:else if data.results.length > 0}
+		{#if form?.exportedUserId}
+			<p class="body" data-testid="account-export-complete">
+				Export ready for {form.exportedUserId} ({form.generatedAt}).
+			</p>
+		{/if}
+		{#if form?.exportError}
+			<p class="body" role="alert">{form.exportError}</p>
+		{/if}
 		<div class="queue-list" data-testid="account-lookup-results">
 			{#each data.results as item (item.userId)}
 				<article class="queue-row" data-testid="account-lookup-item" data-user-id={item.userId}>
@@ -118,6 +127,12 @@
 							</details>
 						{/if}
 
+						<form method="POST" action="?/exportUser" use:enhance data-testid="account-export-form">
+							<input type="hidden" name="userId" value={item.userId} />
+							<button type="submit" class="audit-link" data-testid="account-export-user">
+								Export user data
+							</button>
+						</form>
 						<a
 							class="audit-link"
 							href="/admin/audit?targetType=user&targetId={item.userId}"
@@ -317,6 +332,10 @@
 	.billing-facts dd {
 		margin: 0;
 		color: var(--color-ink);
+	}
+
+	button.audit-link {
+		cursor: pointer;
 	}
 
 	.audit-link {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function uploadTestPhoto(page: import('@playwright/test').Page) {
 	const stamp = Date.now();
@@ -106,6 +107,7 @@ test.describe('US-AVAIL-01 one tap available', () => {
 		const previewToggle = page.getByTestId('availability-toggle');
 		await expect(previewToggle).toHaveAttribute('aria-checked', 'true');
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).analyze();
 		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
 			[]
@@ -208,6 +210,7 @@ test.describe('US-AVAIL-02 one tap im done', () => {
 		await expect(clearedCard.getByText('Available now')).toHaveCount(0);
 		await anonAfter.close();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).analyze();
 		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
 			[]

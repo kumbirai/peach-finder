@@ -15,10 +15,9 @@
 		minReviews = null,
 		priceMax = null,
 		appliedIntents = [],
-		availableHref = '/',
-		intentHrefs = {},
-		onToggleAvailable,
-		onToggleManualFilter
+		manualFilterHrefs = {},
+		availableToggleHref = '/',
+		intentHrefs = {}
 	}: {
 		verified?: boolean;
 		available?: boolean;
@@ -27,10 +26,9 @@
 		minReviews?: number | null;
 		priceMax?: number | null;
 		appliedIntents?: AppliedIntent[];
-		availableHref?: string;
+		manualFilterHrefs?: Record<string, string>;
+		availableToggleHref?: string;
 		intentHrefs?: Record<string, string>;
-		onToggleAvailable?: () => void;
-		onToggleManualFilter?: (index: number) => void;
 	} = $props();
 
 	const derivedIntents = $derived(
@@ -44,7 +42,7 @@
 </script>
 
 <div class="filters" role="group" aria-label="Search filters">
-	{#each DISCOVERY_MANUAL_FILTER_CHIPS as chip, index (chip.kind + (chip.kind === 'lang' ? chip.code : chip.kind === 'priceMax' ? chip.cents : chip.kind === 'minRating' ? chip.value : ''))}
+	{#each DISCOVERY_MANUAL_FILTER_CHIPS as chip (chip.kind + (chip.kind === 'lang' ? chip.code : chip.kind === 'priceMax' ? chip.cents : chip.kind === 'minRating' ? chip.value : ''))}
 		{@const active = isManualFilterActive(chip, {
 			q: '',
 			verified,
@@ -61,25 +59,11 @@
 			areaSlug: null
 		})}
 		{@const intentKey = manualFilterIntentKey(chip)}
-		<Chip
-			selected={active}
-			{intentKey}
-			href={active ? (intentHrefs[intentKey] ?? '/') : undefined}
-			onclick={() => {
-				if (!active) onToggleManualFilter?.(index);
-			}}
-		>
+		<Chip selected={active} {intentKey} href={manualFilterHrefs[intentKey] ?? '/'}>
 			{chip.label}
 		</Chip>
 	{/each}
-	<Chip
-		selected={available}
-		intentKey="available"
-		href={available ? availableHref : undefined}
-		onclick={() => {
-			if (!available) onToggleAvailable?.();
-		}}>Available now</Chip
-	>
+	<Chip selected={available} intentKey="available" href={availableToggleHref}>Available now</Chip>
 	{#each derivedIntents as intent (intent.key)}
 		<Chip selected intentKey={intent.key} href={intentHrefs[intent.key] ?? '/'}>
 			{intent.label}

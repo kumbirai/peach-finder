@@ -1,36 +1,24 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { signInAdminViaLoginForm } from './admin-session';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const ADMIN_EMAIL = 'admin@example.com';
 const ADMIN_PASSWORD = 'adminpass123';
 
-async function signInAdmin(
-	page: import('@playwright/test').Page,
-	request: import('@playwright/test').APIRequestContext
-) {
-	const login = await request.post('/admin/api/identity/login', {
-		data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
-	});
-	expect(login.ok()).toBeTruthy();
-	const loginBody = (await login.json()) as { data: { devTotpCode?: string } };
-	expect(
-		loginBody.data.devTotpCode,
-		'devTotpCode from login when ALLOW_DEV_HELPERS=1'
-	).toBeTruthy();
-
-	const totp = await request.post('/admin/api/identity/login/totp', {
-		data: { totpCode: loginBody.data.devTotpCode }
-	});
-	expect(totp.ok(), await totp.text()).toBeTruthy();
-
-	const storage = await request.storageState();
-	await page.context().addCookies(storage.cookies);
+async function signInAdmin(page: import('@playwright/test').Page) {
+	await signInAdminViaLoginForm(page);
 	await page.goto('/admin');
 	await expect(page.getByRole('navigation', { name: 'Admin console sections' })).toBeVisible();
 }
 
 test.describe('US-ADMIN-01 hardened admin console', () => {
-	test('TC-ADMIN-01a: unauthenticated admin API stays forbidden', async ({ request }) => {
+	test('TC-ADMIN-01a: unauthenticated admin console and API stay forbidden', async ({
+		page,
+		request
+	}) => {
+		const html = await page.goto('/admin');
+		expect(html?.status()).toBeGreaterThanOrEqual(400);
 		const res = await request.get('/admin/api/platform/config');
 		expect(res.status()).toBe(401);
 	});
@@ -56,7 +44,7 @@ test.describe('US-ADMIN-01 hardened admin console', () => {
 		await page.goto('/');
 		await expect(page.locator('[data-admin-ink-strip]')).toHaveCount(0);
 
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		const strip = page.locator('[data-admin-ink-strip]');
 		await expect(strip).toBeVisible();
 		const background = await strip.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -64,7 +52,7 @@ test.describe('US-ADMIN-01 hardened admin console', () => {
 	});
 
 	test('admin console exposes section navigation after sign-in', async ({ page, request }) => {
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		const nav = page.getByRole('navigation', { name: 'Admin console sections' });
 		await expect(nav.getByRole('link', { name: 'Identity queue' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Reports queue' })).toBeVisible();
@@ -72,10 +60,18 @@ test.describe('US-ADMIN-01 hardened admin console', () => {
 		await expect(nav.getByRole('link', { name: 'Platform config' })).toBeVisible();
 		await expect(nav.getByRole('link', { name: 'Audit log' })).toBeVisible();
 		await expect(page.getByTestId('admin-ops-dashboard')).toBeVisible();
+		await nav.getByRole('link', { name: 'Identity queue' }).click();
+		await expect(page.getByTestId('admin-identity-queue')).toBeVisible();
+		const queue = await page.request.get('/admin/api/trust/verification/queue');
+		expect(queue.ok()).toBeTruthy();
+		const queueBody = (await queue.json()) as { data: { queue: Array<{ caseId: string }> } };
+		expect(queueBody.data.queue.length).toBeGreaterThan(0);
 	});
 
 	test('has no critical or serious axe violations on admin login', async ({ page }) => {
 		await page.goto('/admin/login');
+		await expect(page.getByRole('heading', { name: /admin/i })).toBeVisible();
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

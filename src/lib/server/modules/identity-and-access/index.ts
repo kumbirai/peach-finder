@@ -24,7 +24,8 @@ export { buildPostAuthRedirect } from './domain/post-auth-redirect';
 export {
 	getDisplayIdentity,
 	getContactPhone,
-	getSelfAccountSummary
+	getSelfAccountSummary,
+	getUserEmail
 } from './infra/display-identity';
 export {
 	getVerifiedPhoneHash,

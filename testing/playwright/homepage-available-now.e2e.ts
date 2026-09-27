@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const SEED_AVAILABLE_ORDER = [
 	'Lerato K.',
@@ -193,6 +194,7 @@ test.describe('US-DISC-01 homepage available now', () => {
 
 	test('has no critical or serious axe violations', async ({ page }) => {
 		await page.goto('/');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

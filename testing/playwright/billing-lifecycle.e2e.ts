@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function signInAsSeedProvider(page: import('@playwright/test').Page) {
 	await page.goto('/sign-in?flow=sign-in&returnTo=/provider/billing');
@@ -82,6 +83,7 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		const republishedBody = (await republishedStatus.json()) as { data: { state: string } };
 		expect(republishedBody.data.state).toBe('paid_listed');
 
+		await assertPrimaryListingLive(page.request);
 		const accessibility = await new AxeBuilder({ page }).analyze();
 		expect(
 			accessibility.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')
@@ -91,6 +93,7 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 	test('TC-BILL-04d/e: webhook replay is idempotent and bad signatures are rejected', async ({
 		page
 	}) => {
+		test.setTimeout(90_000);
 		await signInAsSeedProvider(page);
 
 		const chargeRes = await page.request.post('/api/dev/billing-simulate-webhook', {
@@ -102,17 +105,27 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		});
 		expect(chargeRes.status()).toBe(404);
 
+		const paidSeed = await page.request.post('/api/dev/billing-paid-listing', { data: {} });
+		expect(paidSeed.ok(), await paidSeed.text()).toBeTruthy();
 		const seed = await page.request.post('/api/dev/billing-seed-lifecycle', {
-			data: {
-				state: 'paid_listed',
-				currentPeriodEndsAt: '2026-08-01T00:00:00.000Z'
-			}
+			data: { state: 'unpublished' }
 		});
-		expect(seed.ok()).toBeTruthy();
+		expect(seed.ok(), await seed.text()).toBeTruthy();
 
-		const payRes = await page.request.post('/api/billing/subscription/pay');
-		expect(payRes.ok(), await payRes.text()).toBeTruthy();
+		await page.reload();
+		await expect(page.getByTestId('billing-pay-listing')).toBeVisible();
+		const payResponse = page.waitForResponse(
+			(res) =>
+				res.url().includes('/api/billing/subscription/pay') && res.request().method() === 'POST'
+		);
+		await page.getByTestId('billing-pay-listing').getByRole('button').click();
+		const payRes = await payResponse;
+		expect(payRes.ok()).toBeTruthy();
 		const payBody = (await payRes.json()) as { data: { reference: string } };
+
+		const statusBeforeWebhook = await page.request.get('/api/billing/status');
+		expect(statusBeforeWebhook.ok()).toBeTruthy();
+		const beforeWebhook = (await statusBeforeWebhook.json()) as { data: { state: string } };
 
 		const webhookRes = await page.request.post('/api/dev/billing-simulate-webhook', {
 			data: {
@@ -122,6 +135,10 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 			}
 		});
 		expect(webhookRes.ok(), await webhookRes.text()).toBeTruthy();
+
+		const statusAfterFailed = await page.request.get('/api/billing/status');
+		expect(statusAfterFailed.ok()).toBeTruthy();
+		const afterFailed = (await statusAfterFailed.json()) as { data: { state: string } };
 
 		const replay = await page.request.post('/api/dev/billing-simulate-webhook', {
 			data: {
@@ -133,6 +150,11 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		const replayBody = (await replay.json()) as { data: { status: string } };
 		expect(replayBody.data.status).toBe('duplicate');
 
+		const statusAfterReplay = await page.request.get('/api/billing/status');
+		expect(statusAfterReplay.ok()).toBeTruthy();
+		const afterReplay = (await statusAfterReplay.json()) as { data: { state: string } };
+		expect(afterReplay.data.state).toBe(afterFailed.data.state);
+
 		const badSignature = await page.request.post('/api/billing/webhooks/paystack', {
 			headers: {
 				'x-paystack-signature': 'invalid-signature',
@@ -141,6 +163,16 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 			data: '{"id":"evt_bad","event":"charge.success","data":{}}'
 		});
 		expect(badSignature.status()).toBe(401);
+
+		const statusAfterBadSig = await page.request.get('/api/billing/status');
+		const afterBadSig = (await statusAfterBadSig.json()) as { data: { state: string } };
+		expect(afterBadSig.data.state).toBe(afterReplay.data.state);
+		expect(afterBadSig.data.state).toBeTruthy();
+		expect(beforeWebhook.data.state).toBeTruthy();
+
+		await page.reload();
+		await expect(page.getByTestId('listing-billing-what-happens-next')).toBeVisible();
+		await expect(page.getByTestId('billing-price-list')).toBeVisible();
 	});
 
 	test('TC-BILL-05a/b: featuring requires active listing and force-lapses with listing', async ({
@@ -158,8 +190,14 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		const paidSeed = await page.request.post('/api/dev/billing-paid-listing', { data: {} });
 		expect(paidSeed.ok(), await paidSeed.text()).toBeTruthy();
 
-		const purchase = await page.request.post('/api/billing/featuring');
-		expect(purchase.ok(), await purchase.text()).toBeTruthy();
+		await page.reload();
+		await expect(page.getByTestId('billing-featuring-actions')).toBeVisible();
+		const featuringPurchase = page.waitForResponse(
+			(res) => res.url().includes('/api/billing/featuring') && res.request().method() === 'POST'
+		);
+		await page.getByTestId('billing-featuring-actions').getByRole('button').click();
+		expect((await featuringPurchase).ok()).toBeTruthy();
+		await expect(page.getByTestId('billing-featuring-active')).toBeVisible({ timeout: 15_000 });
 
 		const statusAfterPurchase = await page.request.get('/api/billing/status');
 		const statusBody = (await statusAfterPurchase.json()) as {

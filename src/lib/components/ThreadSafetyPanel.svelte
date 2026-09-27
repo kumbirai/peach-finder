@@ -6,6 +6,7 @@
 		THREAD_REPORT_SUCCESS_COPY,
 		THREAD_SAFETY_INTRO,
 		THREAD_SAFETY_REASON_OPTIONS,
+		shouldResetThreadSafetyPanelOnMenuClose,
 		threadSafetyPanelStateAfterMenuClose,
 		type ThreadSafetyReason
 	} from '$lib/messaging/thread-safety';
@@ -15,13 +16,15 @@
 		counterpartUserId,
 		counterpartName,
 		panelId,
-		menuOpen = false
+		menuOpen = false,
+		onStayOpen
 	}: {
 		threadId: string;
 		counterpartUserId: string;
 		counterpartName: string;
 		panelId: string;
 		menuOpen?: boolean;
+		onStayOpen?: () => void;
 	} = $props();
 
 	let panelCopy = $state(THREAD_SAFETY_INTRO);
@@ -35,7 +38,15 @@
 	let freeText = $state('');
 
 	$effect(() => {
-		if (menuWasOpen && !menuOpen) {
+		if (
+			menuWasOpen &&
+			!menuOpen &&
+			shouldResetThreadSafetyPanelOnMenuClose({
+				choosingReason,
+				blockConfirming,
+				busy
+			})
+		) {
 			const reset = threadSafetyPanelStateAfterMenuClose();
 			panelCopy = reset.panelCopy;
 			blockConfirming = reset.blockConfirming;
@@ -116,7 +127,13 @@
 	}
 </script>
 
-<div id={panelId} class="thread-safety" data-testid="thread-safety-panel">
+<div
+	id={panelId}
+	class="thread-safety"
+	data-testid="thread-safety-panel"
+	onmousedown={(event) => event.stopPropagation()}
+	onclick={(event) => event.stopPropagation()}
+>
 	<p>{panelCopy}</p>
 	{#if choosingReason}
 		<div class="thread-safety__reasons" role="group" aria-label="Report reason">
@@ -160,6 +177,7 @@
 				disabled={busy}
 				onclick={() => {
 					choosingReason = true;
+					onStayOpen?.();
 				}}
 			>
 				Report

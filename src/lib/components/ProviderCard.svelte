@@ -74,7 +74,9 @@
 			</span>
 		</div>
 		<p class="meta">
-			<span>{distanceLabel}</span>
+			<span aria-label={card.distanceKm != null ? `${formatDistanceKm(card.distanceKm)} away` : undefined}
+				>{distanceLabel}</span
+			>
 			<span>{reviewMeta}</span>
 			{#if priceMeta}
 				<span>{priceMeta}</span>

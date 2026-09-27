@@ -21,7 +21,7 @@ npm run db:seed
 npm run dev
 ```
 
-The app serves at http://127.0.0.1:5173. Design-system primitives: http://127.0.0.1:5173/dev/components.
+The app serves at http://127.0.0.1:5173. Design-system primitives: http://127.0.0.1:5173/dev/components. Local mail (SMTP2GO stand-in): SMTP `127.0.0.1:1025`, MailHog UI http://127.0.0.1:8025.
 
 | Command                    | Purpose                                                   |
 | -------------------------- | --------------------------------------------------------- |

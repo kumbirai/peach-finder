@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { publicAppOrigin } from '../../../env';
+import {
+	objectStoreConfigFromEnv,
+	putS3Object,
+	splitStoredObjectKey
+} from './s3-path-style';
 
 const STAGING_PREFIX = '_staging';
 
@@ -29,6 +34,14 @@ export async function writeFinalObject(objectKey: string, bytes: Buffer): Promis
 	const filePath = localPathForKey(objectKey);
 	await mkdir(path.dirname(filePath), { recursive: true });
 	await writeFile(filePath, bytes);
+	const store = objectStoreConfigFromEnv();
+	if (!store) return;
+	const { bucket, key } = splitStoredObjectKey(objectKey, store);
+	try {
+		await putS3Object(store, bucket, key, bytes);
+	} catch {
+		// Local bytes remain canonical when the object store is unreachable.
+	}
 }
 
 export async function readStagingObject(stagingKey: string): Promise<Buffer> {
@@ -47,10 +60,25 @@ export function sha256(bytes: Buffer): string {
 	return createHash('sha256').update(bytes).digest('hex');
 }
 
-export async function readLocalMediaFile(relativePath: string): Promise<Buffer | null> {
+export function isPublicMediaKey(relativePath: string): boolean {
+	const normalized = relativePath.replaceAll('\\', '/');
+	return (
+		normalized.length > 0 &&
+		!normalized.includes('..') &&
+		!normalized.startsWith('identity-docs/') &&
+		!normalized.includes('/identity-docs/')
+	);
+}
+
+export async function readStoredObject(relativePath: string): Promise<Buffer | null> {
 	try {
 		return await readFile(localPathForKey(relativePath));
 	} catch {
 		return null;
 	}
+}
+
+export async function readLocalMediaFile(relativePath: string): Promise<Buffer | null> {
+	if (!isPublicMediaKey(relativePath)) return null;
+	return readStoredObject(relativePath);
 }

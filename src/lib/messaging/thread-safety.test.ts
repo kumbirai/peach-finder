@@ -3,6 +3,7 @@ import {
 	THREAD_BLOCK_CONFIRM_COPY,
 	THREAD_SAFETY_INTRO,
 	THREAD_SAFETY_REASON_OPTIONS,
+	shouldResetThreadSafetyPanelOnMenuClose,
 	threadSafetyPanelStateAfterMenuClose
 } from './thread-safety';
 
@@ -24,6 +25,37 @@ describe('thread-safety copy', () => {
 			'spam_scam',
 			'other'
 		]);
+	});
+
+	it('keeps an in-progress report or block when the menu flickers closed', () => {
+		expect(
+			shouldResetThreadSafetyPanelOnMenuClose({
+				choosingReason: true,
+				blockConfirming: false,
+				busy: false
+			})
+		).toBe(false);
+		expect(
+			shouldResetThreadSafetyPanelOnMenuClose({
+				choosingReason: false,
+				blockConfirming: true,
+				busy: false
+			})
+		).toBe(false);
+		expect(
+			shouldResetThreadSafetyPanelOnMenuClose({
+				choosingReason: false,
+				blockConfirming: false,
+				busy: true
+			})
+		).toBe(false);
+		expect(
+			shouldResetThreadSafetyPanelOnMenuClose({
+				choosingReason: false,
+				blockConfirming: false,
+				busy: false
+			})
+		).toBe(true);
 	});
 
 	it('resets panel state when the safety menu closes', () => {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const DRAFT = 'Hi Amara, are you free tomorrow afternoon?';
 
@@ -83,8 +84,16 @@ test.describe('US-ACC-02 sign up mid-action', () => {
 		await expect(page.getByText(DRAFT)).toBeVisible({ timeout: 10_000 });
 	});
 
-	test('TC-ACC-02d: interruption is exactly one screen', async ({ page }) => {
+	test('TC-ACC-02d: interruption is exactly one screen', async ({ page, request }) => {
+		test.setTimeout(90_000);
+		const email = `e2e-one-screen-${Date.now()}@example.com`;
+
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await page.evaluate(
+			({ id, draft }) => sessionStorage.setItem(`pf_message_draft_${id}`, draft),
+			{ id: SEED_CORE_PRIMARY_PROFILE_ID, draft: DRAFT }
+		);
+		await page.reload();
 		await page
 			.getByRole('group', { name: 'Contact actions' })
 			.getByRole('link', { name: /^Message / })
@@ -94,12 +103,50 @@ test.describe('US-ACC-02 sign up mid-action', () => {
 		await expect(page.getByRole('link', { name: 'Continue with Google' })).toBeVisible();
 		// No wizard step indicators / next buttons beyond sign-in|sign-up toggle
 		await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0);
+
+		if ((await page.getByLabel('Your name').count()) === 0) {
+			await page.locator('.toggle').getByRole('button', { name: 'Create account' }).click();
+		}
+		await page.getByLabel('Your name').fill('One Screen Seeker');
+		await page.getByLabel('Email').fill(email);
+		await page.getByLabel('Password').fill('password123');
+		await page.locator('input[name="acceptedTerms"]').check();
+		await page.getByRole('button', { name: 'Create account' }).click();
+		await expect(page).toHaveURL(
+			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)
+		);
+		await expect(page.getByLabel('Your message')).toHaveValue(DRAFT, { timeout: 10_000 });
+
+		await page.getByRole('button', { name: 'Send message' }).click();
+		await expect(page.getByText(/deliver this message/i)).toBeVisible({ timeout: 10_000 });
+
+		const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+		expect(tokenRes.ok()).toBeTruthy();
+		const { data } = (await tokenRes.json()) as { data: { token: string } };
+		await page.goto(
+			`/verify-email?token=${data.token}&returnTo=${encodeURIComponent(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`)}`
+		);
+		await page.getByRole('button', { name: 'Verify email' }).click();
+
+		await expect
+			.poll(async () => {
+				const res = await request.get(
+					`/api/dev/message-state?email=${encodeURIComponent(email)}&providerProfileId=${SEED_CORE_PRIMARY_PROFILE_ID}`
+				);
+				const json = (await res.json()) as { data: { messageCount: number } };
+				return json.data.messageCount;
+			})
+			.toBe(1);
+
+		await page.goto(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+		await expect(page.getByText(DRAFT)).toBeVisible({ timeout: 10_000 });
 	});
 
 	test('sign-in screen has no critical or serious axe violations', async ({ page }) => {
 		await page.goto(
 			`/sign-in?returnTo=/provider/${SEED_CORE_PRIMARY_PROFILE_ID}&action=message&providerProfileId=${SEED_CORE_PRIMARY_PROFILE_ID}`
 		);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

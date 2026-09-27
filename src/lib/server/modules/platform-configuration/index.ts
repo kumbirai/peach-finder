@@ -15,11 +15,16 @@ import {
 	getConfig,
 	loadConfigCache,
 	refreshConfigKey,
-	maybeRefreshAll
+	maybeRefreshAll,
+	overwriteCachedConfig,
+	forceConfigTtlElapsed,
+	resetConfigCacheForTests
 } from './infra/config-cache';
 import { newId, type AreaId, type LexiconEntryId, type UserId } from '../../shared/ids';
 import { Err, Ok, type Result, type UseCaseError } from '../../shared/result';
 import { writeAudit } from '../../shared/audit';
+import { auditLog, idempotencyLedger } from '../../shared/schema';
+import { stripForbiddenExportKeys } from './infra/export-sanitize';
 import { publish } from '../../shared/outbox';
 import { asInstant, type Clock } from '../../shared/clock';
 import type { AuthContext } from '../../shared/auth-context';
@@ -34,7 +39,16 @@ import * as listingBilling from '../listing-billing';
 import * as userNotifications from '../user-notifications';
 import * as mediaProcessing from '../media-processing';
 
-export { getConfig, loadConfigCache, refreshConfigKey, maybeRefreshAll };
+export {
+	getConfig,
+	loadConfigCache,
+	refreshConfigKey,
+	maybeRefreshAll,
+	overwriteCachedConfig,
+	forceConfigTtlElapsed,
+	resetConfigCacheForTests
+};
+export { stripForbiddenExportKeys, exportPayloadHasForbiddenMaterial } from './infra/export-sanitize';
 export { CONFIG_KEYS, CONFIG_DEFAULTS, isConfigKey, type ConfigKey };
 export {
 	isValidAuditCursor,
@@ -483,10 +497,27 @@ export async function exportUserData(
 	userId: UserId,
 	actor: AuthContext,
 	db: Database,
-	correlationId: string
+	correlationId: string,
+	idempotencyKey?: string | null
 ) {
 	actor.requireRole('admin');
-	const slices = {
+	const ledgerKey = idempotencyKey ? `admin.export_user_data:${idempotencyKey}` : null;
+	if (ledgerKey) {
+		const existing = await db
+			.select({ body: idempotencyLedger.body })
+			.from(idempotencyLedger)
+			.where(eq(idempotencyLedger.key, ledgerKey))
+			.limit(1);
+		if (existing[0]) {
+			return existing[0].body as {
+				generatedAt: string;
+				userId: UserId;
+				slices: Record<string, unknown>;
+			};
+		}
+	}
+
+	const slices = stripForbiddenExportKeys({
 		'identity-and-access': await identityExportFor(userId),
 		'provider-profile': await providerProfile.exportFor(userId),
 		'provider-availability': await providerAvailability.exportFor(userId),
@@ -496,18 +527,58 @@ export async function exportUserData(
 		'listing-billing': await listingBilling.exportFor(userId),
 		'user-notifications': await userNotifications.exportFor(userId),
 		'media-processing': await mediaProcessing.exportFor(userId)
-	};
+	});
+	const payload = { generatedAt: new Date().toISOString(), userId, slices };
+	let replay: typeof payload | null = null;
+
 	await db.transaction(async (tx) => {
+		if (ledgerKey) {
+			const raced = await tx
+				.select({ body: idempotencyLedger.body })
+				.from(idempotencyLedger)
+				.where(eq(idempotencyLedger.key, ledgerKey))
+				.limit(1);
+			if (raced[0]) {
+				replay = raced[0].body as typeof payload;
+				return;
+			}
+			await tx.insert(idempotencyLedger).values({
+				key: ledgerKey,
+				status: 200,
+				body: payload
+			});
+		}
 		await writeAudit(tx, {
 			actorId: actor.userId,
 			actorRole: 'admin',
 			action: 'admin.export_user_data',
 			targetType: 'user',
 			targetId: userId,
-			correlationId
+			correlationId,
+			metadata: ledgerKey ? { idempotencyKey } : {}
 		});
 	});
-	return { generatedAt: new Date().toISOString(), userId, slices };
+	return replay ?? payload;
+}
+
+export async function countExportAudits(
+	db: Database,
+	userId: UserId,
+	idempotencyKey?: string
+): Promise<number> {
+	const rows = await db
+		.select({ id: auditLog.id })
+		.from(auditLog)
+		.where(
+			and(
+				eq(auditLog.action, 'admin.export_user_data'),
+				eq(auditLog.targetId, userId),
+				idempotencyKey
+					? sql`${auditLog.metadata} ->> 'idempotencyKey' = ${idempotencyKey}`
+					: sql`true`
+			)
+		);
+	return rows.length;
 }
 
 export async function handleConfigChanged(

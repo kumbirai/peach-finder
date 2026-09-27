@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD,
@@ -33,11 +34,18 @@ async function registerAndVerifySeeker(
 	await page.locator('input[name="acceptedTerms"]').check();
 	await page.getByRole('button', { name: 'Create account' }).click();
 	await expect(page).toHaveURL(/\/profile/);
+	await page.waitForLoadState('domcontentloaded');
 
-	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+	let tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+	if (!tokenRes.ok()) {
+		await page.waitForTimeout(500);
+		tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
+	}
 	expect(tokenRes.ok()).toBe(true);
 	const { data } = (await tokenRes.json()) as { data: { token: string } };
-	await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`);
+	await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`, {
+		waitUntil: 'domcontentloaded'
+	});
 	await page.getByRole('button', { name: 'Verify email' }).click();
 	await expect(page).toHaveURL(/\/profile/);
 }
@@ -46,6 +54,7 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('US-ACC-05 delete my account', () => {
 	test('TC-ACC-05a: deletion requires a confirmation step', async ({ page, request }) => {
+		test.setTimeout(90_000);
 		const email = `confirm-step-${Date.now()}@example.com`;
 		await registerAndVerifySeeker(page, request, email, 'password123', 'Confirm Step User');
 
@@ -56,6 +65,13 @@ test.describe('US-ACC-05 delete my account', () => {
 		await expect(page).toHaveURL(/deleteConfirm=1/);
 		await expect(page.getByText(/enter your password to confirm/i)).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Yes, delete my account' })).toBeEnabled();
+
+		const rejected = await page.request.delete('/api/identity/account', {
+			data: { password: 'password123', confirm: false }
+		});
+		expect(rejected.status()).toBe(422);
+		const ping = await page.request.get('/api/session/ping');
+		expect(ping.ok()).toBeTruthy();
 	});
 
 	test('TC-ACC-05c: provider inbox shows Deleted account after seeker deletes', async ({
@@ -98,6 +114,7 @@ test.describe('US-ACC-05 delete my account', () => {
 		const email = `axe-delete-${Date.now()}@example.com`;
 		await registerAndVerifySeeker(page, request, email, 'password123', 'Axe Delete User');
 		await page.goto('/profile?deleteConfirm=1');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

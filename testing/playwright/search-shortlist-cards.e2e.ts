@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-DISC-08 cards I can shortlist from', () => {
 	test.use({ viewport: { width: 360, height: 800 } });
@@ -69,6 +70,7 @@ test.describe('US-DISC-08 cards I can shortlist from', () => {
 
 	test('has no critical or serious axe violations on shortlist cards', async ({ page }) => {
 		await page.goto('/');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

@@ -8,6 +8,8 @@ import {
 	SEED_DUAL_ROLE_PASSWORD,
 	SEED_DUAL_ROLE_PROFILE_ID
 } from '../../scripts/seed-core';
+import { signInAdminViaLoginForm } from './admin-session';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_VERIF_PENDING_NEW_CASE_ID,
 	SEED_VERIF_PENDING_NEW_PROFILE_ID,
@@ -33,24 +35,8 @@ async function signInProvider(page: import('@playwright/test').Page) {
 	});
 }
 
-async function signInAdmin(
-	page: import('@playwright/test').Page,
-	request: import('@playwright/test').APIRequestContext
-) {
-	const login = await request.post('/admin/api/identity/login', {
-		data: { email: SEED_ADMIN_EMAIL, password: SEED_ADMIN_PASSWORD }
-	});
-	expect(login.ok()).toBeTruthy();
-	const loginBody = (await login.json()) as { data: { devTotpCode?: string } };
-	expect(loginBody.data.devTotpCode).toBeTruthy();
-
-	const totp = await request.post('/admin/api/identity/login/totp', {
-		data: { totpCode: loginBody.data.devTotpCode }
-	});
-	expect(totp.ok(), await totp.text()).toBeTruthy();
-
-	const storage = await request.storageState();
-	await page.context().addCookies(storage.cookies);
+async function signInAdmin(page: import('@playwright/test').Page) {
+	await signInAdminViaLoginForm(page);
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -101,7 +87,7 @@ test.describe('US-ADMIN-02 work the identity queue', () => {
 		page,
 		request
 	}) => {
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		await page.goto('/admin/identity');
 		await expect(page.getByTestId('admin-identity-queue')).toBeVisible();
 
@@ -145,6 +131,12 @@ test.describe('US-ADMIN-02 work the identity queue', () => {
 		expect(doc.headers()['content-type']).toContain('image/jpeg');
 	});
 
+	test('identity-docs are denied on the public media path', async ({ request }) => {
+		const denied = await request.get('/media/identity-docs/probe/not-a-real-object.jpg');
+		expect(denied.status()).toBe(404);
+		expect(await denied.text()).not.toMatch(/JFIF|Exif|PNG/);
+	});
+
 	test('TC-ADMIN-02c: approving grants badge without changing public profile visibility', async ({
 		page,
 		request
@@ -153,12 +145,12 @@ test.describe('US-ADMIN-02 work the identity queue', () => {
 		expect(before.ok()).toBeTruthy();
 		const beforeBody = (await before.json()) as { data: Record<string, unknown> };
 
-		await signInAdmin(page, request);
-		const approve = await request.post(
-			`/admin/api/trust/verification/${SEED_VERIF_PENDING_OLD_CASE_ID}/approve`,
-			{ data: {} }
-		);
-		expect(approve.ok(), await approve.text()).toBeTruthy();
+		await signInAdmin(page);
+		await page.goto('/admin/identity');
+		const approveRow = page.locator(`[data-case-id="${SEED_VERIF_PENDING_OLD_CASE_ID}"]`);
+		await expect(approveRow).toBeVisible();
+		await approveRow.getByRole('button', { name: 'Approve' }).click();
+		await expect(approveRow).toHaveCount(0, { timeout: 15_000 });
 
 		const after = await request.get(`/api/provider/profile/${SEED_VERIF_PENDING_OLD_PROFILE_ID}`);
 		expect(after.ok()).toBeTruthy();
@@ -167,24 +159,38 @@ test.describe('US-ADMIN-02 work the identity queue', () => {
 		};
 		expect(afterBody.data.badges.identityVerified).toBe(true);
 		expect(afterBody.data.displayName).toBe(beforeBody.data.displayName);
+
+		await page.goto(`/provider/${SEED_VERIF_PENDING_OLD_PROFILE_ID}`);
+		await expect(page.getByTestId('trust-badge-verified')).toBeVisible();
 	});
 
 	test('TC-ADMIN-02c: rejecting the remaining case requires a reason', async ({
 		page,
 		request
 	}) => {
-		await signInAdmin(page, request);
+		test.setTimeout(60_000);
+		await signInAdmin(page);
+		await page.goto('/admin/identity');
+		const rejectRow = page.locator(`[data-case-id="${SEED_VERIF_PENDING_NEW_CASE_ID}"]`);
+		await expect(rejectRow).toBeVisible();
+		await rejectRow.getByTestId('identity-reject-open').click();
+		await expect(page).toHaveURL(new RegExp(`[?&]reject=${SEED_VERIF_PENDING_NEW_CASE_ID}`));
+		await expect(rejectRow.getByLabel('Rejection reason')).toBeVisible();
+		await rejectRow.getByTestId('identity-reject-confirm').click();
+		await expect(page.getByRole('alert')).toContainText(/reason/i);
+		if ((await rejectRow.getByLabel('Rejection reason').count()) === 0) {
+			await rejectRow.getByTestId('identity-reject-open').click();
+		}
+
 		const blocked = await request.post(
 			`/admin/api/trust/verification/${SEED_VERIF_PENDING_NEW_CASE_ID}/reject`,
 			{ data: { reason: '' } }
 		);
 		expect(blocked.status()).toBe(422);
 
-		const rejected = await request.post(
-			`/admin/api/trust/verification/${SEED_VERIF_PENDING_NEW_CASE_ID}/reject`,
-			{ data: { reason: 'Selfie did not match the ID photo.' } }
-		);
-		expect(rejected.ok(), await rejected.text()).toBeTruthy();
+		await rejectRow.getByLabel('Rejection reason').fill('Selfie did not match the ID photo.');
+		await rejectRow.getByTestId('identity-reject-confirm').click();
+		await expect(rejectRow).toHaveCount(0, { timeout: 15_000 });
 
 		const queue = await request.get('/admin/api/trust/verification/queue');
 		expect(queue.ok()).toBeTruthy();
@@ -195,8 +201,9 @@ test.describe('US-ADMIN-02 work the identity queue', () => {
 	});
 
 	test('has no critical or serious axe violations on identity queue', async ({ page, request }) => {
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		await page.goto('/admin/identity');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -299,6 +306,7 @@ test.describe('US-VERIF-01 submit my identity claim', () => {
 	}) => {
 		await signInProvider(page);
 		await page.goto('/provider/verify');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -370,7 +378,7 @@ test.describe('US-VERIF-02 decision outcomes', () => {
 		};
 		expect(profileBeforeBody.data.badges.identityVerified).toBe(false);
 
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		const rejected = await request.post(
 			`/admin/api/trust/verification/${statusBody.data.caseId}/reject`,
 			{ data: { reason: 'Selfie did not match the ID photo.' } }
@@ -429,7 +437,7 @@ test.describe('US-VERIF-02 decision outcomes', () => {
 		expect(resubmit.status(), await resubmit.text()).toBe(201);
 		const resubmitBody = (await resubmit.json()) as { data: { caseId: string } };
 
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		const approved = await request.post(
 			`/admin/api/trust/verification/${resubmitBody.data.caseId}/approve`,
 			{ data: {} }
@@ -467,6 +475,7 @@ test.describe('US-VERIF-02 decision outcomes', () => {
 	}) => {
 		await signInProvider(page);
 		await page.goto('/provider/dashboard');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
@@ -533,13 +542,14 @@ test.describe('US-VERIF-03 badge suppression on identity-relevant changes', () =
 		await page.goto('/provider/profile/edit');
 		await expect(page.getByText(/Identity verified badge is hidden/i)).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axeResults = await new AxeBuilder({ page }).analyze();
 		const seriousAxe = axeResults.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'
 		);
 		expect(seriousAxe).toEqual([]);
 
-		await signInAdmin(page, request);
+		await signInAdmin(page);
 		const queue = await request.get('/admin/api/trust/verification/queue');
 		expect(queue.ok()).toBeTruthy();
 		const queueBody = (await queue.json()) as {

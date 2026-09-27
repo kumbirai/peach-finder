@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD,
@@ -46,6 +47,7 @@ test.describe('US-BILL-01 a free period I can trust (live stack)', () => {
 		);
 		await expect(page.getByTestId('listing-billing-state-chip')).toContainText('Active listing');
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="listing-billing-status"]')
 			.analyze();

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const FORBIDDEN_IDENTIFYING_KEYS = [
 	'viewerKey',
@@ -107,8 +108,22 @@ test.describe('US-ANLY-01 my four numbers (live stack)', () => {
 
 		await page.getByTestId('analytics-range-7').click();
 		await expect(page).toHaveURL(/range=7/);
+		const afterSeven = await page.request.get('/api/analytics/dashboard?range=7');
+		expect(afterSeven.ok(), await afterSeven.text()).toBeTruthy();
+		const afterSevenBody = (await afterSeven.json()) as {
+			data: { profileViews: { currentTotal: string } };
+		};
+		expect(afterSevenBody.data.profileViews.currentTotal).toBe(sevenBody.data.profileViews.currentTotal);
 		await page.getByTestId('analytics-range-90').click();
 		await expect(page).toHaveURL(/range=90/);
+		const afterNinety = await page.request.get('/api/analytics/dashboard?range=90');
+		expect(afterNinety.ok(), await afterNinety.text()).toBeTruthy();
+		const afterNinetyBody = (await afterNinety.json()) as {
+			data: { profileViews: { currentTotal: string } };
+		};
+		expect(afterNinetyBody.data.profileViews.currentTotal).toBe(
+			ninetyBody.data.profileViews.currentTotal
+		);
 	});
 
 	test('TC-ANLY-01c: metric definitions are shown in-product', async ({ page }) => {
@@ -119,6 +134,7 @@ test.describe('US-ANLY-01 my four numbers (live stack)', () => {
 		await expect(page.getByText(/card shown in a search or homepage results set/i)).toBeVisible();
 		await expect(page.getByText(/new message thread started with you/i)).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="provider-analytics"]')
 			.analyze();
@@ -161,6 +177,7 @@ test.describe('US-ANLY-03 demand signal I can act on (live stack)', () => {
 			page.getByTestId('analytics-demand-tag-01900000-0000-7000-8000-000000000201')
 		).toContainText('Not on your profile');
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="analytics-demand-signals"]')
 			.analyze();
@@ -189,6 +206,7 @@ test.describe('US-ANLY-02 aggregate always, identifiable never (live stack)', ()
 		expect(analyticsText).not.toMatch(/seeker@example\.com|response-seeker-/i);
 		expect(analyticsText).not.toMatch(/viewer_key|seekerId/i);
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="provider-analytics"]')
 			.analyze();
@@ -282,6 +300,7 @@ test.describe('US-ANLY-04 cause and effect on the chart (live stack)', () => {
 			page.getByTestId(`analytics-chart-marker-featured-${featuredMarker!.date}`)
 		).toHaveCount(3);
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="provider-analytics"]')
 			.analyze();

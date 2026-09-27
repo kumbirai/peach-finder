@@ -1,6 +1,6 @@
 ---
 title: Peach Finder — Test Artefacts — Overview
-updated: 2026-09-04
+updated: 2026-09-27
 ---
 
 # Test Artefacts — Overview
@@ -34,6 +34,7 @@ updated: 2026-09-04
 | `03-test-cases/billing-analytics-and-privacy.md` | US-BILL-01..05, US-ANLY-01..04, US-PRIV-01..04 (13 stories) |
 | `04-traceability-matrix.md` | BR → FR → SR → US → TC coverage, gap check |
 | `05-playwright-spec-designs/` | 11 live-stack-seeded E2E designs (8 critical-path journeys + 2 visual/perceived-quality) |
+| `06-playwright-backend-validation-audit.md` | 2026-09-27 live-stack audit: false-green / UI-only / API-only refactor list, coverage gaps, passing tests, and correction status |
 
 ## 3. Clustering rationale
 

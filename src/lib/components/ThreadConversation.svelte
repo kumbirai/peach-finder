@@ -44,6 +44,24 @@
 	let transport: MessagingTransport | null = null;
 	let safetyMenuOpen = $state(false);
 	const safetyPanelId = $derived(`thread-safety-${threadId}`);
+	let safetyMenuRoot: HTMLDivElement | undefined = $state();
+
+	$effect(() => {
+		if (!safetyMenuOpen) return;
+		const onDocumentClick = (event: MouseEvent) => {
+			const target = event.target;
+			if (!(target instanceof Node)) return;
+			if (safetyMenuRoot?.contains(target)) return;
+			safetyMenuOpen = false;
+		};
+		const timer = window.setTimeout(() => {
+			document.addEventListener('click', onDocumentClick);
+		}, 250);
+		return () => {
+			window.clearTimeout(timer);
+			document.removeEventListener('click', onDocumentClick);
+		};
+	});
 
 	function scrollToBottom(): void {
 		if (!threadBodyEl) return;
@@ -220,27 +238,38 @@
 				{/if}
 			</p>
 		</div>
-		<details class="thread-safety-details" bind:open={safetyMenuOpen}>
-			<summary
+		<div class="thread-safety-details" bind:this={safetyMenuRoot}>
+			<button
+				type="button"
 				class="icon-btn"
 				data-testid="thread-safety-toggle"
 				aria-label="Conversation safety options"
+				aria-expanded={safetyMenuOpen}
 				aria-controls={safetyPanelId}
+				onclick={(event) => {
+					event.stopPropagation();
+					safetyMenuOpen = !safetyMenuOpen;
+				}}
 			>
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<circle cx="5" cy="12" r="1.5" fill="currentColor" />
 					<circle cx="12" cy="12" r="1.5" fill="currentColor" />
 					<circle cx="19" cy="12" r="1.5" fill="currentColor" />
 				</svg>
-			</summary>
-			<ThreadSafetyPanel
-				panelId={safetyPanelId}
-				menuOpen={safetyMenuOpen}
-				{threadId}
-				{counterpartUserId}
-				{counterpartName}
-			/>
-		</details>
+			</button>
+			{#if safetyMenuOpen}
+				<ThreadSafetyPanel
+					panelId={safetyPanelId}
+					menuOpen={safetyMenuOpen}
+					onStayOpen={() => {
+						safetyMenuOpen = true;
+					}}
+					{threadId}
+					{counterpartUserId}
+					{counterpartName}
+				/>
+			{/if}
+		</div>
 	</header>
 </div>
 
@@ -293,12 +322,6 @@
 	.thread-safety-details {
 		position: relative;
 		flex-shrink: 0;
-	}
-	.thread-safety-details summary {
-		list-style: none;
-	}
-	.thread-safety-details summary::-webkit-details-marker {
-		display: none;
 	}
 	.thread-safety-details :global(.thread-safety) {
 		position: absolute;

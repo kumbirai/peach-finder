@@ -3,8 +3,12 @@
 	"private": true,
 	"version": "0.0.0",
 	"scripts": {
-		"test": "playwright test",
-		"test:ui": "playwright test --ui",
+		"test": "playwright test --project=chromium",
+		"test:ui": "playwright test --ui --project=chromium",
+		"test:smoke": "playwright test --project=chromium homepage.e2e.ts browse-anonymous.e2e.ts search-to-contact.e2e.ts admin-console.e2e.ts",
+		"test:seeding": "playwright test --project=chromium-seeding seeding/seed.spec.ts --workers=1",
+		"test:seeding:verify": "playwright test --project=chromium-seeding seeding/verify.spec.ts seeding/live-ui-journeys.spec.ts --workers=1",
+		"test:seeding:full": "npm run test:seeding && npm run test:seeding:verify",
 		"typecheck": "tsc --noEmit -p tsconfig.json"
 	},
 	"devDependencies": {

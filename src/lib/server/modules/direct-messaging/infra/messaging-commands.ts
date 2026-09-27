@@ -22,6 +22,7 @@ import { messages, pendingMessages, threads } from './schema';
 import { resolveThreadAccess } from './thread-access';
 import { upsertPresenceHeartbeat } from './presence-heartbeat';
 import { countUnreadInThread } from './unread-queries';
+import { isUniqueConstraintViolation } from '../../../shared/unique-constraint';
 
 const MAX_BODY_LENGTH = 4000;
 
@@ -133,7 +134,8 @@ async function sendMessageInTransaction(
 		body: string;
 		now: Date;
 		correlationId: string;
-	}
+	},
+	uniqueRetry = 0
 ): Promise<Result<{ threadId: ThreadId; messageId: MessageId }, UseCaseError>> {
 	const body = input.body.trim();
 	let threadId: ThreadId;
@@ -211,8 +213,8 @@ async function sendMessageInTransaction(
 			await publish(tx, msgEvent);
 		});
 	} catch (error) {
-		if (createdThread && String(error).includes('unique')) {
-			return sendMessageInTransaction(db, { ...input, correlationId: input.correlationId });
+		if (createdThread && uniqueRetry < 2 && isUniqueConstraintViolation(error)) {
+			return sendMessageInTransaction(db, input, uniqueRetry + 1);
 		}
 		throw error;
 	}

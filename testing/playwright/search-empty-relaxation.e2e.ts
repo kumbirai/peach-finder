@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-DISC-07 empty results that help instead of a dead end', () => {
 	test('TC-DISC-07a: empty state names constraints and one-tap relaxation re-runs search', async ({
@@ -47,6 +48,7 @@ test.describe('US-DISC-07 empty results that help instead of a dead end', () => 
 	test('has no critical or serious axe violations on empty search state', async ({ page }) => {
 		await page.goto('/?available=1&priceMax=10000');
 		await expect(page.getByTestId('empty-search-state')).toBeVisible();
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

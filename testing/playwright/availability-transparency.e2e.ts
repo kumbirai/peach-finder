@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function signInAsSeedProvider(page: import('@playwright/test').Page) {
 	await page.goto('/sign-in?flow=sign-in&returnTo=/provider/dashboard');
@@ -58,6 +59,7 @@ test.describe('US-AVAIL-05 no black boxes about my own signals', () => {
 		await expect(page.getByTestId('availability-expiry-countdown')).toBeVisible();
 		await expect(page.getByTestId('availability-expiry-countdown')).toContainText(/Expires in/i);
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="availability-toggle"]')
 			.analyze();

@@ -69,6 +69,7 @@ export {
 	type NotificationPreferencesDto,
 	type PreferenceUpdate
 };
+export { armFailNextEmailChannel } from './infra/dispatch';
 
 export async function exportFor(
 	userId: UserId

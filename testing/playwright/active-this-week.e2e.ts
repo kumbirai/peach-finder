@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const THANDI_PROFILE_ID = '01900000-0000-7000-8000-000000000102';
 
@@ -22,6 +23,7 @@ test.describe('US-AVAIL-04 active this week earned automatically', () => {
 		await page.reload();
 		await expect(page.getByTestId('trust-badge-active-week')).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const accessibility = await new AxeBuilder({ page })
 			.include('[data-testid="profile-trust-badges"]')
 			.analyze();

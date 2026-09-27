@@ -57,6 +57,7 @@ test-results/
 playwright-report/
 blob-report/
 .auth/
+testing/playwright/seeding/.out/
 
 # Temporary files
 *.tmp

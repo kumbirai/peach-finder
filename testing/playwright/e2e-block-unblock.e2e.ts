@@ -6,6 +6,7 @@ import {
 	SEED_DUAL_ROLE_PASSWORD,
 	SEED_DUAL_ROLE_PROFILE_ID
 } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_SAFE02_AMARA_EMAIL,
 	SEED_SAFE02_AMARA_PASSWORD,
@@ -84,6 +85,11 @@ test.describe('US-SAFE-02 block instant silent messages both ways', () => {
 			{ data: { body: 'Seeker attempt after block' } }
 		);
 		expect(seekerSend.status()).toBe(404);
+		const seekerSendAgain = await page.request.post(
+			`/api/messaging/threads/${DUAL_AMARA_THREAD_ID}/messages`,
+			{ data: { body: 'Second seeker attempt after block' } }
+		);
+		expect(seekerSendAgain.status()).toBe(404);
 
 		const amaraContext = await browser.newContext({ storageState: amaraStorage });
 		const amaraPage = await amaraContext.newPage();
@@ -145,6 +151,7 @@ test.describe('US-SAFE-02 block instant silent messages both ways', () => {
 		await page.goto('/profile');
 		await expect(page.getByRole('heading', { name: 'Blocked people' })).toBeVisible();
 		await expect(page.getByTestId('blocked-people-list')).toBeVisible();
+		await assertPrimaryListingLive(page.request);
 		const axeResults = await new AxeBuilder({ page })
 			.include('[data-testid="blocked-people-list"]')
 			.analyze();
@@ -237,6 +244,7 @@ test.describe('US-REV-06 blocking does not rewrite history', () => {
 			amaraPage.getByTestId('provider-review-item').filter({ hasText: SEED_SAFE02_REVIEW_BODY })
 		).toBeVisible();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).include('[data-testid="profile-reviews"]').analyze();
 		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
 			[]

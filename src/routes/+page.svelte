@@ -10,7 +10,11 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import SearchFilters from '$lib/components/SearchFilters.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
-	import { DISCOVERY_MANUAL_FILTER_CHIPS, toggleManualFilter } from '$lib/manual-filters';
+	import {
+		DISCOVERY_MANUAL_FILTER_CHIPS,
+		manualFilterIntentKey,
+		toggleManualFilter
+	} from '$lib/manual-filters';
 	import {
 		buildRecentSearchLabel,
 		clearRecentSearches,
@@ -177,21 +181,20 @@
 		return params.toString() ? `/?${params.toString()}` : '/';
 	}
 
-	function toggleAvailableFilter() {
+	const manualFilterHrefs = $derived.by(() => {
 		const state = currentUrlState();
-		state.available = !state.available;
-		void goto(hrefForState(state));
-	}
+		return Object.fromEntries(
+			DISCOVERY_MANUAL_FILTER_CHIPS.map((chip) => [
+				manualFilterIntentKey(chip),
+				hrefForState(toggleManualFilter(chip, state))
+			])
+		);
+	});
+	const availableToggleHref = $derived.by(() => {
+		const state = currentUrlState();
+		return hrefForState({ ...state, available: !state.available });
+	});
 
-	function toggleManualFilterChip(index: number) {
-		const chip = DISCOVERY_MANUAL_FILTER_CHIPS[index];
-		if (!chip) return;
-		void goto(hrefForState(toggleManualFilter(chip, currentUrlState())));
-	}
-
-	const availableHref = $derived(
-		hrefForState(removeIntentFromState(currentUrlState(), 'available'))
-	);
 	const intentHrefs = $derived(
 		Object.fromEntries(
 			visibleAppliedIntents.map((intent) => [
@@ -269,10 +272,9 @@
 			minReviews={data.minReviews}
 			priceMax={data.priceMax}
 			appliedIntents={visibleAppliedIntents}
-			{availableHref}
+			{manualFilterHrefs}
+			{availableToggleHref}
 			{intentHrefs}
-			onToggleAvailable={toggleAvailableFilter}
-			onToggleManualFilter={toggleManualFilterChip}
 		/>
 	</div>
 

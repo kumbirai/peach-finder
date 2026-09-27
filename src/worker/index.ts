@@ -35,7 +35,8 @@ import {
 	handleListingLapsedProjectionRemove,
 	handleFeaturingActivated,
 	handleFeaturingLapsed,
-	upsertSearchProjection
+	upsertSearchProjection,
+	runSearchProjectionReconcile
 } from '../lib/server/modules/discovery-search';
 import {
 	refreshSearchDisplayName,
@@ -382,10 +383,12 @@ let lastActiveThisWeekTickAt = 0;
 let lastBillingLifecycleTickAt = 0;
 let lastAnalyticsMaintenanceTickAt = 0;
 let lastRetentionTickAt = 0;
+let lastProjectionReconcileAt = 0;
 const ACTIVE_THIS_WEEK_TICK_MS = 24 * 60 * 60 * 1000;
 const BILLING_LIFECYCLE_TICK_MS = 60 * 60 * 1000;
 const ANALYTICS_MAINTENANCE_TICK_MS = 60 * 60 * 1000;
 const RETENTION_TICK_MS = 24 * 60 * 60 * 1000;
+const PROJECTION_RECONCILE_MS = 60 * 60 * 1000;
 
 setInterval(() => {
 	void (async () => {
@@ -417,6 +420,11 @@ setInterval(() => {
 			const now = new Date();
 			const gateway = createPaymentGateway(publicAppOrigin());
 			await runBillingLifecycleTick(db, now, `billing-lifecycle-${now.toISOString()}`, gateway);
+		}
+
+		if (nowMs - lastProjectionReconcileAt >= PROJECTION_RECONCILE_MS) {
+			lastProjectionReconcileAt = nowMs;
+			await runSearchProjectionReconcile(db, new Date());
 		}
 
 		if (nowMs - lastAnalyticsMaintenanceTickAt >= ANALYTICS_MAINTENANCE_TICK_MS) {

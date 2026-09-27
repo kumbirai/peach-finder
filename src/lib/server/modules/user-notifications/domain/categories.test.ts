@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	ESSENTIAL_CATEGORY_IDS,
+	isActorAttributedCategory,
 	isEssentialCategory,
 	isValidPreferenceChannel,
 	NOTIFICATION_CATEGORIES,
@@ -34,6 +35,13 @@ describe('notification categories', () => {
 				expect(ESSENTIAL_CATEGORY_IDS.has(category.id)).toBe(false);
 			}
 		}
+	});
+
+	it('treats only counterpart-attributed categories as block-silence gated', () => {
+		expect(isActorAttributedCategory('new_message')).toBe(true);
+		expect(isActorAttributedCategory('review_received')).toBe(true);
+		expect(isActorAttributedCategory('billing_payment')).toBe(false);
+		expect(isActorAttributedCategory('report_receipt')).toBe(false);
 	});
 
 	it('validates known channels only', () => {

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('component gallery', () => {
 	test('shows primitives with never-color-alone signals', async ({ page }) => {
@@ -40,6 +41,7 @@ test.describe('component gallery', () => {
 
 	test('has no critical or serious axe violations', async ({ page }) => {
 		await page.goto('/dev/components');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

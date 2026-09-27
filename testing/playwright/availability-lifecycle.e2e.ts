@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function uploadTestPhoto(page: import('@playwright/test').Page) {
 	const stamp = Date.now();
@@ -121,6 +122,7 @@ test.describe('US-AVAIL-03 availability lifecycle', () => {
 		expect(afterRenew.state).toBe('available');
 		expect(new Date(afterRenew.setAt).getTime()).toBeGreaterThan(new Date(beforeRenew).getTime());
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).analyze();
 		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
 			[]
@@ -187,6 +189,7 @@ test.describe('US-AVAIL-03 availability lifecycle', () => {
 		).toHaveCount(0);
 		await anonAfter.close();
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page }).analyze();
 		expect(axe.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual(
 			[]

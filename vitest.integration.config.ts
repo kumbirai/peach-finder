@@ -1,4 +1,7 @@
+import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
+
+const loaded = loadEnv('test', process.cwd(), '');
 
 export default defineConfig({
 	test: {
@@ -9,7 +12,9 @@ export default defineConfig({
 		hookTimeout: 90_000,
 		fileParallelism: false,
 		env: {
-			ALLOW_DEV_HELPERS: '1'
+			...loaded,
+			ALLOW_DEV_HELPERS: '1',
+			SMTP_HOST: ''
 		}
 	}
 });

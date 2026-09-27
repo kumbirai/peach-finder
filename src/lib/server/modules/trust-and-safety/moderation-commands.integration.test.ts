@@ -12,7 +12,10 @@ import type { DomainEvent } from '../../shared/events';
 import { asId } from '../../shared/ids';
 import { auditLog, outbox } from '../../shared/schema';
 import { providerProfiles } from '../provider-profile/infra/schema';
-import { handleProviderProfileModeration } from '../provider-profile';
+import {
+	dispatchPendingProviderProfileModerationEffects,
+	handleProviderProfileModeration
+} from '../provider-profile';
 import { findActiveSession, createSession } from '../identity-and-access';
 import {
 	unpublishProfile,
@@ -154,6 +157,34 @@ describe('US-ADMIN-04 moderation commands integration', () => {
 					)
 				);
 			expect(notifications.length).toBeGreaterThan(0);
+		});
+	});
+
+	it('dev moderation-effect dispatch unpublished the targeted profile', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const unpublished = await unpublishProfile(db, {
+				adminId: ADMIN_ID,
+				providerProfileId: PRIMARY_PROFILE_ID,
+				reason: 'Policy violation confirmed.',
+				idempotencyKey: 'unpublish-dispatch',
+				correlationId: 'corr-unpublish-dispatch',
+				now: new Date('2026-09-06T12:00:00.000Z')
+			});
+			expect(unpublished.ok).toBe(true);
+
+			const handled = await dispatchPendingProviderProfileModerationEffects(db);
+			expect(handled).toBeGreaterThan(0);
+
+			const profile = await db
+				.select({ publishState: providerProfiles.publishState })
+				.from(providerProfiles)
+				.where(eq(providerProfiles.id, PRIMARY_PROFILE_ID))
+				.limit(1);
+			expect(profile[0]?.publishState).toBe('unpublished');
 		});
 	});
 

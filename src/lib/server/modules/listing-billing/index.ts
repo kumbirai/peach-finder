@@ -1,6 +1,7 @@
 import type { Database, Transaction } from '../../db';
 import type { UserId } from '../../shared/ids';
 import { getOwnedProfileIdDb } from '../provider-profile';
+import { getSubscription } from './infra/subscription-read';
 import { cancelListingForProfile } from './infra/cancel-on-delete';
 import { ensureBuildingListing } from './infra/ensure-building-listing';
 import { startTrialOnPublish } from './infra/start-trial-on-publish';
@@ -16,10 +17,12 @@ export {
 export {
 	getSubscription,
 	getActiveListingCount,
+	listDiscoverableListedProfileIds,
 	listingStateLabel,
 	type SubscriptionSummary
 } from './infra/subscription-read';
 export {
+	getActiveFeaturing,
 	getActiveFeaturingActivatedAt,
 	listFeaturingActivationsInRange,
 	type FeaturingActivationEvent
@@ -70,7 +73,27 @@ export async function cancelListingForOwner(
 	await cancelListingForProfile(tx, profileId, now);
 }
 
-/** Wave 0 stub — populated by later waves. */
-export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
-	return {};
+export async function exportFor(userId: UserId): Promise<{
+	listing?: {
+		state: string;
+		listingLabel: string;
+		trialEndsAt: string | null;
+		graceEndsAt: string | null;
+		cancelAtPeriodEnd: boolean;
+	};
+}> {
+	const { getDb } = await import('../../db');
+	const profileId = await getOwnedProfileIdDb(getDb(), userId);
+	if (!profileId) return {};
+	const subscription = await getSubscription(getDb(), profileId);
+	if (!subscription) return {};
+	return {
+		listing: {
+			state: subscription.state,
+			listingLabel: subscription.listingLabel,
+			trialEndsAt: subscription.trialEndsAt,
+			graceEndsAt: subscription.graceEndsAt,
+			cancelAtPeriodEnd: subscription.cancelAtPeriodEnd
+		}
+	};
 }

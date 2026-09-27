@@ -111,6 +111,13 @@ export function getCategoryDefinition(category: string): CategoryDefinition | un
 	return NOTIFICATION_CATEGORIES.find((entry) => entry.id === category);
 }
 
+/** Actor-attributed categories must honor block_cache before any channel write (LLD §7). */
+export const ACTOR_ATTRIBUTED_CATEGORY_IDS = new Set(['new_message', 'review_received']);
+
+export function isActorAttributedCategory(category: string): boolean {
+	return ACTOR_ATTRIBUTED_CATEGORY_IDS.has(category);
+}
+
 export function isValidPreferenceChannel(channel: string): channel is NotificationChannel {
 	return channel === 'email' || channel === 'push' || channel === 'in_app';
 }

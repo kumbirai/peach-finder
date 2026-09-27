@@ -50,10 +50,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       DATABASE_URL: postgres://postgres:secret@127.0.0.1:5432/peach_finder
       DATABASE_URL_MIGRATE: postgres://postgres:secret@127.0.0.1:5432/peach_finder
       PUBLIC_APP_ORIGIN: http://127.0.0.1:5173
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: '1025'
+      SMTP_FROM: Peach Finder <noreply@peachfinder.local>
+      MAILHOG_URL: http://127.0.0.1:8025
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

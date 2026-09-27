@@ -25,6 +25,12 @@ export {
 	mirrorAvailabilityOnProjection
 } from './infra/projection-handlers';
 export { handleUserBlocked, handleUserUnblocked } from './infra/subscriptions';
+export {
+	runSearchProjectionReconcile,
+	corruptAvailabilityOnProjection,
+	listDiscoverablePublishedProfileIds,
+	type ProjectionReconcileResult
+} from './infra/projection-reconcile';
 
 export async function exportFor(_userId: UserId): Promise<Record<string, never>> {
 	return {};

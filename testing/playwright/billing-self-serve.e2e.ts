@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 async function signInAsSeedProvider(page: import('@playwright/test').Page) {
 	await page.goto('/sign-in?flow=sign-in&returnTo=/provider/billing');
@@ -68,9 +69,13 @@ test.describe('US-BILL-03 painless self-serve billing (live stack)', () => {
 
 		await page.reload();
 		await expect(page.getByTestId('billing-cancel-renewal')).toBeVisible();
-
-		const cancelRes = await page.request.post('/api/billing/subscription/cancel-renewal');
-		expect(cancelRes.ok(), await cancelRes.text()).toBeTruthy();
+		const cancelResponse = page.waitForResponse(
+			(res) =>
+				res.url().includes('/api/billing/subscription/cancel-renewal') &&
+				res.request().method() === 'POST'
+		);
+		await page.getByTestId('billing-cancel-renewal').getByRole('button').click();
+		expect((await cancelResponse).ok()).toBeTruthy();
 
 		const statusRes = await page.request.get('/api/billing/status');
 		expect(statusRes.ok()).toBeTruthy();
@@ -110,6 +115,7 @@ test.describe('US-BILL-03 painless self-serve billing (live stack)', () => {
 			await page.getByTestId('billing-history-list').locator('li').count()
 		).toBeGreaterThanOrEqual(beforeCount + 2);
 
+		await assertPrimaryListingLive(page.request);
 		const axe = await new AxeBuilder({ page })
 			.include('[data-testid="provider-billing-page"]')
 			.analyze();

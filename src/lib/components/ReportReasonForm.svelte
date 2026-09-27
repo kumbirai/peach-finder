@@ -38,13 +38,16 @@
 <div class="report-form" data-testid="report-reason-form">
 	<div class="report-form__reasons" role="group" aria-label="Report reason">
 		{#each REPORT_REASON_OPTIONS as option (option.value)}
-			<Button
-				variant={localReason === option.value ? 'primary' : 'secondary'}
+			<button
+				type="button"
+				class="reason-chip"
+				class:reason-chip--selected={localReason === option.value}
 				disabled={busy}
+				data-testid={`report-reason-${option.value}`}
 				onclick={() => void chooseReason(option.value)}
 			>
 				{option.label}
-			</Button>
+			</button>
 		{/each}
 	</div>
 
@@ -76,10 +79,29 @@
 		flex-wrap: wrap;
 		gap: var(--space-sm);
 	}
-	.report-form :global(.btn) {
+	.reason-chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-title-family);
 		font-size: 0.875rem;
+		font-weight: var(--font-title-weight);
+		border-radius: var(--radius-pill);
 		padding: 10px 18px;
 		min-height: 44px;
+		cursor: pointer;
+		background: var(--color-paper);
+		color: var(--color-pine);
+		border: 1px solid var(--color-stone);
+	}
+	.reason-chip--selected {
+		background: var(--color-peach-deep);
+		color: var(--color-paper);
+		border-color: var(--color-peach-deep);
+	}
+	.reason-chip:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 	.report-form__details {
 		display: grid;

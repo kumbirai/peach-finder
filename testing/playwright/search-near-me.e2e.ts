@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
+import { assertPrimaryListingLive, assertSearchContainsProfile } from './live-backend-assert';
 
 const ROSEBANK = { latitude: -26.1448, longitude: 28.0416 };
 
@@ -41,6 +43,11 @@ test.describe('US-DISC-05 near me without giving up my privacy', () => {
 		await expect(page).toHaveURL(/lat=/);
 		await expect(page).toHaveURL(/lng=/);
 		await expect(page.locator('[aria-label$="away"]').first()).toBeVisible();
+		await assertSearchContainsProfile(
+			page.request,
+			SEED_CORE_PRIMARY_PROFILE_ID,
+			'?near=1&lat=-26.1448&lng=28.0416'
+		);
 	});
 
 	test('TC-DISC-05b: denying location offers manual area entry', async ({ page }) => {
@@ -91,6 +98,7 @@ test.describe('US-DISC-05 near me without giving up my privacy', () => {
 		await context.grantPermissions(['geolocation']);
 		await context.setGeolocation(ROSEBANK);
 		await page.goto('/?near=1&lat=-26.1448&lng=28.0416');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

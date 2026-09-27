@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-PONB-01 register as a provider', () => {
 	test('TC-PONB-01a: registration creates draft profile and opens onboarding checklist', async ({
@@ -68,6 +69,7 @@ test.describe('US-PONB-01 register as a provider', () => {
 
 	test('provider registration has no critical or serious axe violations', async ({ page }) => {
 		await page.goto('/provider/register');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

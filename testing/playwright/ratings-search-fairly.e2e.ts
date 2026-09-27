@@ -4,6 +4,7 @@ import {
 	SEED_CORE_ZERO_REVIEW_DISPLAY_NAME,
 	SEED_CORE_ZERO_REVIEW_PROFILE_ID
 } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-REV-04 ratings I can search by, fairly', () => {
 	test('TC-REV-04a: highly rated query applies configured threshold to results', async ({
@@ -52,6 +53,7 @@ test.describe('US-REV-04 ratings I can search by, fairly', () => {
 		page
 	}) => {
 		await page.goto(`/?q=${encodeURIComponent('Highly rated massage therapist')}`);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

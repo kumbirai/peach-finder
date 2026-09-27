@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { Database } from '../../../db';
+import type { Database, Transaction } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import { badgeState } from './schema';
 
@@ -11,7 +11,7 @@ export type BadgeDisplayState = {
 };
 
 export async function loadBadgeDisplayState(
-	db: Database,
+	db: Database | Transaction,
 	providerProfileId: ProviderProfileId
 ): Promise<BadgeDisplayState> {
 	const rows = await db

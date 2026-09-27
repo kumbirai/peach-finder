@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { suggestionRenderBudgetMs } from '../../src/lib/performance/cwv-budgets';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 const SEED_PROVIDER_NAMES = [
 	'Amara T.',
@@ -36,7 +38,7 @@ test.describe('US-DISC-03 suggestions as I type', () => {
 		await typeForSuggestions(page, 'dee');
 		const firstSuggestion = page.getByTestId('search-suggestion').first();
 		await expect(firstSuggestion).toContainText(/deep tissue/i);
-		expect(Date.now() - started).toBeLessThan(2000);
+		expect(Date.now() - started).toBeLessThan(suggestionRenderBudgetMs());
 	});
 
 	test('TC-DISC-03b: typing a provider name never surfaces individual provider names', async ({
@@ -92,6 +94,7 @@ test.describe('US-DISC-03 suggestions as I type', () => {
 	test('has no critical or serious axe violations with suggestions open', async ({ page }) => {
 		await typeForSuggestions(page, 'deep');
 		await expect(page.getByTestId('search-suggestion').first()).toBeVisible();
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

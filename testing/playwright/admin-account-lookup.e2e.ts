@@ -1,11 +1,13 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_ADMIN_EMAIL,
 	SEED_ADMIN_PASSWORD,
 	SEED_CORE_PHONE_ON_NUMBER,
 	SEED_CORE_PRIMARY_PROFILE_ID,
-	SEED_DUAL_ROLE_EMAIL
+	SEED_DUAL_ROLE_EMAIL,
+	SEED_DUAL_ROLE_USER_ID
 } from '../../scripts/seed-core';
 
 async function signInAdmin(request: import('@playwright/test').APIRequestContext) {
@@ -99,6 +101,33 @@ test.describe('US-ADMIN-05 look up anyone, impersonate no one', () => {
 		).toBeVisible();
 	});
 
+	test('SR-DATA-07: export from account lookup omits secrets and is idempotent', async ({
+		page,
+		request
+	}) => {
+		await signInAdminPage(page, request);
+		await page.goto(`/admin/accounts?q=${encodeURIComponent('Amara')}`);
+		await expect(page.getByTestId('account-export-form').first()).toBeVisible();
+		await page.getByTestId('account-export-user').first().click();
+		await page.waitForLoadState('domcontentloaded');
+
+		const key = `e2e-export-${Date.now()}`;
+		const first = await request.post(`/admin/api/platform/export/${SEED_DUAL_ROLE_USER_ID}`, {
+			headers: { 'Idempotency-Key': key }
+		});
+		expect(first.ok(), await first.text()).toBeTruthy();
+		const firstBody = (await first.json()) as { data: { generatedAt: string; slices: unknown } };
+		expect(JSON.stringify(firstBody.data.slices)).not.toMatch(
+			/passwordHash|pspCustomerRef|identity-docs/
+		);
+		const second = await request.post(`/admin/api/platform/export/${SEED_DUAL_ROLE_USER_ID}`, {
+			headers: { 'Idempotency-Key': key }
+		});
+		expect(second.ok()).toBeTruthy();
+		const secondBody = (await second.json()) as { data: { generatedAt: string } };
+		expect(secondBody.data.generatedAt).toBe(firstBody.data.generatedAt);
+	});
+
 	test('TC-ADMIN-05b: no impersonation affordance on accounts page', async ({ page, request }) => {
 		await signInAdminPage(page, request);
 		await page.goto('/admin/accounts');
@@ -106,11 +135,18 @@ test.describe('US-ADMIN-05 look up anyone, impersonate no one', () => {
 		await expect(page.getByRole('link', { name: /log in as/i })).toHaveCount(0);
 		await expect(page.getByRole('button', { name: /impersonat/i })).toHaveCount(0);
 		await expect(page.getByRole('link', { name: /impersonat/i })).toHaveCount(0);
+		const impersonate = await request.get('/admin/api/identity/impersonate');
+		expect(impersonate.status()).toBe(404);
+		const lookup = await request.get('/admin/api/identity/accounts?q=Amara');
+		expect(lookup.ok()).toBeTruthy();
 	});
 
 	test('has no critical or serious axe violations on account lookup', async ({ page, request }) => {
 		await signInAdminPage(page, request);
 		await page.goto(`/admin/accounts?q=${encodeURIComponent('Amara')}`);
+		const lookup = await request.get('/admin/api/identity/accounts?q=Amara');
+		expect(lookup.ok()).toBeTruthy();
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

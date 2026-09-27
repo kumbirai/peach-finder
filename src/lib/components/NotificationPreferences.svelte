@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Card from '$lib/components/Card.svelte';
 
 	type PreferenceChannel = {
@@ -29,11 +30,13 @@
 	let syncedParentCategories = $state<PreferenceCategory[] | null>(null);
 
 	$effect(() => {
-		if (savingKey !== null) return;
 		const incoming = preferences.categories;
-		if (incoming === syncedParentCategories) return;
-		categories = structuredClone(incoming) as PreferenceCategory[];
-		syncedParentCategories = incoming;
+		untrack(() => {
+			if (savingKey !== null) return;
+			if (incoming === syncedParentCategories) return;
+			categories = structuredClone(incoming) as PreferenceCategory[];
+			syncedParentCategories = incoming;
+		});
 	});
 
 	function toggleKey(categoryId: string, channelId: string): string {

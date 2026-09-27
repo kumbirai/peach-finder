@@ -70,3 +70,17 @@ export async function getSelfAccountSummary(
 		hasPassword: row.passwordHash !== null
 	};
 }
+
+export async function getUserEmail(
+	db: Pick<Database, 'select'>,
+	userId: UserId
+): Promise<string | null> {
+	const rows = await db
+		.select({ email: users.email, status: users.status, anonymizedAt: users.anonymizedAt })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+	const row = rows[0];
+	if (!row?.email || row.status === 'deleted' || row.anonymizedAt !== null) return null;
+	return row.email;
+}

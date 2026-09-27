@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { SEED_CORE_PRIMARY_PROFILE_ID } from '../../scripts/seed-core';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 test.describe('US-ACC-01 anonymous browse', () => {
 	test('TC-ACC-01a: homepage search filter and profile without login wall', async ({ page }) => {
@@ -49,6 +50,7 @@ test.describe('US-ACC-01 anonymous browse', () => {
 
 	test('homepage has no critical or serious axe violations', async ({ page }) => {
 		await page.goto('/');
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page }).analyze();
 		const serious = results.violations.filter(
 			(v) => v.impact === 'critical' || v.impact === 'serious'

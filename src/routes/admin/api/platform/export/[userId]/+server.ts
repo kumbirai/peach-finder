@@ -8,10 +8,17 @@ import { AuthorizationBug } from '$lib/server/shared/auth-context';
 
 export const _requiredRole: Role = 'admin';
 
-export const POST: RequestHandler = async ({ params, locals }) => {
+export const POST: RequestHandler = async ({ params, locals, request }) => {
 	try {
 		const userId = asId<'UserId'>(params.userId ?? '');
-		const payload = await exportUserData(userId, locals.auth, getDb(), locals.correlationId);
+		const idempotencyKey = request.headers.get('idempotency-key');
+		const payload = await exportUserData(
+			userId,
+			locals.auth,
+			getDb(),
+			locals.correlationId,
+			idempotencyKey
+		);
 		return json(success(payload), {
 			headers: {
 				'content-disposition': `attachment; filename="peach-finder-export-${userId}-${payload.generatedAt.slice(0, 10)}.json"`

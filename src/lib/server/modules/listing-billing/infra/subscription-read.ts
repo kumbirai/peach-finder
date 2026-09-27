@@ -2,6 +2,10 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../../db';
 import type { ProviderProfileId } from '../../../shared/ids';
 import type { BillingContinuity } from '../domain/trial-eligibility';
+import {
+	DISCOVERABLE_LISTING_STATES,
+	isDiscoverableListingState
+} from '../domain/listing-visibility';
 import { listings } from './schema';
 
 const LIVE_LISTING_STATES = ['free_listed', 'paid_listed'] as const;
@@ -67,6 +71,19 @@ export async function getSubscription(
 		listingLabel: listingStateLabel(row.state)
 	};
 }
+
+export async function listDiscoverableListedProfileIds(
+	db: Database
+): Promise<ProviderProfileId[]> {
+	const rows = await db
+		.select({ providerProfileId: listings.providerProfileId })
+		.from(listings)
+		.where(inArray(listings.state, [...DISCOVERABLE_LISTING_STATES]));
+
+	return rows.map((row) => row.providerProfileId as ProviderProfileId);
+}
+
+export { isDiscoverableListingState };
 
 export async function getActiveListingCount(db: Database): Promise<number> {
 	const result = await db

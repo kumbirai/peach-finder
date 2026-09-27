@@ -6,6 +6,7 @@ import {
 	SEED_DUAL_ROLE_PASSWORD
 } from '../../scripts/seed-core';
 import { reportReasonLabels } from '../../src/lib/safety/report-flow';
+import { assertPrimaryListingLive } from './live-backend-assert';
 
 function isProfilePage(url: string): boolean {
 	return new URL(url).pathname === '/profile';
@@ -33,7 +34,7 @@ async function openThreadWithProvider(
 	page: import('@playwright/test').Page,
 	providerProfileId: string,
 	firstMessage: string
-): Promise<void> {
+): Promise<string> {
 	const composeRes = await page.request.post('/api/messaging/threads', {
 		data: {
 			providerProfileId,
@@ -45,9 +46,12 @@ async function openThreadWithProvider(
 		data: { status: string; threadId?: string };
 	};
 	expect(body.data.status).toBe('sent');
-	expect(body.data.threadId).toMatch(/^[0-9a-f-]{36}$/);
-	await page.goto(`/messages/${body.data.threadId}`);
+	const threadId = body.data.threadId;
+	expect(threadId).toMatch(/^[0-9a-f-]{36}$/);
+	await page.goto(`/messages/${threadId}`);
 	await expect(page).toHaveURL(/\/messages\/[0-9a-f-]{36}/);
+	await expect(page.getByTestId('thread-safety-toggle')).toBeVisible();
+	return threadId!;
 }
 
 async function readProfileSnapshot(page: import('@playwright/test').Page, profileId: string) {
@@ -102,13 +106,31 @@ test.describe('US-SAFE-01 report anything from anywhere in two taps', () => {
 		const context = await browser.newContext({ storageState: seekerStorageState });
 		const page = await context.newPage();
 
+		const before = await readProfileSnapshot(page, SEED_CORE_PRIMARY_PROFILE_ID);
 		await openThreadWithProvider(page, SEED_CORE_PRIMARY_PROFILE_ID, 'Thread report reachability');
 
+		await page.waitForLoadState('networkidle');
 		await page.getByTestId('thread-safety-toggle').click();
 		const panel = page.getByTestId('thread-safety-panel');
 		await expect(panel).toBeVisible({ timeout: 15_000 });
 		await expect(panel.getByTestId('thread-safety-report')).toBeVisible();
 		await expect(panel.getByTestId('thread-safety-block')).toBeVisible();
+
+		await panel.getByTestId('thread-safety-report').getByRole('button', { name: 'Report' }).click();
+		const reportResponse = page.waitForResponse(
+			(res) => res.url().includes('/api/trust/reports') && res.request().method() === 'POST'
+		);
+		await expect(page.getByRole('group', { name: 'Report reason' })).toBeVisible();
+		await page
+			.getByRole('group', { name: 'Report reason' })
+			.getByRole('button', { name: 'Harassment' })
+			.click();
+		expect((await reportResponse).status()).toBe(201);
+		await expect(panel).toContainText(/report started/i);
+
+		const after = await readProfileSnapshot(page, SEED_CORE_PRIMARY_PROFILE_ID);
+		expect(after.data.displayName).toBe(before.data.displayName);
+		expect(after.data.badges).toEqual(before.data.badges);
 
 		await context.close();
 	});
@@ -123,6 +145,15 @@ test.describe('US-SAFE-01 report anything from anywhere in two taps', () => {
 			await expect(reasonGroup.getByRole('button', { name: label })).toBeVisible();
 		}
 		await expect(reasonGroup.getByRole('button')).toHaveCount(reportReasonLabels().length);
+
+		const rejected = await page.request.post('/api/trust/reports', {
+			data: {
+				targetType: 'profile',
+				targetId: SEED_CORE_PRIMARY_PROFILE_ID,
+				reason: 'not_a_real_reason'
+			}
+		});
+		expect(rejected.status()).toBe(422);
 
 		await context.close();
 	});
@@ -173,6 +204,7 @@ test.describe('US-SAFE-01 report anything from anywhere in two taps', () => {
 		const page = await context.newPage();
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}/report`);
+		await assertPrimaryListingLive(page.request);
 		const results = await new AxeBuilder({ page })
 			.include('[data-testid="profile-report-panel"]')
 			.analyze();
