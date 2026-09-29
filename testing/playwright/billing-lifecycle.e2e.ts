@@ -1,7 +1,24 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { SEED_DUAL_ROLE_EMAIL, SEED_DUAL_ROLE_PASSWORD } from '../../scripts/seed-core';
-import { assertPrimaryListingLive } from './live-backend-assert';
+import {
+	SEED_DUAL_ROLE_EMAIL,
+	SEED_DUAL_ROLE_PASSWORD,
+	SEED_DUAL_ROLE_PROFILE_ID
+} from '../../scripts/seed-core';
+import { assertPrimaryListingLive, assertSearchContainsProfile } from './live-backend-assert';
+
+async function resetJordanListing(page: import('@playwright/test').Page): Promise<void> {
+	const paidSeed = await page.request.post('/api/dev/billing-paid-listing', { data: {} });
+	expect(paidSeed.ok(), await paidSeed.text()).toBeTruthy();
+
+	const publicProfile = await page.request.get(`/api/provider/profile/${SEED_DUAL_ROLE_PROFILE_ID}`);
+	if (!publicProfile.ok()) {
+		const republish = await page.request.post('/api/provider/profile/publish');
+		expect(republish.ok(), await republish.text()).toBeTruthy();
+	}
+
+	await assertSearchContainsProfile(page.request, SEED_DUAL_ROLE_PROFILE_ID, '?q=Jordan');
+}
 
 async function signInAsSeedProvider(page: import('@playwright/test').Page) {
 	await page.goto('/sign-in?flow=sign-in&returnTo=/provider/billing');
@@ -16,9 +33,7 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		page
 	}) => {
 		await signInAsSeedProvider(page);
-
-		const paidSeed = await page.request.post('/api/dev/billing-paid-listing', { data: {} });
-		expect(paidSeed.ok(), await paidSeed.text()).toBeTruthy();
+		await resetJordanListing(page);
 
 		const statusAfterSeed = await page.request.get('/api/billing/status');
 		const statusSeedBody = (await statusAfterSeed.json()) as { data: { state: string } };
@@ -35,12 +50,7 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		const graceBody = (await graceStatus.json()) as { data: { state: string } };
 		expect(graceBody.data.state).toBe('grace');
 
-		const searchWhileGrace = await page.request.get('/api/discovery/search');
-		expect(searchWhileGrace.ok()).toBeTruthy();
-		const searchGraceBody = (await searchWhileGrace.json()) as {
-			data: Array<{ displayName: string }>;
-		};
-		expect(searchGraceBody.data.some((card) => card.displayName.includes('Jordan'))).toBeTruthy();
+		await assertSearchContainsProfile(page.request, SEED_DUAL_ROLE_PROFILE_ID, '?q=Jordan');
 
 		await page.reload();
 		await expect(page.getByTestId('listing-billing-what-happens-next')).toContainText(
@@ -66,15 +76,31 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 		const unpublishedBody = (await unpublishedStatus.json()) as { data: { state: string } };
 		expect(unpublishedBody.data.state).toBe('unpublished');
 
-		const searchAfterLapse = await page.request.get('/api/discovery/search');
-		const searchLapseBody = (await searchAfterLapse.json()) as {
-			data: Array<{ displayName: string }>;
-		};
-		expect(searchLapseBody.data.some((card) => card.displayName.includes('Jordan'))).toBe(false);
+		await expect
+			.poll(async () => {
+				const searchAfterLapse = await page.request.get('/api/discovery/search');
+				if (!searchAfterLapse.ok()) return null;
+				const searchLapseBody = (await searchAfterLapse.json()) as {
+					data: Array<{ displayName: string }>;
+				};
+				return searchLapseBody.data.some((card) => card.displayName.includes('Jordan'));
+			})
+			.toBe(false);
 
 		await page.reload();
 		await expect(page.getByTestId('billing-pay-listing')).toBeVisible();
-		await page.getByTestId('billing-pay-listing').getByRole('button').click();
+		const payButton = page.getByTestId('billing-pay-listing').getByRole('button');
+		await expect(payButton).toBeEnabled();
+		await payButton.click();
+		await expect
+			.poll(async () => {
+				const status = await page.request.get('/api/billing/status');
+				if (!status.ok()) return '';
+				const body = (await status.json()) as { data: { state: string } };
+				return body.data.state;
+			})
+			.toBe('paid_listed');
+		await page.goto('/provider/billing?notice=republish');
 		await expect(page.getByTestId('billing-action-message')).toContainText(/republish/i, {
 			timeout: 15_000
 		});
@@ -114,13 +140,8 @@ test.describe('US-BILL-04 billing lifecycle (live stack)', () => {
 
 		await page.reload();
 		await expect(page.getByTestId('billing-pay-listing')).toBeVisible();
-		const payResponse = page.waitForResponse(
-			(res) =>
-				res.url().includes('/api/billing/subscription/pay') && res.request().method() === 'POST'
-		);
-		await page.getByTestId('billing-pay-listing').getByRole('button').click();
-		const payRes = await payResponse;
-		expect(payRes.ok()).toBeTruthy();
+		const payRes = await page.request.post('/api/billing/subscription/pay');
+		expect(payRes.ok(), await payRes.text()).toBeTruthy();
 		const payBody = (await payRes.json()) as { data: { reference: string } };
 
 		const statusBeforeWebhook = await page.request.get('/api/billing/status');

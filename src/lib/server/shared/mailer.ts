@@ -50,7 +50,10 @@ export function nodemailerTransport(settings: SmtpSettings): SmtpTransport {
 		host: settings.host,
 		port: settings.port,
 		secure: settings.secure,
-		auth: settings.user && settings.pass ? { user: settings.user, pass: settings.pass } : undefined
+		auth: settings.user && settings.pass ? { user: settings.user, pass: settings.pass } : undefined,
+		connectionTimeout: 5_000,
+		greetingTimeout: 5_000,
+		socketTimeout: 10_000
 	});
 }
 

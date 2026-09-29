@@ -1,4 +1,8 @@
 import type { Database } from '../src/lib/server/db';
+import {
+	SEED_SAFE02_AMARA_EMAIL,
+	SEED_SAFE02_AMARA_PASSWORD
+} from './seed-blocking-constants';
 import type { UserId } from '../src/lib/server/shared/ids';
 import { eq, sql } from 'drizzle-orm';
 import { users, adminTotp } from '../src/lib/server/modules/identity-and-access/infra/schema';
@@ -11,7 +15,10 @@ import {
 	services,
 	serviceTags
 } from '../src/lib/server/modules/provider-profile/infra/schema';
-import { availability } from '../src/lib/server/modules/provider-availability/infra/schema';
+import {
+	availability,
+	availabilityHistory
+} from '../src/lib/server/modules/provider-availability/infra/schema';
 import { ratingAggregate, reviews } from '../src/lib/server/modules/provider-reviews/infra/schema';
 import {
 	providerBadges,
@@ -36,7 +43,7 @@ const PLACEHOLDER_CARD = '/placeholder-photo.svg';
 const PLACEHOLDER_GALLERY = '/placeholder-photo.svg';
 
 /** Fixed trial end for seeded free-listed providers (within E2E trial-ending reminder window). */
-export const SEED_TRIAL_ENDS_AT = new Date('2026-09-09T10:00:00Z');
+export const SEED_TRIAL_ENDS_AT = new Date('2027-09-09T10:00:00.000Z');
 
 /** Thandi's last activity for US-VIEW-02 coarse-presence fixtures (paired with integration-test anchor). */
 export const SEED_VIEW02_THANDI_ACTIVITY_AT = new Date('2026-09-03T12:00:00.000Z');
@@ -399,6 +406,7 @@ export async function seedCore(db: Database): Promise<void> {
 	const areaBySlug = new Map(areaRows.map((a) => [a.slug, a.id]));
 
 	const adminPasswordHash = await hashPassword(SEED_ADMIN_PASSWORD);
+	const amaraPasswordHash = await hashPassword(SEED_SAFE02_AMARA_PASSWORD);
 	await db
 		.insert(users)
 		.values({
@@ -453,16 +461,38 @@ export async function seedCore(db: Database): Promise<void> {
 
 		const tag = TAG_SEED.find((t) => t.slug === p.tagSlug)!;
 
+		const isPrimaryProvider = p.userId === PROVIDERS[0]!.userId;
 		await db
 			.insert(users)
 			.values({
 				id: p.userId,
 				displayName: p.displayName,
 				phone: p.phone,
+				...(isPrimaryProvider
+					? {
+							email: SEED_SAFE02_AMARA_EMAIL,
+							emailVerifiedAt: publishedAt,
+							passwordHash: amaraPasswordHash
+						}
+					: {}),
 				phoneVerifiedAt: new Date(),
 				status: 'active'
 			})
-			.onConflictDoNothing();
+			.onConflictDoUpdate({
+				target: users.id,
+				set: {
+					displayName: p.displayName,
+					phone: p.phone,
+					...(isPrimaryProvider
+						? {
+								email: SEED_SAFE02_AMARA_EMAIL,
+								emailVerifiedAt: publishedAt,
+								passwordHash: amaraPasswordHash
+							}
+						: {}),
+					status: 'active'
+				}
+			});
 
 		await db
 			.insert(providerProfiles)
@@ -550,6 +580,20 @@ export async function seedCore(db: Database): Promise<void> {
 				updatedAt: new Date()
 			})
 			.onConflictDoNothing();
+
+		if (p.available && p.availabilitySetAt) {
+			await db
+				.insert(availabilityHistory)
+				.values({
+					id: crypto.randomUUID(),
+					providerProfileId: p.profileId,
+					eventType: 'set',
+					occurredAt: p.availabilitySetAt,
+					setAt: p.availabilitySetAt,
+					correlationId: `seed-core-${p.profileId}`
+				})
+				.onConflictDoNothing();
+		}
 
 		if (p.rating) {
 			await db

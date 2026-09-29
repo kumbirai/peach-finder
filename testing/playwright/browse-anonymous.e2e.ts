@@ -11,14 +11,15 @@ test.describe('US-ACC-01 anonymous browse', () => {
 
 		await page.getByLabel('Search therapists').fill('zulu');
 		await page.getByRole('button', { name: 'Search' }).click();
-		await expect(page).toHaveURL(/\?q=zulu/);
+		await expect(page).toHaveURL(/lang=zu/);
 
-		await page.goto('/?q=zulu&verified=1');
+		await page.goto('/?lang=zu&verified=1');
 		await expect(page).toHaveURL(/verified=1/);
+		await expect(page.getByText(/therapists? found/i)).toBeVisible();
 
-		const firstCard = page.locator('.card').first();
-		await firstCard.click();
-		await expect(page).toHaveURL(/\/provider\//);
+		const firstProfileLink = page.locator('a.profile-link[href^="/provider/"]').first();
+		await expect(firstProfileLink).toBeVisible({ timeout: 15_000 });
+		await Promise.all([page.waitForURL(/\/provider\//, { timeout: 15_000 }), firstProfileLink.click()]);
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expect(page.getByText('About')).toBeVisible();
 		await expect(page.getByText('Services')).toBeVisible();

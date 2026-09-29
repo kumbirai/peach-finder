@@ -29,8 +29,12 @@ export function resolveE2eBaseUrl(port: number, raw = process.env.E2E_BASE_URL):
 	return raw ?? `http://127.0.0.1:${port}`;
 }
 
+export function buildDatabasePrepCommand(): string {
+	return `npm run db:migrate && SEED_PACK=seed-core npm run db:seed && node --env-file=.env --import tsx scripts/seed-blocking.ts && node --env-file=.env --import tsx scripts/seed-verification.ts && node --env-file=.env --import tsx scripts/seed-reports.ts && node --env-file=.env --import tsx scripts/seed-reviews.ts && node --env-file=.env --import tsx scripts/reconcile-search-projection.ts`;
+}
+
 export function buildWebServerCommand(port: number): string {
-	return `npm run db:migrate && SEED_PACK=seed-core npm run db:seed && node --env-file=.env --import tsx scripts/seed-blocking.ts && node --env-file=.env --import tsx scripts/seed-verification.ts && node --env-file=.env --import tsx scripts/seed-reports.ts && node --env-file=.env --import tsx scripts/seed-reviews.ts && ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`;
+	return `ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`;
 }
 
 export function definedEnv(source: Record<string, string | undefined>): Record<string, string> {
@@ -48,6 +52,7 @@ export function e2eWebServerEnv(
 		...source,
 		PUBLIC_APP_ORIGIN: baseURL,
 		ALLOW_DEV_HELPERS: '1',
+		PAYSTACK_SECRET_KEY: '',
 		SMTP_HOST: source.SMTP_HOST ?? '127.0.0.1',
 		SMTP_PORT: source.SMTP_PORT ?? '1025',
 		SMTP_FROM: source.SMTP_FROM ?? 'Peach Finder <noreply@peachfinder.local>',

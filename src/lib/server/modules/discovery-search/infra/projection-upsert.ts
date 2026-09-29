@@ -147,7 +147,9 @@ async function loadProjectionSource(
 		.map((row) => row.name)
 		.join(' ');
 	const intro = profile.intro?.trim() ?? '';
-	const searchText = [intro, serviceNames].filter(Boolean).join(' ').trim() || intro;
+	const displayName = identity.isDeleted ? 'Former user' : identity.displayName;
+	const searchText =
+		[displayName, intro, serviceNames].filter(Boolean).join(' ').trim() || displayName;
 	const introExtract = formatIntroExtract(intro);
 
 	return {
@@ -156,7 +158,7 @@ async function loadProjectionSource(
 		areaId: profile.area_id,
 		searchText,
 		introExtract,
-		displayName: identity.isDeleted ? 'Former user' : identity.displayName,
+		displayName,
 		serviceTagIds: (tagRows as unknown as Array<{ id: string }>).map((row) => row.id),
 		languageCodes: (languageRows as unknown as Array<{ code: string }>).map((row) => row.code),
 		priceMinCents: prices?.min_cents ?? null,

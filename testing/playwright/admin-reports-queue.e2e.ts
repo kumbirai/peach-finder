@@ -7,6 +7,7 @@ import {
 	SEED_DUAL_ROLE_EMAIL,
 	SEED_DUAL_ROLE_PASSWORD
 } from '../../scripts/seed-core';
+import { restorePrimaryListing } from './restore-primary-listing';
 import { assertPrimaryListingLive } from './live-backend-assert';
 import {
 	SEED_REPORT_ACT_OPEN_ID,
@@ -105,38 +106,44 @@ test.describe('US-ADMIN-03 work the reports queue to human resolution', () => {
 		browser
 	}) => {
 		test.setTimeout(120_000);
+		await restorePrimaryListing(browser);
 
 		const seekerContext = await browser.newContext();
 		const seekerPage = await seekerContext.newPage();
-		await signInSeeker(seekerPage);
-		const seekerRequest = seekerPage.request;
+		try {
+			await signInSeeker(seekerPage);
+			const seekerRequest = seekerPage.request;
 
-		const beforePrimary = await readProfileSnapshot(seekerRequest, SEED_CORE_PRIMARY_PROFILE_ID);
+			const beforePrimary = await readProfileSnapshot(seekerRequest, SEED_CORE_PRIMARY_PROFILE_ID);
 
-		await signInAdmin(request);
-		const dismiss = await request.post(
-			`/admin/api/trust/reports/${SEED_REPORT_NEW_OPEN_ID}/dismiss`,
-			{ data: { note: 'Reviewed — no policy violation.' } }
-		);
-		expect(dismiss.ok(), await dismiss.text()).toBeTruthy();
-		await request.post('/api/dev/notification-dispatch');
+			await signInAdmin(request);
+			const dismiss = await request.post(
+				`/admin/api/trust/reports/${SEED_REPORT_NEW_OPEN_ID}/dismiss`,
+				{ data: { note: 'Reviewed — no policy violation.' } }
+			);
+			expect(dismiss.ok(), await dismiss.text()).toBeTruthy();
+			await request.post('/api/dev/notification-dispatch');
 
-		const midPrimary = await readProfileSnapshot(seekerRequest, SEED_CORE_PRIMARY_PROFILE_ID);
-		expect(midPrimary.data.displayName).toBe(beforePrimary.data.displayName);
-		expect(midPrimary.data.badges).toEqual(beforePrimary.data.badges);
+			const midPrimary = await readProfileSnapshot(seekerRequest, SEED_CORE_PRIMARY_PROFILE_ID);
+			expect(midPrimary.data.displayName).toBe(beforePrimary.data.displayName);
+			expect(midPrimary.data.badges).toEqual(beforePrimary.data.badges);
 
-		const act = await request.post(`/admin/api/trust/reports/${SEED_REPORT_ACT_OPEN_ID}/act`, {
-			data: { action: 'unpublish', reason: 'Verified safety concern after review.' }
-		});
-		expect(act.ok(), await act.text()).toBeTruthy();
-		await request.post('/api/dev/notification-dispatch');
+			const act = await request.post(`/admin/api/trust/reports/${SEED_REPORT_ACT_OPEN_ID}/act`, {
+				data: { action: 'unpublish', reason: 'Verified safety concern after review.' }
+			});
+			expect(act.ok(), await act.text()).toBeTruthy();
+			const effect = await request.post('/api/dev/moderation-effect-dispatch');
+			expect(effect.ok(), await effect.text()).toBeTruthy();
+			await request.post('/api/dev/notification-dispatch');
 
-		expect(await dispatchUntilNotification(seekerRequest, 'report_resolution')).toBeTruthy();
+			expect(await dispatchUntilNotification(seekerRequest, 'report_resolution')).toBeTruthy();
 
-		const hidden = await seekerRequest.get(`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`);
-		expect(hidden.status()).toBeGreaterThanOrEqual(400);
-
-		await seekerContext.close();
+			const hidden = await seekerRequest.get(`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`);
+			expect(hidden.status()).toBeGreaterThanOrEqual(400);
+		} finally {
+			await seekerContext.close();
+			await restorePrimaryListing(browser);
+		}
 	});
 
 	test('reports queue page has no critical or serious axe violations', async ({

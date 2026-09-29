@@ -20,7 +20,7 @@ describe('US-REV-02 admin removal via ModerationActionTaken', () => {
 			await loadConfigCache(db);
 			await seedReviews(db);
 
-			const now = new Date('2026-09-06T11:00:00Z');
+			const now = new Date();
 			const seekerId = asId<'UserId'>(SEED_REV_ELIGIBLE_SEEKER_ID);
 			const providerProfileId = asId<'ProviderProfileId'>(SEED_REV_PROVIDER_PROFILE_ID);
 
@@ -83,7 +83,7 @@ describe('US-REV-02 admin removal via ModerationActionTaken', () => {
 			await loadConfigCache(db);
 			await seedReviews(db);
 
-			const now = new Date('2026-09-06T11:30:00Z');
+			const now = new Date();
 			const seekerId = asId<'UserId'>(SEED_REV_ELIGIBLE_SEEKER_ID);
 			const providerProfileId = asId<'ProviderProfileId'>(SEED_REV_PROVIDER_PROFILE_ID);
 
@@ -148,7 +148,7 @@ describe('US-REV-02 admin removal via ModerationActionTaken', () => {
 			await loadConfigCache(db);
 			await seedReviews(db);
 
-			const now = new Date('2026-09-06T12:00:00Z');
+			const now = new Date();
 			const seekerId = asId<'UserId'>(SEED_REV_ELIGIBLE_SEEKER_ID);
 			const providerProfileId = asId<'ProviderProfileId'>(SEED_REV_PROVIDER_PROFILE_ID);
 

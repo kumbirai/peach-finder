@@ -1,6 +1,10 @@
 import { expect } from '@playwright/test';
 import { registerAndPublishProvider } from '../../provider-session';
+import { assertSearchContainsProfile } from '../../live-backend-assert';
 import type { SeedContext, SeededPersona } from '../types';
+
+/** Matches onboarding intro in `publishOnboardedListing` — searchable per discovery-search LLD (not display name). */
+const PUBLISH_INTRO_SEARCH = 'sports recovery';
 
 export async function seedProvider(ctx: SeedContext): Promise<SeededPersona> {
 	await registerAndPublishProvider(ctx.page, ctx.page.request, {
@@ -27,12 +31,25 @@ export async function seedProvider(ctx: SeedContext): Promise<SeededPersona> {
 	expect(meRes.ok(), await meRes.text()).toBeTruthy();
 	const meBody = (await meRes.json()) as { data: { profileId: string; userId?: string } };
 
-	const search = await ctx.page.request.get(
-		`/api/discovery/search?q=${encodeURIComponent(ctx.spec.displayName)}`
-	);
-	expect(search.ok()).toBeTruthy();
-	const searchBody = (await search.json()) as { data: Array<{ providerProfileId: string }> };
-	expect(searchBody.data.map((card) => card.providerProfileId)).toContain(meBody.data.profileId);
+	const deadline = Date.now() + 30_000;
+	let found = false;
+	while (Date.now() < deadline) {
+		try {
+			await assertSearchContainsProfile(
+				ctx.page.request,
+				meBody.data.profileId,
+				`?q=${encodeURIComponent(PUBLISH_INTRO_SEARCH)}`
+			);
+			found = true;
+			break;
+		} catch {
+			await ctx.page.waitForTimeout(1_000);
+		}
+	}
+	expect(
+		found,
+		`profile ${meBody.data.profileId} not in search for "${PUBLISH_INTRO_SEARCH}"`
+	).toBe(true);
 
 	return {
 		key: ctx.spec.key,
@@ -43,7 +60,12 @@ export async function seedProvider(ctx: SeedContext): Promise<SeededPersona> {
 		phone: ctx.phone,
 		profileId: meBody.data.profileId,
 		userId: meBody.data.userId,
-		completedJourneys: ['provider-register', 'onboarding-publish', 'availability-on', 'search-visible'],
+		completedJourneys: [
+			'provider-register',
+			'onboarding-publish',
+			'availability-on',
+			'search-visible'
+		],
 		partial: ctx.partial
 	};
 }

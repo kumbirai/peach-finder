@@ -8,7 +8,12 @@ import { asInstant } from '../../../shared/clock';
 import type { DomainEvent } from '../../../shared/events';
 import { emailVerificationTokens, oauthLinks, passwordResetTokens, users } from './schema';
 import { hashPassword, verifyPassword } from './password-hash';
-import { storeDevVerificationToken, storeDevPasswordResetToken } from './dev-verification';
+import {
+	findUserIdByEmail,
+	getDevVerificationToken,
+	storeDevPasswordResetToken,
+	storeDevVerificationToken
+} from './dev-verification';
 import { sendTransactionalEmail } from '../../../shared/mailer';
 import { publicAppOrigin } from '../../../env';
 import { validateDisplayName, validateEmail, validatePassword } from '../domain/password-policy';
@@ -134,11 +139,16 @@ export async function registerSeeker(
 	});
 
 	storeDevVerificationToken(normalizedEmail, rawToken);
-	await sendIdentityLinkEmail({
+	const verificationEmail = sendIdentityLinkEmail({
 		to: normalizedEmail,
 		subject: 'Verify your Peach Finder email',
 		path: `/verify-email?token=${rawToken}`
 	});
+	if (process.env.ALLOW_DEV_HELPERS === '1') {
+		void verificationEmail;
+	} else {
+		await verificationEmail;
+	}
 
 	return Ok({
 		userId,
@@ -261,6 +271,49 @@ export async function isEmailVerified(db: Database, userId: UserId): Promise<boo
 		.where(eq(users.id, userId))
 		.limit(1);
 	return rows[0]?.emailVerifiedAt != null;
+}
+
+export async function devVerifyEmailByAddress(
+	db: Database,
+	email: string,
+	now: Date,
+	correlationId: string
+): Promise<Result<{ userId: UserId; alreadyVerified: boolean }, UseCaseError>> {
+	if (process.env.ALLOW_DEV_HELPERS !== '1') {
+		return Err({ kind: 'forbidden', reason: 'dev helpers disabled' });
+	}
+
+	const normalizedEmail = email.trim().toLowerCase();
+	const userId = await findUserIdByEmail(db, normalizedEmail);
+	if (!userId) {
+		return Err({ kind: 'not_found', resource: 'user' });
+	}
+
+	if (await isEmailVerified(db, userId)) {
+		return Ok({ userId, alreadyVerified: true });
+	}
+
+	let rawToken = getDevVerificationToken(normalizedEmail);
+	if (!rawToken) {
+		rawToken = newEmailVerificationToken();
+		const tokenHash = hashToken(rawToken);
+		await db.insert(emailVerificationTokens).values({
+			id: newId(),
+			userId,
+			email: normalizedEmail,
+			tokenHash,
+			purpose: 'register',
+			expiresAt: new Date(now.getTime() + EMAIL_VERIFY_TTL_MS)
+		});
+		storeDevVerificationToken(normalizedEmail, rawToken);
+	}
+
+	const verified = await verifyEmailToken(db, rawToken, now, correlationId);
+	if (!verified.ok) {
+		return verified;
+	}
+
+	return Ok({ userId: verified.value.userId, alreadyVerified: false });
 }
 
 export type OAuthProfile = {

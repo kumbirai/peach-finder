@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { assertPrimaryListingLive } from './live-backend-assert';
+import { submitProviderRegistrationForm } from './provider-session';
 
 test.describe('US-PONB-01 register as a provider', () => {
 	test('TC-PONB-01a: registration creates draft profile and opens onboarding checklist', async ({
@@ -11,16 +12,12 @@ test.describe('US-PONB-01 register as a provider', () => {
 		const email = `e2e-provider-${stamp}@example.com`;
 		const phone = `082${String(stamp).slice(-7)}`;
 
-		await page.goto('/provider/register');
-		await page.getByLabel('Your name').fill('E2E Provider');
-		await page.getByLabel('Email').fill(email);
-		await page.getByLabel('Mobile number').fill(phone);
-		await page.locator('#areaId').selectOption({ index: 1 });
-		await page.getByLabel('Password').fill('password123');
-		await page.locator('input[name="acceptedTerms"]').check();
-		await page.getByRole('button', { name: 'Continue' }).click();
-
-		await expect(page.getByLabel('Verification code')).toBeVisible({ timeout: 10_000 });
+		await submitProviderRegistrationForm(page, {
+			name: 'E2E Provider',
+			email,
+			phone,
+			password: 'password123'
+		});
 
 		const otpId = await page.locator('input[name="otpId"]').inputValue();
 		expect(otpId).toBeTruthy();
@@ -43,15 +40,12 @@ test.describe('US-PONB-01 register as a provider', () => {
 		const phone = `083${String(stamp).slice(-7)}`;
 		const displayName = 'Persist Values';
 
-		await page.goto('/provider/register');
-		await page.getByLabel('Your name').fill(displayName);
-		await page.getByLabel('Email').fill(email);
-		await page.getByLabel('Mobile number').fill(phone);
-		await page.locator('#areaId').selectOption({ index: 1 });
-		await page.getByLabel('Password').fill('password123');
-		await page.locator('input[name="acceptedTerms"]').check();
-		await page.getByRole('button', { name: 'Continue' }).click();
-		await expect(page.getByLabel('Verification code')).toBeVisible();
+		await submitProviderRegistrationForm(page, {
+			name: displayName,
+			email,
+			phone,
+			password: 'password123'
+		});
 
 		await page.getByLabel('Verification code').fill('000000');
 		await page.getByRole('button', { name: 'Verify and continue' }).click();

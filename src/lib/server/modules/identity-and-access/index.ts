@@ -47,6 +47,7 @@ export {
 	registerSeeker,
 	loginPassword,
 	verifyEmailToken,
+	devVerifyEmailByAddress,
 	isEmailVerified,
 	findOAuthLink,
 	createOAuthUser,

@@ -61,8 +61,15 @@ test.describe('US-BILL-01 a free period I can trust (live stack)', () => {
 	}) => {
 		await signInAsSeedProvider(page);
 
+		const trialEndsAt = '2026-09-08T14:00:00.000Z';
+		const dispatchNow = '2026-09-06T12:00:00.000Z';
+		const seedTrial = await page.request.post('/api/dev/billing-seed-lifecycle', {
+			data: { state: 'free_listed', trialEndsAt }
+		});
+		expect(seedTrial.ok(), await seedTrial.text()).toBeTruthy();
+
 		const dispatchRes = await page.request.post('/api/dev/trial-ending-dispatch', {
-			data: { now: '2026-09-06T12:00:00.000Z' }
+			data: { now: dispatchNow }
 		});
 		expect(dispatchRes.ok(), await dispatchRes.text()).toBeTruthy();
 		const dispatchBody = (await dispatchRes.json()) as { data: { sent: number } };

@@ -6,6 +6,7 @@ import {
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../scripts/seed-core';
 import { assertPrimaryListingLive } from './live-backend-assert';
+import { restorePrimaryListing } from './restore-primary-listing';
 
 const PLATFORM_CONFIG_TARGET_ID = '00000000-0000-7000-8000-000000000000';
 
@@ -24,55 +25,65 @@ async function signInAdmin(request: import('@playwright/test').APIRequestContext
 test.describe('US-ADMIN-07 everything I do is on the record', () => {
 	test('TC-ADMIN-07a: admin actions appear in the audit viewer with full fields', async ({
 		page,
-		request
+		request,
+		browser
 	}) => {
-		await signInAdmin(request);
+		test.setTimeout(90_000);
+		await restorePrimaryListing(browser);
 
-		const unpublish = await request.post('/admin/api/trust/moderation/unpublish', {
-			data: {
-				providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
-				reason: 'Live-stack audit trail verification.'
-			}
-		});
-		expect(unpublish.ok(), await unpublish.text()).toBeTruthy();
+		try {
+			await signInAdmin(request);
 
-		const apiAudit = await request.get(
-			`/admin/api/audit?targetType=provider_profile&targetId=${SEED_CORE_PRIMARY_PROFILE_ID}`
-		);
-		expect(apiAudit.ok(), await apiAudit.text()).toBeTruthy();
-		const apiBody = (await apiAudit.json()) as {
-			data: Array<{
-				action: string;
-				actorDisplayName: string;
-				reason: string | null;
-				targetType: string;
-				targetId: string;
-				occurredAt: string;
-			}>;
-		};
-		const entry = apiBody.data.find((row) => row.action === 'moderation.unpublish');
-		expect(entry).toBeDefined();
-		expect(entry!.actorDisplayName).toBeTruthy();
-		expect(entry!.reason).toBe('Live-stack audit trail verification.');
-		expect(entry!.targetType).toBe('provider_profile');
-		expect(entry!.targetId).toBe(SEED_CORE_PRIMARY_PROFILE_ID);
-		expect(entry!.occurredAt).toBeTruthy();
+			const unpublish = await request.post('/admin/api/trust/moderation/unpublish', {
+				data: {
+					providerProfileId: SEED_CORE_PRIMARY_PROFILE_ID,
+					reason: 'Live-stack audit trail verification.'
+				}
+			});
+			expect(unpublish.ok(), await unpublish.text()).toBeTruthy();
+			const effect = await request.post('/api/dev/moderation-effect-dispatch');
+			expect(effect.ok(), await effect.text()).toBeTruthy();
 
-		const storage = await request.storageState();
-		await page.context().addCookies(storage.cookies);
-		await page.goto(
-			`/admin/audit?targetType=provider_profile&targetId=${SEED_CORE_PRIMARY_PROFILE_ID}`
-		);
-		await expect(page.getByTestId('admin-audit-log')).toBeVisible();
-		const row = page
-			.getByTestId('audit-log-entry')
-			.filter({ hasText: 'moderation.unpublish' })
-			.first();
-		await expect(row).toBeVisible();
-		await expect(row.getByTestId('audit-actor')).not.toBeEmpty();
-		await expect(row.getByTestId('audit-reason')).toContainText(
-			'Live-stack audit trail verification.'
-		);
+			const apiAudit = await request.get(
+				`/admin/api/audit?targetType=provider_profile&targetId=${SEED_CORE_PRIMARY_PROFILE_ID}`
+			);
+			expect(apiAudit.ok(), await apiAudit.text()).toBeTruthy();
+			const apiBody = (await apiAudit.json()) as {
+				data: Array<{
+					action: string;
+					actorDisplayName: string;
+					reason: string | null;
+					targetType: string;
+					targetId: string;
+					occurredAt: string;
+				}>;
+			};
+			const entry = apiBody.data.find((row) => row.action === 'moderation.unpublish');
+			expect(entry).toBeDefined();
+			expect(entry!.actorDisplayName).toBeTruthy();
+			expect(entry!.reason).toBe('Live-stack audit trail verification.');
+			expect(entry!.targetType).toBe('provider_profile');
+			expect(entry!.targetId).toBe(SEED_CORE_PRIMARY_PROFILE_ID);
+			expect(entry!.occurredAt).toBeTruthy();
+
+			const storage = await request.storageState();
+			await page.context().addCookies(storage.cookies);
+			await page.goto(
+				`/admin/audit?targetType=provider_profile&targetId=${SEED_CORE_PRIMARY_PROFILE_ID}`
+			);
+			await expect(page.getByTestId('admin-audit-log')).toBeVisible();
+			const row = page
+				.getByTestId('audit-log-entry')
+				.filter({ hasText: 'moderation.unpublish' })
+				.first();
+			await expect(row).toBeVisible();
+			await expect(row.getByTestId('audit-actor')).not.toBeEmpty();
+			await expect(row.getByTestId('audit-reason')).toContainText(
+				'Live-stack audit trail verification.'
+			);
+		} finally {
+			await restorePrimaryListing(browser);
+		}
 	});
 
 	test('TC-ADMIN-07b: no API path can modify audit entries', async ({ request }) => {

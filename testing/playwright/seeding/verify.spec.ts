@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { signInAdminViaLoginForm } from '../admin-session';
+import { signInSeeker } from '../seeker-session';
+import { assertSearchContainsProfile } from '../live-backend-assert';
 import { readManifest, requirePersona } from './manifest';
 import { isProductionBaseUrl, requiredEnvMessage } from './seed.config';
+
+const PUBLISH_INTRO_SEARCH = 'sports recovery';
 
 test.describe.configure({ mode: 'serial', retries: 0 });
 
@@ -22,15 +26,16 @@ test('verify UI-seeded provider is live in search and profile', async ({ page })
 	const body = (await api.json()) as { data: { displayName: string } };
 	expect(body.data.displayName).toBe(provider.displayName);
 
-	const search = await page.request.get(
-		`/api/discovery/search?q=${encodeURIComponent(provider.displayName)}`
+	await assertSearchContainsProfile(
+		page.request,
+		profileId,
+		`?q=${encodeURIComponent(PUBLISH_INTRO_SEARCH)}`
 	);
-	expect(search.ok()).toBeTruthy();
-	const searchBody = (await search.json()) as { data: Array<{ providerProfileId: string }> };
-	expect(searchBody.data.map((card) => card.providerProfileId)).toContain(profileId);
 
 	await page.goto('/');
-	await expect(page.locator('article.card').filter({ hasText: provider.displayName })).toBeVisible({
+	await expect(
+		page.locator(`a[href="/provider/${profileId}"]`).filter({ hasText: provider.displayName })
+	).toBeVisible({
 		timeout: 15_000
 	});
 	await page.goto(`/provider/${profileId}`);
@@ -39,13 +44,9 @@ test('verify UI-seeded provider is live in search and profile', async ({ page })
 
 test('verify UI-seeded seeker can sign in through the form', async ({ page }) => {
 	const seeker = requirePersona('ui-seeker');
-	await page.goto('/sign-in?flow=sign-in&returnTo=/profile');
-	await page.getByLabel('Email').fill(seeker.email);
-	await page.getByLabel('Password').fill(seeker.password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+	await signInSeeker(page, seeker.email, seeker.password, '/profile');
 	const ping = await page.request.get('/api/session/ping');
-	expect(ping.ok()).toBeTruthy();
+	expect(ping.ok(), await ping.text()).toBeTruthy();
 });
 
 test('admin account lookup finds the UI-seeded provider via the live console', async ({ page }) => {
@@ -55,5 +56,7 @@ test('admin account lookup finds the UI-seeded provider via the live console', a
 	await page.getByLabel('Search accounts').fill(provider.email);
 	await page.getByRole('button', { name: 'Search' }).click();
 	await expect(page.getByTestId('account-lookup-results')).toBeVisible({ timeout: 15_000 });
-	await expect(page.getByTestId('account-lookup-item').filter({ hasText: provider.email })).toBeVisible();
+	await expect(
+		page.getByTestId('account-lookup-item').filter({ hasText: provider.email })
+	).toBeVisible();
 });

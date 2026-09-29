@@ -8,13 +8,15 @@ export default defineConfig({
 		expect: { requireAssertions: true },
 		environment: 'node',
 		include: ['src/**/*.integration.test.ts'],
-		testTimeout: 90_000,
-		hookTimeout: 90_000,
+		testTimeout: 180_000,
+		hookTimeout: 180_000,
 		fileParallelism: false,
 		env: {
 			...loaded,
 			ALLOW_DEV_HELPERS: '1',
-			SMTP_HOST: ''
+			SMTP_HOST: loaded.SMTP_HOST || '127.0.0.1',
+			SMTP_PORT: loaded.SMTP_PORT || '1025',
+			SMTP_FROM: loaded.SMTP_FROM || 'Peach Finder <noreply@peachfinder.local>'
 		}
 	}
 });

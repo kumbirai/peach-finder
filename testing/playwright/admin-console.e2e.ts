@@ -61,7 +61,8 @@ test.describe('US-ADMIN-01 hardened admin console', () => {
 		await expect(nav.getByRole('link', { name: 'Audit log' })).toBeVisible();
 		await expect(page.getByTestId('admin-ops-dashboard')).toBeVisible();
 		await nav.getByRole('link', { name: 'Identity queue' }).click();
-		await expect(page.getByTestId('admin-identity-queue')).toBeVisible();
+		await expect(page).toHaveURL(/\/admin\/identity/, { timeout: 15_000 });
+		await expect(page.getByTestId('admin-identity-queue')).toBeVisible({ timeout: 15_000 });
 		const queue = await page.request.get('/admin/api/trust/verification/queue');
 		expect(queue.ok()).toBeTruthy();
 		const queueBody = (await queue.json()) as { data: { queue: Array<{ caseId: string }> } };

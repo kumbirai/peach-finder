@@ -108,3 +108,11 @@ export function readDevAdminEnrollmentSecret(userId: string): Buffer | null {
 	if (!row) return null;
 	return Buffer.from(row.secretBase64, 'base64');
 }
+
+/** Test-only: simulate Vite HMR clearing in-memory dev helper stores. */
+export function clearDevStoresForTests(): void {
+	devTokenStore.clear();
+	devResetTokenStore.clear();
+	devOtpStore.clear();
+	devAdminEnrollmentStore.clear();
+}

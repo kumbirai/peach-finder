@@ -20,23 +20,14 @@ export async function registerAndVerifySeeker(
 	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
 	await page.waitForLoadState('domcontentloaded');
 
-	const tokenRes = await request.post('/api/dev/verification-token', { data: { email } });
-	if (!tokenRes.ok()) {
+	let verifyRes = await request.post('/api/dev/verify-email', { data: { email } });
+	if (!verifyRes.ok()) {
 		await page.waitForTimeout(500);
-		const retry = await request.post('/api/dev/verification-token', { data: { email } });
-		expect(retry.ok()).toBe(true);
-		const retryData = (await retry.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${retryData.data.token}&returnTo=/profile`, {
-			waitUntil: 'domcontentloaded'
-		});
-	} else {
-		const { data } = (await tokenRes.json()) as { data: { token: string } };
-		await page.goto(`/verify-email?token=${data.token}&returnTo=/profile`, {
-			waitUntil: 'domcontentloaded'
-		});
+		verifyRes = await request.post('/api/dev/verify-email', { data: { email } });
 	}
-	await page.getByRole('button', { name: 'Verify email' }).click();
-	await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+	expect(verifyRes.ok(), await verifyRes.text()).toBeTruthy();
+	const verifyBody = (await verifyRes.json()) as { data: { verified: boolean } };
+	expect(verifyBody.data.verified).toBe(true);
 }
 
 export async function signInSeeker(

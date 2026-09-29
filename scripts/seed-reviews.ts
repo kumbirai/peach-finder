@@ -8,29 +8,24 @@ import { reviews } from '../src/lib/server/modules/provider-reviews/infra/schema
 import { recomputeRatingAggregate } from '../src/lib/server/modules/provider-reviews/infra/rating-aggregate';
 import { asId } from '../src/lib/server/shared/ids';
 import { hashPassword } from '../src/lib/server/modules/identity-and-access/infra/password-hash';
-
-export const SEED_REV_PROVIDER_PROFILE_ID = '01900000-0000-7000-8000-000000000103';
-export const SEED_REV_PROVIDER_OWNER_ID = '01900000-0000-7000-8000-000000000003';
-export const SEED_REV_PROVIDER_EMAIL = 'rev-provider@example.com';
-export const SEED_REV_PROVIDER_PASSWORD = 'password123';
-
-export const SEED_REV_INELIGIBLE_SEEKER_ID = '01900000-0000-7000-8000-00000000d101';
-export const SEED_REV_INELIGIBLE_SEEKER_EMAIL = 'rev-ineligible@example.com';
-export const SEED_REV_INELIGIBLE_SEEKER_PASSWORD = 'password123';
-export const SEED_REV_INELIGIBLE_THREAD_ID = '01900000-0000-7000-8000-00000000d201';
-
-export const SEED_REV_ELIGIBLE_SEEKER_ID = '01900000-0000-7000-8000-00000000d102';
-export const SEED_REV_ELIGIBLE_SEEKER_EMAIL = 'rev-eligible@example.com';
-export const SEED_REV_ELIGIBLE_SEEKER_PASSWORD = 'password123';
-export const SEED_REV_ELIGIBLE_THREAD_ID = '01900000-0000-7000-8000-00000000d202';
-
-export const SEED_REV_EXISTING_SEEKER_ID = '01900000-0000-7000-8000-00000000d103';
-export const SEED_REV_EXISTING_SEEKER_EMAIL = 'rev-existing@example.com';
-export const SEED_REV_EXISTING_SEEKER_PASSWORD = 'password123';
-export const SEED_REV_EXISTING_THREAD_ID = '01900000-0000-7000-8000-00000000d203';
-export const SEED_REV_EXISTING_REVIEW_ID = '01900000-0000-7000-8000-00000000d301';
-
-export const SEED_REV_INELIGIBLE_REASON = "You can review after you've been in contact for a day.";
+export * from './seed-reviews-constants';
+import {
+	SEED_REV_ELIGIBLE_SEEKER_EMAIL,
+	SEED_REV_ELIGIBLE_SEEKER_ID,
+	SEED_REV_ELIGIBLE_THREAD_ID,
+	SEED_REV_EXISTING_SEEKER_EMAIL,
+	SEED_REV_EXISTING_REVIEW_ID,
+	SEED_REV_EXISTING_SEEKER_ID,
+	SEED_REV_EXISTING_THREAD_ID,
+	SEED_REV_INELIGIBLE_SEEKER_EMAIL,
+	SEED_REV_INELIGIBLE_SEEKER_ID,
+	SEED_REV_INELIGIBLE_SEEKER_PASSWORD,
+	SEED_REV_INELIGIBLE_THREAD_ID,
+	SEED_REV_PROVIDER_EMAIL,
+	SEED_REV_PROVIDER_OWNER_ID,
+	SEED_REV_PROVIDER_PASSWORD,
+	SEED_REV_PROVIDER_PROFILE_ID
+} from './seed-reviews-constants';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -78,6 +73,7 @@ export async function seedReviews(db: Database): Promise<void> {
 				set: {
 					displayName: seeker.displayName,
 					email: seeker.email,
+					emailVerifiedAt: new Date('2026-08-01T10:00:00Z'),
 					passwordHash,
 					status: 'active'
 				}

@@ -1,20 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { assertPrimaryListingLive } from './live-backend-assert';
-
-async function registerSeeker(
-	page: import('@playwright/test').Page,
-	email: string,
-	password: string
-) {
-	await page.goto('/sign-in?returnTo=/profile');
-	await page.getByLabel('Your name').fill('E2E Seeker');
-	await page.getByLabel('Email').fill(email);
-	await page.getByLabel('Password').fill(password);
-	await page.locator('input[name="acceptedTerms"]').check();
-	await page.getByRole('button', { name: 'Create account' }).click();
-	await expect(page).toHaveURL(/\/profile/);
-}
+import { registerAndVerifySeeker } from './seeker-session';
 
 async function signInSeeker(
 	page: import('@playwright/test').Page,
@@ -35,8 +22,8 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 		const context = await browser.newContext();
 		const page = await context.newPage();
 
-		await registerSeeker(page, email, password);
-		await expect(page.getByText('E2E Seeker')).toBeVisible();
+		await registerAndVerifySeeker(page, page.request, email, password, 'E2E Seeker');
+		await expect(page.getByLabel('Display name')).toHaveValue('E2E Seeker');
 
 		const storage = await context.storageState();
 		await context.close();
@@ -44,7 +31,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 		const restored = await browser.newContext({ storageState: storage });
 		const again = await restored.newPage();
 		await again.goto('/profile');
-		await expect(again.getByText('E2E Seeker')).toBeVisible();
+		await expect(again.getByLabel('Display name')).toHaveValue('E2E Seeker');
 		await restored.close();
 	});
 
@@ -54,7 +41,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 
 		const contextA = await browser.newContext();
 		const pageA = await contextA.newPage();
-		await registerSeeker(pageA, email, password);
+		await registerAndVerifySeeker(pageA, pageA.request, email, password, 'E2E Seeker');
 
 		const contextB = await browser.newContext();
 		const pageB = await contextB.newPage();
@@ -67,7 +54,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 		await expect(pageA.getByRole('link', { name: 'Sign in' })).toBeVisible();
 
 		await pageB.goto('/profile');
-		await expect(pageB.getByText('E2E Seeker')).toBeVisible();
+		await expect(pageB.getByLabel('Display name')).toHaveValue('E2E Seeker');
 
 		await contextA.close();
 		await contextB.close();
@@ -77,15 +64,24 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 		const email = `reset-e2e-${Date.now()}@example.com`;
 		const password = 'password123';
 
-		await registerSeeker(page, email, password);
+		await registerAndVerifySeeker(page, page.request, email, password, 'E2E Seeker');
 
 		await page.goto('/forgot-password');
 		await page.getByLabel('Email').fill(email);
 		await page.getByRole('button', { name: 'Send reset link' }).click();
+		await expect(page.getByRole('status')).toContainText(/sent/i, { timeout: 15_000 });
 
-		const tokenRes = await request.post('/api/dev/password-reset-token', { data: { email } });
-		expect(tokenRes.ok()).toBe(true);
-		const { data } = (await tokenRes.json()) as { data: { token: string } };
+		let resetToken = '';
+		await expect
+			.poll(async () => {
+				const tokenRes = await request.post('/api/dev/password-reset-token', { data: { email } });
+				if (!tokenRes.ok()) return null;
+				const body = (await tokenRes.json()) as { data: { token: string } };
+				resetToken = body.data.token;
+				return resetToken;
+			})
+			.toBeTruthy();
+		const data = { token: resetToken };
 
 		await page.goto(`/reset-password?token=${data.token}`);
 		await page.getByLabel('New password').fill('newpassword123');
@@ -108,7 +104,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 
 		const contextA = await browser.newContext();
 		const pageA = await contextA.newPage();
-		await registerSeeker(pageA, email, password);
+		await registerAndVerifySeeker(pageA, pageA.request, email, password, 'E2E Seeker');
 
 		const contextB = await browser.newContext();
 		const pageB = await contextB.newPage();
@@ -130,7 +126,7 @@ test.describe('US-ACC-03 stay signed in, sign out anywhere', () => {
 		expect(pingB.status()).toBe(401);
 
 		await pageA.reload();
-		await expect(pageA.getByText('E2E Seeker')).toBeVisible();
+		await expect(pageA.getByLabel('Display name')).toHaveValue('E2E Seeker');
 
 		await contextA.close();
 		await contextB.close();

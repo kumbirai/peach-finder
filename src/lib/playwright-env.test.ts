@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+	buildDatabasePrepCommand,
 	buildWebServerCommand,
 	e2eWebServerEnv,
 	loadDotEnv,
@@ -52,8 +53,11 @@ describe('playwright-env', () => {
 	it('keeps webServer port aligned with resolved E2E port', () => {
 		const port = resolveE2ePort('5199');
 		expect(buildWebServerCommand(port)).toBe(
-			`npm run db:migrate && SEED_PACK=seed-core npm run db:seed && node --env-file=.env --import tsx scripts/seed-blocking.ts && node --env-file=.env --import tsx scripts/seed-verification.ts && node --env-file=.env --import tsx scripts/seed-reports.ts && node --env-file=.env --import tsx scripts/seed-reviews.ts && ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`
+			`ALLOW_DEV_HELPERS=1 npm run dev -- --host 127.0.0.1 --port ${port}`
 		);
+		expect(buildDatabasePrepCommand()).toContain('npm run db:migrate');
+		expect(buildDatabasePrepCommand()).toContain('seed-reviews.ts');
+		expect(buildDatabasePrepCommand()).toContain('reconcile-search-projection.ts');
 		expect(resolveE2eBaseUrl(port)).toBe('http://127.0.0.1:5199');
 	});
 
@@ -68,6 +72,7 @@ describe('playwright-env', () => {
 		});
 		expect(env.PUBLIC_APP_ORIGIN).toBe('http://127.0.0.1:4177');
 		expect(env.ALLOW_DEV_HELPERS).toBe('1');
+		expect(env.PAYSTACK_SECRET_KEY).toBe('');
 		expect(env.DATABASE_URL).toBe('postgres://app@localhost/db');
 		expect(env.SMTP_HOST).toBe('127.0.0.1');
 		expect(env.SMTP_PORT).toBe('1025');
@@ -98,6 +103,15 @@ describe('playwright-env', () => {
 		expect(compose).toContain('mail.smtp2go.com');
 		expect(compose).toContain("'1025:1025'");
 		expect(compose).toContain("'8025:8025'");
+	});
+
+	it('bypasses seeker login rate limits when ALLOW_DEV_HELPERS is enabled', () => {
+		const source = readFileSync(
+			join(process.cwd(), 'src/routes/sign-in/+page.server.ts'),
+			'utf8'
+		);
+		expect(source).toContain("process.env.ALLOW_DEV_HELPERS === '1'");
+		expect(source).toMatch(/login:[\s\S]*ALLOW_DEV_HELPERS === '1'/);
 	});
 
 	it('keeps the projection-repair e2e bound to the live reconcile helper', () => {

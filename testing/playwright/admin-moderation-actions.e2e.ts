@@ -5,11 +5,8 @@ import {
 	SEED_ADMIN_PASSWORD,
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../scripts/seed-core';
-import {
-	SEED_SAFE02_AMARA_EMAIL,
-	SEED_SAFE02_AMARA_PASSWORD
-} from '../../scripts/seed-blocking-constants';
-import { assertPrimaryListingLive } from './live-backend-assert';
+import { assertPrimaryListingLive, assertSearchContainsProfile } from './live-backend-assert';
+import { restorePrimaryListing, signInPrimaryProvider } from './restore-primary-listing';
 import {
 	SEED_REPORT_ACT_OPEN_ID,
 	SEED_REPORT_DISMISSED_ID,
@@ -38,18 +35,6 @@ async function signInAdmin(request: import('@playwright/test').APIRequestContext
 	expect(totp.ok(), await totp.text()).toBeTruthy();
 }
 
-async function signInProvider(
-	page: import('@playwright/test').Page,
-	email: string,
-	password: string
-) {
-	await page.goto('/sign-in?flow=sign-in&returnTo=/provider/dashboard');
-	await page.getByLabel('Email').fill(email);
-	await page.getByLabel('Password').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page).toHaveURL(/\/provider\/dashboard/, { timeout: 15_000 });
-}
-
 async function dispatchUntilNotification(
 	request: import('@playwright/test').APIRequestContext,
 	category: string
@@ -65,22 +50,6 @@ async function dispatchUntilNotification(
 		if (notifBody.data.some((n) => n.category === category)) return true;
 	}
 	return false;
-}
-
-async function restorePrimaryListing(
-	browser: import('@playwright/test').Browser
-): Promise<void> {
-	const restoreContext = await browser.newContext();
-	const restorePage = await restoreContext.newPage();
-	await signInProvider(restorePage, SEED_SAFE02_AMARA_EMAIL, SEED_SAFE02_AMARA_PASSWORD);
-	const restoreLive = await restorePage.request.get(
-		`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`
-	);
-	if (!restoreLive.ok()) {
-		const restorePublish = await restorePage.request.post('/api/provider/profile/publish');
-		expect(restorePublish.ok(), await restorePublish.text()).toBeTruthy();
-	}
-	await restoreContext.close();
 }
 
 test.describe('US-ADMIN-04 the only hands that take content down', () => {
@@ -102,14 +71,7 @@ test.describe('US-ADMIN-04 the only hands that take content down', () => {
 
 		const stillLive = await request.get(`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		expect(stillLive.ok()).toBeTruthy();
-		const search = await request.get('/api/discovery/search');
-		expect(search.ok()).toBeTruthy();
-		const searchBody = (await search.json()) as {
-			data: Array<{ providerProfileId: string }>;
-		};
-		expect(searchBody.data.map((card) => card.providerProfileId)).toContain(
-			SEED_CORE_PRIMARY_PROFILE_ID
-		);
+		await assertSearchContainsProfile(request, SEED_CORE_PRIMARY_PROFILE_ID, '?q=deep+tissue');
 	});
 
 	test('TC-ADMIN-04b: unpublish via API notifies provider after dispatch', async ({
@@ -142,7 +104,7 @@ test.describe('US-ADMIN-04 the only hands that take content down', () => {
 			`/api/provider/profile/${SEED_CORE_PRIMARY_PROFILE_ID}`
 		);
 		expect(hidden.status()).toBeGreaterThanOrEqual(400);
-		const searchAfter = await publicPage.request.get('/api/discovery/search');
+		const searchAfter = await publicPage.request.get('/api/discovery/search?q=deep+tissue');
 		const searchBody = (await searchAfter.json()) as {
 			data: Array<{ providerProfileId: string }>;
 		};
@@ -154,7 +116,7 @@ test.describe('US-ADMIN-04 the only hands that take content down', () => {
 		const providerContext = await browser.newContext();
 		const providerPage = await providerContext.newPage();
 		try {
-			await signInProvider(providerPage, SEED_SAFE02_AMARA_EMAIL, SEED_SAFE02_AMARA_PASSWORD);
+			await signInPrimaryProvider(providerPage);
 			expect(
 				await dispatchUntilNotification(providerPage.request, 'moderation_outcome')
 			).toBeTruthy();

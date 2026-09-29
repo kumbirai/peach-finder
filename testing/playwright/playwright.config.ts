@@ -14,7 +14,10 @@ const baseURL = resolveE2eBaseUrl(port);
 
 export default defineConfig({
 	testDir: '.',
+	globalSetup: path.join(__dirname, 'global-setup.ts'),
 	fullyParallel: false,
+	workers: 1,
+	timeout: 120_000,
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 1 : 0,
 	use: {

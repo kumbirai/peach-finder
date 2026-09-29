@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import sharp from 'sharp';
 import { assertPrimaryListingLive } from './live-backend-assert';
+import { registerVerifiedProvider } from './provider-session';
 
 async function uploadTestPhoto(page: import('@playwright/test').Page) {
 	const stamp = Date.now();
@@ -47,22 +48,12 @@ async function registerFreshProvider(
 	const password = 'password123';
 	const phone = `083${String(stamp).slice(-7)}`;
 
-	await page.goto('/provider/register');
-	await page.getByLabel('Your name').fill('Profile Build E2E');
-	await page.getByLabel('Email').fill(email);
-	await page.getByLabel('Mobile number').fill(phone);
-	await page.locator('#areaId').selectOption({ index: 1 });
-	await page.getByLabel('Password').fill(password);
-	await page.locator('input[name="acceptedTerms"]').check();
-	await page.getByRole('button', { name: 'Continue' }).click();
-
-	await expect(page.getByLabel('Verification code')).toBeVisible({ timeout: 10_000 });
-	const otpId = await page.locator('input[name="otpId"]').inputValue();
-	const otpRes = await request.post('/api/dev/otp-code', { data: { otpId } });
-	const { data } = (await otpRes.json()) as { data: { code: string } };
-	await page.getByLabel('Verification code').fill(data.code);
-	await page.getByRole('button', { name: 'Verify and continue' }).click();
-	await expect(page).toHaveURL(/\/provider\/onboarding/, { timeout: 15_000 });
+	await registerVerifiedProvider(page, request, {
+		name: 'Profile Build E2E',
+		email,
+		phone,
+		password
+	});
 
 	return { email, password };
 }

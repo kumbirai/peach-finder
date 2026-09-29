@@ -69,7 +69,12 @@
 	}
 	@media (max-width: 767px) {
 		.sticky-cta {
+			position: fixed;
+			left: 0;
+			right: 0;
 			bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+			max-width: 40rem;
+			margin: 0 auto;
 		}
 	}
 	@media (min-width: 768px) {

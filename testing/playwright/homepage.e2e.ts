@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { assertPrimaryListingLive } from './live-backend-assert';
+import { assertPrimaryListingLive, assertSearchContainsProfile } from './live-backend-assert';
+
+const NOMSA_PROFILE_ID = '01900000-0000-7000-8000-000000000104';
 
 test.describe('homepage smoke', () => {
 	test('renders the SSR homepage with design-system tokens', async ({ page }) => {
@@ -13,9 +15,12 @@ test.describe('homepage smoke', () => {
 		const html = await page.content();
 		expect(html).toContain('Find relief, right now');
 		await assertPrimaryListingLive(page.request);
+		await assertSearchContainsProfile(page.request, NOMSA_PROFILE_ID, '?q=Nomsa');
 		await expect(page.getByRole('heading', { name: 'More therapists nearby' })).toBeVisible();
-		await expect(page.locator('article.card').filter({ hasText: 'Nomsa P.' })).toBeVisible();
 		await expect(page.locator('article.card').filter({ hasText: 'Amara T.' })).toBeVisible();
+		await expect(page.locator('article.card').filter({ hasText: 'Nomsa P.' })).toBeVisible({
+			timeout: 15_000
+		});
 	});
 
 	test('has no critical or serious axe violations', async ({ page }) => {

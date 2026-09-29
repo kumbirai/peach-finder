@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContextOptions } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { assertPrimaryListingLive } from './live-backend-assert';
+import { signInSeeker } from './seeker-session';
 import {
 	SEED_REV_ELIGIBLE_SEEKER_EMAIL,
 	SEED_REV_ELIGIBLE_SEEKER_PASSWORD,
@@ -14,22 +15,7 @@ import {
 	SEED_REV_PROVIDER_EMAIL,
 	SEED_REV_PROVIDER_PASSWORD,
 	SEED_REV_PROVIDER_PROFILE_ID
-} from '../../scripts/seed-reviews';
-
-async function signInSeeker(
-	page: import('@playwright/test').Page,
-	email: string,
-	password: string,
-	returnTo: string
-) {
-	await page.goto(`/sign-in?flow=sign-in&returnTo=${encodeURIComponent(returnTo)}`);
-	await page.getByLabel('Email').fill(email);
-	await page.getByLabel('Password').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page).toHaveURL(new RegExp(returnTo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), {
-		timeout: 15_000
-	});
-}
+} from '../../scripts/seed-reviews-constants';
 
 async function signInProvider(
 	page: import('@playwright/test').Page,

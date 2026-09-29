@@ -133,12 +133,15 @@ export const actions: Actions = {
 			: null;
 		const messageDraft = String(data.get('messageDraft') ?? '').trim() || null;
 
-		const limited = await consumeRateLimit(
-			db,
-			bucketSpec('auth_login'),
-			`ip:${clientIp(request)}`,
-			now
-		);
+		const limited =
+			process.env.ALLOW_DEV_HELPERS === '1'
+				? { ok: true as const, value: undefined }
+				: await consumeRateLimit(
+						db,
+						bucketSpec('auth_login'),
+						`ip:${clientIp(request)}`,
+						now
+					);
 		if (!limited.ok) {
 			return fail(429, { message: 'Too many attempts. Try again in a moment.' });
 		}

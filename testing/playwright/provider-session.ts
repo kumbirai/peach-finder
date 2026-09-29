@@ -15,6 +15,42 @@ function svelteKitActionIds(body: string): { otpId: string; userId: string } {
 	}
 }
 
+export async function selectRegistrationArea(page: Page): Promise<string> {
+	const areaId = await page.locator('#areaId option').nth(1).getAttribute('value');
+	expect(areaId, 'registration requires a seeded area').toBeTruthy();
+	await page.locator('#areaId').selectOption(areaId!);
+	await expect(page.locator('#areaId')).toHaveValue(areaId!);
+	return areaId!;
+}
+
+async function fillBoundField(page: Page, label: string, value: string): Promise<void> {
+	const field = page.getByLabel(label);
+	await field.click();
+	await field.fill(value);
+	await field.dispatchEvent('input');
+	await field.dispatchEvent('change');
+}
+
+export async function submitProviderRegistrationForm(
+	page: Page,
+	input: { name: string; email: string; phone: string; password: string }
+): Promise<void> {
+	await page.goto('/provider/register');
+	await fillBoundField(page, 'Your name', input.name);
+	await fillBoundField(page, 'Email', input.email);
+	await fillBoundField(page, 'Mobile number', input.phone);
+	await selectRegistrationArea(page);
+	await fillBoundField(page, 'Password', input.password);
+	await page.locator('input[name="acceptedTerms"]').check();
+	await Promise.all([
+		page.waitForResponse(
+			(res) => res.url().includes('/provider/register') && res.request().method() === 'POST'
+		),
+		page.getByRole('button', { name: 'Continue' }).click()
+	]);
+	await expect(page.getByLabel('Verification code')).toBeVisible({ timeout: 20_000 });
+}
+
 function hiddenInputValue(html: string, name: string): string {
 	const named = new RegExp(
 		`name="${name}"[^>]*value="([^"]+)"|value="([^"]+)"[^>]*name="${name}"`
@@ -28,8 +64,7 @@ export async function registerVerifiedProvider(
 	input: { name: string; email: string; phone: string; password: string }
 ): Promise<string> {
 	await page.goto('/provider/register');
-	const areaId = await page.locator('#areaId option').nth(1).getAttribute('value');
-	expect(areaId, 'registration requires a seeded area').toBeTruthy();
+	const areaId = await selectRegistrationArea(page);
 
 	const registerRes = await page.request.post('/provider/register?/register', {
 		headers: { Accept: 'text/html' },

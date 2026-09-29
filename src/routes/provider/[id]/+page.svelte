@@ -46,6 +46,6 @@
 	.page {
 		max-width: 40rem;
 		margin: 0 auto;
-		padding-bottom: 5rem;
+		padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
 	}
 </style>

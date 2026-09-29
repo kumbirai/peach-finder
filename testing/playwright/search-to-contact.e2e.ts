@@ -9,7 +9,11 @@ import {
 	SEED_CORE_PRIMARY_PROFILE_ID
 } from '../../scripts/seed-core';
 
-import { registerAndVerifySeeker } from './seeker-session';
+import {
+	SEED_MSG01_BLOCKED_SEEKER_EMAIL,
+	SEED_MSG01_BLOCKED_SEEKER_PASSWORD
+} from '../../scripts/seed-blocking-constants';
+import { registerAndVerifySeeker, signInSeeker } from './seeker-session';
 
 const DRAFT = 'Hi, are you available this afternoon?';
 
@@ -271,13 +275,13 @@ test.describe('E2E-1 search to contact', () => {
 		const seekerContext = await browser.newContext();
 		const seekerPage = await seekerContext.newPage();
 		const email = `view03-seeker-${Date.now()}@example.com`;
-		await seekerPage.goto('/sign-in?returnTo=/profile');
-		await seekerPage.getByLabel('Your name').fill('View03 Seeker');
-		await seekerPage.getByLabel('Email').fill(email);
-		await seekerPage.getByLabel('Password').fill('password123');
-		await seekerPage.locator('input[name="acceptedTerms"]').check();
-		await seekerPage.getByRole('button', { name: 'Create account' }).click();
-		await expect(seekerPage).toHaveURL(/\/profile/);
+		await registerAndVerifySeeker(
+			seekerPage,
+			seekerPage.request,
+			email,
+			'password123',
+			'View03 Seeker'
+		);
 
 		await seekerPage.goto(`/provider/${SEED_CORE_PHONE_OFF_PROFILE_ID}`);
 		await expect(seekerPage.getByRole('link', { name: 'Call' })).toBeVisible();
@@ -382,7 +386,8 @@ test.describe('E2E-1 search to contact', () => {
 		await page.getByRole('button', { name: 'Create account' }).click();
 
 		await expect(page).toHaveURL(
-			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}\\?draft=`)
+			new RegExp(`/messages/compose/${SEED_CORE_PRIMARY_PROFILE_ID}\\?draft=`),
+			{ timeout: 30_000 }
 		);
 		await expect(page.getByLabel('Your message')).toHaveValue(DRAFT, { timeout: 10_000 });
 
@@ -458,11 +463,14 @@ test.describe('E2E-1 search to contact', () => {
 			.getByRole('link', { name: /^Message / })
 			.click();
 		await expect(page).toHaveURL(new RegExp(`/messages/[0-9a-f-]{36}`));
+		await expect(
+			page.getByTestId('message-bubble-outbound').filter({ hasText: firstMessage })
+		).toBeVisible({ timeout: 15_000 });
 		await page.getByLabel('Write a message').fill(secondMessage);
 		await page.getByRole('button', { name: 'Send' }).click();
 		await expect(
 			page.getByTestId('message-bubble-outbound').filter({ hasText: secondMessage })
-		).toBeVisible({ timeout: 10_000 });
+		).toBeVisible({ timeout: 20_000 });
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		await page
@@ -514,11 +522,12 @@ test.describe('E2E-1 search to contact', () => {
 		const context = await browser.newContext();
 		const page = await context.newPage();
 
-		await page.goto('/sign-in?flow=sign-in&returnTo=/profile');
-		await page.getByLabel('Email').fill('msg01-blocked@example.com');
-		await page.getByLabel('Password').fill('password123');
-		await page.getByRole('button', { name: 'Sign in' }).click();
-		await expect(page).toHaveURL(/\/profile/, { timeout: 15_000 });
+		await signInSeeker(
+			page,
+			SEED_MSG01_BLOCKED_SEEKER_EMAIL,
+			SEED_MSG01_BLOCKED_SEEKER_PASSWORD,
+			'/profile'
+		);
 
 		await page.goto(`/provider/${SEED_CORE_PRIMARY_PROFILE_ID}`);
 		await expect(

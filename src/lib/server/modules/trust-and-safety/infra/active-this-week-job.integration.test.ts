@@ -12,11 +12,13 @@ import type { Database } from '../../../db';
 import { handleBadgeFlagEvent } from './identity-change-subscription';
 import { badgeState } from './schema';
 import { loadBadgeDisplayState } from './badge-read';
+import { getRecentActivityCount } from '../../provider-availability/infra/availability-commands';
 import { evaluateActiveThisWeekSignals, runActiveThisWeekJob } from './active-this-week-job';
 import { claimUndispatched } from '../../../shared/outbox';
 
 const ZANELE_PROFILE_ID = '01900000-0000-7000-8000-000000000105' as ProviderProfileId;
 const ZANELE_USER_ID = '01900000-0000-7000-8000-000000000005';
+const THANDI_PROFILE_ID = '01900000-0000-7000-8000-000000000102' as ProviderProfileId;
 
 async function dispatchBadgeEvents(db: Database): Promise<void> {
 	const rows = await claimUndispatched(db, 200);
@@ -35,6 +37,21 @@ async function dispatchBadgeEvents(db: Database): Promise<void> {
 }
 
 describe('US-AVAIL-04 active this week job', () => {
+	it('seed-core records availability history for active-this-week signals', async () => {
+		await withTestDatabase(async (db) => {
+			await seedPlatform(db);
+			await loadConfigCache(db);
+			await seedCore(db);
+
+			const count = await getRecentActivityCount(
+				db,
+				THANDI_PROFILE_ID,
+				new Date('2026-09-01T00:00:00.000Z')
+			);
+			expect(count).toBeGreaterThan(0);
+		});
+	});
+
 	it('TC-AVAIL-04a: grants badge when only sign-in occurred in the trailing 7 days', async () => {
 		await withTestDatabase(async (db) => {
 			await seedPlatform(db);
